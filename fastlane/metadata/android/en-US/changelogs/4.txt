@@ -1,0 +1,3 @@
+Initial F-Droid preparation release.
+
+Includes SSH and experimental Mosh terminal sessions, SFTP browsing, saved machine profiles, trusted host key management, app lock, terminal themes, and Android background keepalive support.

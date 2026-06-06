@@ -1,0 +1,22 @@
+Conduit is a local-first SSH, Mosh, and SFTP workspace for Android and iOS.
+
+It is built for people who need to reach real machines from a phone without creating an account, syncing credentials through a service, or paying a subscription to open a shell.
+
+Features:
+
+* SSH terminal sessions
+* Experimental Mosh roaming for unreliable mobile networks
+* SFTP file browsing and export
+* Saved machine profiles with tags and search
+* Local credential and trusted host key storage
+* Trusted host key prompts and key management
+* App lock with device authentication when supported
+* Tabbed terminal workspace
+* Mobile-friendly modifier, navigation, and function keys
+* Fullscreen terminal mode
+* Terminal themes
+* Android background keepalive through a foreground service
+
+Conduit does not require a Conduit account and does not use a Conduit sync service. Saved connection profiles, credentials, and trusted host keys are stored on device using platform secure storage.
+
+Mosh support requires mosh-server on the remote host and reachable UDP ports. It is currently marked experimental while dart_mosh, the Dart implementation used by Conduit, continues to mature.
