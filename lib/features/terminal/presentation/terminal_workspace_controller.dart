@@ -1,14 +1,16 @@
 import 'dart:async';
 
 import 'package:conduit/features/hosts/domain/saved_host.dart';
+import 'package:conduit/features/terminal/domain/network_connectivity.dart';
 import 'package:conduit/features/terminal/domain/ssh_terminal_repository.dart';
 import 'package:conduit/features/terminal/presentation/terminal_session_controller.dart';
 import 'package:flutter/foundation.dart';
 
 class TerminalWorkspaceController extends ChangeNotifier {
-  TerminalWorkspaceController(this._repository);
+  TerminalWorkspaceController(this._repository, [this._connectivity]);
 
   final SshTerminalRepository _repository;
+  final NetworkConnectivity? _connectivity;
 
   final List<TerminalSessionController> _sessions = [];
   int _activeIndex = 0;
@@ -47,6 +49,7 @@ class TerminalWorkspaceController extends ChangeNotifier {
     final session = TerminalSessionController(
       host: host,
       repository: _repository,
+      connectivity: _connectivity,
     );
     session.addListener(notifyListeners);
     _sessions.add(session);

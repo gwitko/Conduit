@@ -27,10 +27,12 @@ class _HostFormPageState extends State<HostFormPage> {
   final _passphraseController = TextEditingController();
   final _tagController = TextEditingController();
   final _timeoutController = TextEditingController(text: '12');
+  final _moshLocaleController = TextEditingController(text: 'C.UTF-8');
   final FocusNode _tagFocusNode = FocusNode();
   SshAuthMethod _authMethod = SshAuthMethod.password;
   bool _showPassword = false;
   bool _showPassphrase = false;
+  bool _useMosh = false;
   List<String> _tags = const [];
 
   bool get _isEditing => widget.host != null;
@@ -50,6 +52,8 @@ class _HostFormPageState extends State<HostFormPage> {
       _tags = List<String>.from(host.tags);
       _timeoutController.text = host.connectionTimeoutSeconds.toString();
       _authMethod = host.authMethod;
+      _useMosh = host.useMosh;
+      _moshLocaleController.text = host.moshLocale;
     }
   }
 
@@ -65,6 +69,7 @@ class _HostFormPageState extends State<HostFormPage> {
     _tagController.dispose();
     _tagFocusNode.dispose();
     _timeoutController.dispose();
+    _moshLocaleController.dispose();
     super.dispose();
   }
 
@@ -287,6 +292,32 @@ class _HostFormPageState extends State<HostFormPage> {
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   validator: _validateTimeout,
                 ),
+                const SizedBox(height: 4),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Connect with Mosh (experimental)'),
+                  subtitle: const Text(
+                    'Roaming UDP session over SSH. Requires mosh-server on the '
+                    'host and open UDP ports.',
+                  ),
+                  value: _useMosh,
+                  onChanged: (value) => setState(() => _useMosh = value),
+                ),
+                if (_useMosh) ...[
+                  const SizedBox(height: 4),
+                  TextFormField(
+                    controller: _moshLocaleController,
+                    decoration: const InputDecoration(
+                      labelText: 'Mosh locale',
+                      helperText:
+                          'Must be a UTF-8 locale installed on the host.',
+                      prefixIcon: Icon(Icons.language_outlined),
+                    ),
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    textInputAction: TextInputAction.next,
+                  ),
+                ],
               ],
             ),
             const SizedBox(height: 22),
@@ -370,6 +401,10 @@ class _HostFormPageState extends State<HostFormPage> {
       passphrase: _passphraseController.text,
       tags: _tags,
       connectionTimeoutSeconds: int.parse(_timeoutController.text),
+      useMosh: _useMosh,
+      moshLocale: _moshLocaleController.text.trim().isEmpty
+          ? 'C.UTF-8'
+          : _moshLocaleController.text.trim(),
       lastConnectedAt: currentHost?.lastConnectedAt,
     );
 

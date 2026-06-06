@@ -3,8 +3,11 @@ import 'dart:convert';
 
 import 'package:conduit/core/app_failure.dart';
 import 'package:conduit/features/hosts/domain/saved_host.dart';
+import 'package:conduit/features/terminal/domain/network_connectivity.dart';
+import 'package:conduit/features/terminal/domain/roaming_terminal_session.dart';
 import 'package:conduit/features/terminal/domain/ssh_terminal_repository.dart';
 import 'package:conduit/features/terminal/domain/ssh_terminal_session.dart';
+import 'package:conduit/features/terminal/domain/terminal_string_sequence_filter.dart';
 import 'package:conduit/features/terminal/presentation/terminal_keyboard_controller.dart';
 import 'package:flutter/foundation.dart';
 import 'package:xterm/xterm.dart';
@@ -18,25 +21,34 @@ enum TerminalConnectionStatus {
 }
 
 class TerminalSessionController extends ChangeNotifier {
-  TerminalSessionController({required this.host, required this.repository})
-    : keyboard = TerminalKeyboardController(defaultInputHandler),
-      terminal = Terminal(maxLines: 10000) {
+  TerminalSessionController({
+    required this.host,
+    required this.repository,
+    this.connectivity,
+  }) : keyboard = TerminalKeyboardController(defaultInputHandler),
+       terminal = Terminal(maxLines: 10000) {
     _configureTerminal();
   }
 
   final SavedHost host;
   final SshTerminalRepository repository;
+  final NetworkConnectivity? connectivity;
   final TerminalKeyboardController keyboard;
   final Terminal terminal;
+  final _outputFilter = TerminalStringSequenceFilter();
 
   TerminalConnectionStatus _status = TerminalConnectionStatus.idle;
   SshTerminalSession? _session;
   StreamSubscription<String>? _stdoutSubscription;
   StreamSubscription<String>? _stderrSubscription;
   StreamSubscription<void>? _doneSubscription;
+  StreamSubscription<void>? _connectivitySubscription;
   String _title = '';
   int _pixelWidth = 0;
   int _pixelHeight = 0;
+  Timer? _resizeTimer;
+  int _pendingColumns = 0;
+  int _pendingRows = 0;
   bool _disconnecting = false;
   bool _disposed = false;
   int _connectionGeneration = 0;
@@ -60,6 +72,7 @@ class TerminalSessionController extends ChangeNotifier {
     }
 
     final generation = ++_connectionGeneration;
+    _outputFilter.reset();
     _status = TerminalConnectionStatus.connecting;
     terminal.write(
       'Connecting to ${host.username}@${host.host}:${host.port}...\r\n',
@@ -80,6 +93,12 @@ class TerminalSessionController extends ChangeNotifier {
 
       terminal.buffer.clear();
       terminal.buffer.setCursor(0, 0);
+      if (kDebugMode) {
+        debugPrint(
+          '[term ${host.name}] connect size -> '
+          '${terminal.viewWidth}x${terminal.viewHeight}',
+        );
+      }
       session.resize(
         terminal.viewWidth,
         terminal.viewHeight,
@@ -90,7 +109,10 @@ class TerminalSessionController extends ChangeNotifier {
       _stdoutSubscription = session.stdout
           .cast<List<int>>()
           .transform(const Utf8Decoder(allowMalformed: true))
-          .listen(terminal.write, onError: _handleStreamError);
+          .listen(
+            (chunk) => terminal.write(_outputFilter.process(chunk)),
+            onError: _handleStreamError,
+          );
       _stderrSubscription = session.stderr
           .cast<List<int>>()
           .transform(const Utf8Decoder(allowMalformed: true))
@@ -102,6 +124,12 @@ class TerminalSessionController extends ChangeNotifier {
           notifyListeners();
         }
       }, onError: _handleStreamError);
+
+      if (session is RoamingTerminalSession) {
+        _connectivitySubscription = connectivity?.onNetworkChanged.listen(
+          (_) => _rehome(),
+        );
+      }
 
       _status = TerminalConnectionStatus.connected;
       notifyListeners();
@@ -127,12 +155,16 @@ class TerminalSessionController extends ChangeNotifier {
     _disconnecting = true;
     _connectionGeneration += 1;
 
+    _resizeTimer?.cancel();
+    _resizeTimer = null;
     await _stdoutSubscription?.cancel();
     await _stderrSubscription?.cancel();
     await _doneSubscription?.cancel();
+    await _connectivitySubscription?.cancel();
     _stdoutSubscription = null;
     _stderrSubscription = null;
     _doneSubscription = null;
+    _connectivitySubscription = null;
 
     final session = _session;
     _session = null;
@@ -178,7 +210,10 @@ class TerminalSessionController extends ChangeNotifier {
     terminal.onResize = (columns, rows, pixelWidth, pixelHeight) {
       _pixelWidth = pixelWidth;
       _pixelHeight = pixelHeight;
-      _session?.resize(columns, rows, pixelWidth, pixelHeight);
+      _pendingColumns = columns;
+      _pendingRows = rows;
+      _resizeTimer?.cancel();
+      _resizeTimer = Timer(const Duration(milliseconds: 250), _flushResize);
     };
     terminal.onOutput = (data) {
       final session = _session;
@@ -187,6 +222,27 @@ class TerminalSessionController extends ChangeNotifier {
       }
       unawaited(session.send(utf8.encode(data)).catchError(_handleStreamError));
     };
+  }
+
+  void _rehome() {
+    final session = _session;
+    if (session is! RoamingTerminalSession ||
+        _status != TerminalConnectionStatus.connected) {
+      return;
+    }
+    final roaming = session as RoamingTerminalSession;
+    unawaited(roaming.rehome().catchError(_handleStreamError));
+  }
+
+  void _flushResize() {
+    final session = _session;
+    if (session == null) return;
+    if (kDebugMode) {
+      debugPrint(
+        '[term ${host.name}] -> server ${_pendingColumns}x$_pendingRows',
+      );
+    }
+    session.resize(_pendingColumns, _pendingRows, _pixelWidth, _pixelHeight);
   }
 
   void _handleStreamError(Object error, [StackTrace? stackTrace]) {
@@ -211,9 +267,11 @@ class TerminalSessionController extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     _connectionGeneration += 1;
+    _resizeTimer?.cancel();
     unawaited(_stdoutSubscription?.cancel());
     unawaited(_stderrSubscription?.cancel());
     unawaited(_doneSubscription?.cancel());
+    unawaited(_connectivitySubscription?.cancel());
     final session = _session;
     _session = null;
     if (session != null) {

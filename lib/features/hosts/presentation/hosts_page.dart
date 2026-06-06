@@ -83,19 +83,23 @@ class _HostsPageState extends State<HostsPage> {
     Future<void>.microtask(() async {
       try {
         while (true) {
-          if (!mounted) break;
           final next = widget.promptCoordinator.current;
           if (next == null) break;
-          // ignore: use_build_context_synchronously
-          final decision =
-              await showHostKeyPromptDialog(context: context, request: next) ??
-              HostKeyDecision.reject;
+          final decision = await _requestHostKeyDecision(next);
           widget.promptCoordinator.resolve(next, decision);
         }
       } finally {
         _showingHostKeyPrompt = false;
       }
     });
+  }
+
+  Future<HostKeyDecision> _requestHostKeyDecision(
+    HostKeyPromptRequest request,
+  ) async {
+    if (!mounted) return HostKeyDecision.reject;
+    return await showHostKeyPromptDialog(context: context, request: request) ??
+        HostKeyDecision.reject;
   }
 
   @override

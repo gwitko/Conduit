@@ -91,7 +91,9 @@ class _SftpBrowserPageState extends State<SftpBrowserPage> {
             ),
           ),
           floatingActionButton:
-              _controller.status == SftpBrowserStatus.ready && !_controller.busy
+              _controller.status == SftpBrowserStatus.ready &&
+                  !_controller.busy &&
+                  _controller.transfer == null
               ? _ActionsFab(
                   onNewFolder: _promptNewFolder,
                   onUpload: _pickAndUpload,
@@ -303,21 +305,43 @@ class _SftpBrowserPageState extends State<SftpBrowserPage> {
   Future<void> _pickAndUpload() async {
     final FilePickerResult? result;
     try {
-      result = await FilePicker.pickFiles();
+      result = await FilePicker.pickFiles(
+        allowMultiple: true,
+        withReadStream: true,
+      );
     } catch (error) {
       _showError(error);
       return;
     }
     if (result == null || result.files.isEmpty) return;
-    final file = result.files.single;
-    final path = file.path;
-    if (path == null) {
-      _showSnack('That file could not be read.');
-      return;
+    final files = <SftpUploadFile>[];
+    for (final file in result.files) {
+      final readStream = file.readStream;
+      final path = file.path;
+      if (readStream == null && path == null) {
+        _showSnack('One of those files could not be read.');
+        return;
+      }
+      files.add(
+        readStream == null
+            ? SftpUploadFile.local(
+                localPath: path!,
+                name: file.name,
+                size: file.size,
+              )
+            : SftpUploadFile(
+                source: () => readStream,
+                name: file.name,
+                size: file.size,
+              ),
+      );
     }
     try {
-      await _controller.uploadFile(path, file.name, file.size);
-      _showSnack('Uploaded ${file.name}');
+      await _controller.uploadFiles(files);
+      final uploaded = files.length == 1
+          ? files.single.name
+          : '${files.length} files';
+      _showSnack('Uploaded $uploaded');
     } catch (error) {
       _showError(error);
     }

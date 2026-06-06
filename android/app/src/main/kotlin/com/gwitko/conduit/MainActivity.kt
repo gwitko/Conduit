@@ -1,5 +1,6 @@
 package com.gwitko.conduit
 
+import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -7,6 +8,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
@@ -31,13 +33,29 @@ class MainActivity : FlutterFragmentActivity() {
                     BackgroundConnectionService.stop(this)
                     result.success(null)
                 }
+                "requestNotificationPermission" -> {
+                    requestNotificationPermissionIfNeeded()
+                    result.success(null)
+                }
                 else -> result.notImplemented()
             }
         }
     }
 
+    private fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        val granted = checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
+        if (granted) return
+        requestPermissions(
+            arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+            NOTIFICATION_PERMISSION_REQUEST_CODE,
+        )
+    }
+
     companion object {
         const val BACKGROUND_KEEPALIVE_CHANNEL = "conduit/background_keepalive"
+        private const val NOTIFICATION_PERMISSION_REQUEST_CODE = 2001
     }
 }
 

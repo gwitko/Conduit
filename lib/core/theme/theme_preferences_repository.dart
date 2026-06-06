@@ -51,7 +51,7 @@ class ThemePreferencesRepository {
       ),
       palette: AppPalette.values.firstWhere(
         (palette) => palette.name == rawPalette,
-        orElse: () => AppPalette.tokyoNight,
+        orElse: () => AppPalette.synthwave,
       ),
       terminalFont: TerminalFontOption.values.firstWhere(
         (font) => font.name == rawTerminalFont,

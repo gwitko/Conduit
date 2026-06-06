@@ -13,6 +13,8 @@ class SavedHost {
     this.passphrase = '',
     this.tags = const [],
     this.connectionTimeoutSeconds = 12,
+    this.useMosh = false,
+    this.moshLocale = 'C.UTF-8',
     this.lastConnectedAt,
   });
 
@@ -27,6 +29,8 @@ class SavedHost {
   final String passphrase;
   final List<String> tags;
   final int connectionTimeoutSeconds;
+  final bool useMosh;
+  final String moshLocale;
   final DateTime? lastConnectedAt;
 
   bool get isValid =>
@@ -57,6 +61,8 @@ class SavedHost {
     String? passphrase,
     List<String>? tags,
     int? connectionTimeoutSeconds,
+    bool? useMosh,
+    String? moshLocale,
     DateTime? lastConnectedAt,
     bool clearLastConnectedAt = false,
   }) {
@@ -73,6 +79,8 @@ class SavedHost {
       tags: tags ?? this.tags,
       connectionTimeoutSeconds:
           connectionTimeoutSeconds ?? this.connectionTimeoutSeconds,
+      useMosh: useMosh ?? this.useMosh,
+      moshLocale: moshLocale ?? this.moshLocale,
       lastConnectedAt: clearLastConnectedAt
           ? null
           : lastConnectedAt ?? this.lastConnectedAt,
@@ -92,6 +100,8 @@ class SavedHost {
       'passphrase': passphrase,
       'tags': tags,
       'connectionTimeoutSeconds': connectionTimeoutSeconds,
+      'useMosh': useMosh,
+      'moshLocale': moshLocale,
       'lastConnectedAt': lastConnectedAt?.toIso8601String(),
     };
   }
@@ -121,6 +131,10 @@ class SavedHost {
       passphrase: json['passphrase'] as String? ?? '',
       tags: tags,
       connectionTimeoutSeconds: json['connectionTimeoutSeconds'] as int? ?? 12,
+      useMosh: json['useMosh'] as bool? ?? false,
+      moshLocale: (json['moshLocale'] as String?)?.trim().isNotEmpty == true
+          ? (json['moshLocale'] as String).trim()
+          : 'C.UTF-8',
       lastConnectedAt: lastConnectedAtRaw == null
           ? null
           : DateTime.tryParse(lastConnectedAtRaw),

@@ -14,13 +14,17 @@ import 'package:conduit/features/sftp/data/dart_ssh_sftp_repository.dart';
 import 'package:conduit/features/sftp/data/file_picker_file_export.dart';
 import 'package:conduit/features/sftp/domain/file_export.dart';
 import 'package:conduit/features/sftp/domain/sftp_repository.dart';
+import 'package:conduit/features/terminal/data/connectivity_plus_network.dart';
 import 'package:conduit/features/terminal/data/dart_ssh_terminal_repository.dart';
+import 'package:conduit/features/terminal/data/mosh_terminal_repository.dart';
+import 'package:conduit/features/terminal/data/routing_terminal_repository.dart';
 import 'package:conduit/features/terminal/data/secure_host_key_verifier.dart';
 import 'package:conduit/features/terminal/domain/host_key_verifier.dart';
 import 'package:conduit/features/terminal/domain/ssh_terminal_repository.dart';
 import 'package:conduit/features/terminal/presentation/host_key_prompt_coordinator.dart';
 import 'package:conduit/features/terminal/presentation/terminal_background_keepalive.dart';
 import 'package:conduit/features/terminal/presentation/terminal_workspace_controller.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -42,8 +46,14 @@ void main() {
     secureStorage,
     promptCoordinator,
   );
-  final terminalRepository = DartSshTerminalRepository(hostKeyVerifier);
-  final workspaceController = TerminalWorkspaceController(terminalRepository);
+  final terminalRepository = RoutingTerminalRepository(
+    ssh: DartSshTerminalRepository(hostKeyVerifier),
+    mosh: MoshTerminalRepository(hostKeyVerifier),
+  );
+  final workspaceController = TerminalWorkspaceController(
+    terminalRepository,
+    ConnectivityPlusNetwork(),
+  );
   final sftpRepository = DartSshSftpRepository(hostKeyVerifier);
   const fileExport = FilePickerFileExport();
 
@@ -97,6 +107,7 @@ class _ConduitAppState extends State<ConduitApp> with WidgetsBindingObserver {
   AppLifecycleState _lifecycleState = AppLifecycleState.resumed;
   bool _keepaliveRunning = false;
   int _keepaliveSessionCount = 0;
+  bool _notificationPermissionRequested = false;
 
   @override
   void initState() {
@@ -113,6 +124,7 @@ class _ConduitAppState extends State<ConduitApp> with WidgetsBindingObserver {
 
   void _syncBackgroundKeepalive() {
     final sessionCount = widget.workspaceController.liveSessionCount;
+    _maybeRequestNotificationPermission(sessionCount);
     final shouldRun =
         sessionCount > 0 &&
         (_lifecycleState == AppLifecycleState.hidden ||
@@ -133,6 +145,19 @@ class _ConduitAppState extends State<ConduitApp> with WidgetsBindingObserver {
             _keepaliveRunning = !shouldRun;
             _keepaliveSessionCount = 0;
           }),
+    );
+  }
+
+  void _maybeRequestNotificationPermission(int sessionCount) {
+    if (_notificationPermissionRequested ||
+        sessionCount == 0 ||
+        _lifecycleState != AppLifecycleState.resumed ||
+        defaultTargetPlatform != TargetPlatform.android) {
+      return;
+    }
+    _notificationPermissionRequested = true;
+    unawaited(
+      _backgroundKeepalive.requestNotificationPermission().catchError((_) {}),
     );
   }
 

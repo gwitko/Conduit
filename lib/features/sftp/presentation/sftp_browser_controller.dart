@@ -34,6 +34,30 @@ class SftpTransfer {
   }
 }
 
+class SftpUploadFile {
+  SftpUploadFile({
+    required this.source,
+    required this.name,
+    required this.size,
+  });
+
+  SftpUploadFile.local({
+    required String localPath,
+    required String name,
+    required int size,
+  }) : this(source: () => File(localPath).openRead(), name: name, size: size);
+
+  final String name;
+  final int size;
+  final Stream<List<int>> Function() source;
+
+  Stream<Uint8List> openRead() {
+    return source().map(
+      (chunk) => chunk is Uint8List ? chunk : Uint8List.fromList(chunk),
+    );
+  }
+}
+
 class SftpBrowserController extends ChangeNotifier {
   SftpBrowserController({
     required this.host,
@@ -265,35 +289,70 @@ class SftpBrowserController extends ChangeNotifier {
   }
 
   Future<void> uploadFile(String localPath, String name, int size) async {
+    await uploadFiles([
+      SftpUploadFile.local(localPath: localPath, name: name, size: size),
+    ]);
+  }
+
+  Future<void> uploadFiles(List<SftpUploadFile> files) async {
+    if (files.isEmpty) {
+      return;
+    }
     final session = _session;
     if (session == null) {
       throw const AppFailure('Not connected.');
     }
-    _transfer = SftpTransfer(name: name, isUpload: true, done: 0, total: size);
+    if (_busy) {
+      throw const AppFailure('A transfer is already in progress.');
+    }
+    _busy = true;
     _safeNotify();
     try {
-      final stream = File(localPath).openRead().map(
-        (chunk) => chunk is Uint8List ? chunk : Uint8List.fromList(chunk),
-      );
+      for (var index = 0; index < files.length; index += 1) {
+        final file = files[index];
+        final transferName = files.length == 1
+            ? file.name
+            : '${file.name} (${index + 1}/${files.length})';
+        await _uploadFile(session, file, transferName);
+      }
+      await _load(_path);
+    } finally {
+      _busy = false;
+      _transfer = null;
+      _safeNotify();
+    }
+  }
+
+  Future<void> _uploadFile(
+    SftpSession session,
+    SftpUploadFile file,
+    String transferName,
+  ) async {
+    _transfer = SftpTransfer(
+      name: transferName,
+      isUpload: true,
+      done: 0,
+      total: file.size,
+    );
+    _safeNotify();
+    try {
       await session.write(
-        _join(_path, name),
-        stream,
-        size,
+        _join(_path, file.name),
+        file.openRead(),
+        file.size,
         onProgress: (sent) {
           _transfer = SftpTransfer(
-            name: name,
+            name: transferName,
             isUpload: true,
             done: sent,
-            total: size,
+            total: file.size,
           );
           _safeNotify();
         },
       );
-    } finally {
-      _transfer = null;
-      _safeNotify();
+    } catch (error) {
+      throw AppFailure('Could not upload ${file.name}.', error);
     }
-    await refresh();
   }
 
   Future<void> _mutate(Future<void> Function() action) async {
