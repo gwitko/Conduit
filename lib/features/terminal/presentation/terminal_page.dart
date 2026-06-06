@@ -213,22 +213,24 @@ class _TerminalSurfaceState extends State<_TerminalSurface> {
 
   @override
   Widget build(BuildContext context) {
-    return TerminalView(
-      widget.session.terminal,
-      focusNode: widget.focusNode,
-      autofocus: widget.focusNode != null,
-      deleteDetection: true,
-      keyboardType: TextInputType.visiblePassword,
-      keyboardAppearance: Brightness.dark,
-      theme: widget.palette.terminalThemeFor(widget.brightness),
-      textStyle: TerminalStyle(
-        fontFamily: widget.fontFamily,
-        fontSize: widget.fontSize,
+    return ClipRect(
+      child: TerminalView(
+        widget.session.terminal,
+        focusNode: widget.focusNode,
+        autofocus: widget.focusNode != null,
+        deleteDetection: true,
+        keyboardType: TextInputType.visiblePassword,
+        keyboardAppearance: Brightness.dark,
+        theme: widget.palette.terminalThemeFor(widget.brightness),
+        textStyle: TerminalStyle(
+          fontFamily: widget.fontFamily,
+          fontSize: widget.fontSize,
+        ),
+        padding: const EdgeInsets.fromLTRB(0, 6, 0, 4),
+        cursorType: TerminalCursorType.block,
+        alwaysShowCursor: true,
+        simulateScroll: true,
       ),
-      padding: EdgeInsets.zero,
-      cursorType: TerminalCursorType.block,
-      alwaysShowCursor: true,
-      simulateScroll: true,
     );
   }
 }

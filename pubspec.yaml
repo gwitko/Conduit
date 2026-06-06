@@ -10,9 +10,11 @@ dependencies:
   flutter:
     sdk: flutter
 
+  connectivity_plus: ^6.1.0
   cupertino_icons: ^1.0.8
   dartssh2: ^2.17.1
   xterm: ^4.0.0
+  dart_mosh: ^0.0.2
   flutter_secure_storage: ^10.3.1
   local_auth: ^3.0.1
   uuid: ^4.5.3

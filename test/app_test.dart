@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:conduit/core/presentation/system_navigation_insets.dart';
@@ -18,6 +19,8 @@ import 'package:conduit/features/sftp/presentation/sftp_browser_controller.dart'
 import 'package:conduit/features/terminal/data/secure_host_key_verifier.dart';
 import 'package:conduit/features/terminal/domain/host_key_prompt.dart';
 import 'package:conduit/features/terminal/domain/host_key_verifier.dart';
+import 'package:conduit/features/terminal/domain/network_connectivity.dart';
+import 'package:conduit/features/terminal/domain/roaming_terminal_session.dart';
 import 'package:conduit/features/terminal/domain/ssh_terminal_repository.dart';
 import 'package:conduit/features/terminal/domain/ssh_terminal_session.dart';
 import 'package:conduit/features/terminal/presentation/host_key_prompt_coordinator.dart';
@@ -169,6 +172,48 @@ void main() {
 
       expect(controller.status, TerminalConnectionStatus.disconnected);
       expect(session.closeCount, 1);
+
+      controller.dispose();
+    });
+
+    test('re-homes a roaming session when connectivity changes', () async {
+      final session = _RoamingTerminalSession();
+      final connectivity = _FakeNetworkConnectivity();
+      final controller = TerminalSessionController(
+        host: _buildHost('roam'),
+        repository: _ImmediateTerminalRepository(session),
+        connectivity: connectivity,
+      );
+
+      await controller.connect();
+      expect(controller.status, TerminalConnectionStatus.connected);
+
+      connectivity.emit();
+      await Future<void>.delayed(Duration.zero);
+      expect(session.rehomeCount, 1);
+
+      await controller.disconnect();
+      connectivity.emit();
+      await Future<void>.delayed(Duration.zero);
+      expect(session.rehomeCount, 1);
+
+      controller.dispose();
+    });
+
+    test('ignores connectivity changes for a non-roaming session', () async {
+      final session = _TrackableTerminalSession();
+      final connectivity = _FakeNetworkConnectivity();
+      final controller = TerminalSessionController(
+        host: _buildHost('ssh'),
+        repository: _ImmediateTerminalRepository(session),
+        connectivity: connectivity,
+      );
+
+      await controller.connect();
+      connectivity.emit();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(controller.status, TerminalConnectionStatus.connected);
 
       controller.dispose();
     });
@@ -564,6 +609,27 @@ void main() {
       expect(session.madeDirectories.single, '/home/user/new');
     });
 
+    test('uploads multiple files under the current path', () async {
+      final tempDir = await Directory.systemTemp.createTemp('conduit_sftp_');
+      addTearDown(() => tempDir.delete(recursive: true));
+      final first = File('${tempDir.path}/one.txt');
+      final second = File('${tempDir.path}/two.txt');
+      await first.writeAsBytes([1, 2]);
+      await second.writeAsBytes([3, 4, 5]);
+
+      await controller.connect();
+      await controller.uploadFiles([
+        SftpUploadFile.local(localPath: first.path, name: 'one.txt', size: 2),
+        SftpUploadFile.local(localPath: second.path, name: 'two.txt', size: 3),
+      ]);
+
+      expect(session.writtenFiles['/home/user/one.txt'], [1, 2]);
+      expect(session.writtenFiles['/home/user/two.txt'], [3, 4, 5]);
+      expect(session.listCalls['/home/user'], 2);
+      expect(controller.transfer, isNull);
+      expect(controller.busy, isFalse);
+    });
+
     test(
       'search filters current folder entries by name and metadata',
       () async {
@@ -800,6 +866,63 @@ class _TrackableTerminalSession implements SshTerminalSession {
   Future<void> send(List<int> data) async {}
 }
 
+class _ImmediateTerminalRepository implements SshTerminalRepository {
+  _ImmediateTerminalRepository(this._session);
+
+  final SshTerminalSession _session;
+
+  @override
+  Future<SshTerminalSession> connect(
+    SavedHost host, {
+    required int columns,
+    required int rows,
+  }) async {
+    return _session;
+  }
+}
+
+class _RoamingTerminalSession
+    implements SshTerminalSession, RoamingTerminalSession {
+  final Completer<void> _done = Completer<void>();
+  int rehomeCount = 0;
+
+  @override
+  Future<void> get done => _done.future;
+
+  @override
+  Stream<List<int>> get stderr => const Stream.empty();
+
+  @override
+  Stream<List<int>> get stdout => const Stream.empty();
+
+  @override
+  Future<void> close() async {
+    if (!_done.isCompleted) {
+      _done.complete();
+    }
+  }
+
+  @override
+  void resize(int columns, int rows, int pixelWidth, int pixelHeight) {}
+
+  @override
+  Future<void> send(List<int> data) async {}
+
+  @override
+  Future<void> rehome() async {
+    rehomeCount += 1;
+  }
+}
+
+class _FakeNetworkConnectivity implements NetworkConnectivity {
+  final StreamController<void> _controller = StreamController<void>.broadcast();
+
+  void emit() => _controller.add(null);
+
+  @override
+  Stream<void> get onNetworkChanged => _controller.stream;
+}
+
 class _StubPrompt implements HostKeyPrompt {
   _StubPrompt({required this.decision});
 
@@ -856,9 +979,12 @@ class _FakeSftpSession implements SftpSession {
   final String home;
   final Map<String, List<SftpEntry>> tree;
   final List<String> madeDirectories = [];
+  final Map<String, List<int>> writtenFiles = {};
+  final Map<String, int> listCalls = {};
 
   @override
   Future<List<SftpEntry>> list(String path) async {
+    listCalls[path] = (listCalls[path] ?? 0) + 1;
     final entries = tree[path];
     if (entries == null) {
       throw StateError('No such directory: $path');
@@ -886,7 +1012,12 @@ class _FakeSftpSession implements SftpSession {
     int length, {
     void Function(int bytesSent)? onProgress,
   }) async {
-    await data.drain<void>();
+    final bytes = <int>[];
+    await for (final chunk in data) {
+      bytes.addAll(chunk);
+      onProgress?.call(bytes.length);
+    }
+    writtenFiles[path] = bytes;
   }
 
   @override

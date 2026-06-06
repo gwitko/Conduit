@@ -102,8 +102,12 @@ class DartSshSftpSession implements SftpSession {
           SftpFileOpenMode.truncate,
     );
     try {
-      final writer = file.write(data, onProgress: onProgress);
-      await writer.done;
+      var bytesSent = 0;
+      await for (final chunk in data) {
+        await file.writeBytes(chunk, offset: bytesSent);
+        bytesSent += chunk.length;
+        onProgress?.call(bytesSent);
+      }
     } finally {
       await file.close();
     }

@@ -9,7 +9,7 @@ class ThemeController extends ChangeNotifier {
   final ThemePreferencesRepository _repository;
 
   ThemeMode _themeMode = ThemeMode.dark;
-  AppPalette _palette = AppPalette.tokyoNight;
+  AppPalette _palette = AppPalette.synthwave;
   TerminalFontOption _terminalFont = TerminalFontOption.atkynsonNerdFont;
   double _terminalFontSize = 13.5;
   List<TerminalKeyboardAction> _terminalKeyboardActions =
