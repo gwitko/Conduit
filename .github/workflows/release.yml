@@ -62,7 +62,7 @@ jobs:
 
           printf '%s' "${ANDROID_KEYSTORE_BASE64}" | base64 --decode > android/app/upload-keystore.jks
           {
-            echo "storeFile=app/upload-keystore.jks"
+            echo "storeFile=upload-keystore.jks"
             echo "storePassword=${ANDROID_STORE_PASSWORD}"
             echo "keyPassword=${ANDROID_KEY_PASSWORD}"
             echo "keyAlias=${ANDROID_KEY_ALIAS}"
