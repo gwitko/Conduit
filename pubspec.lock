@@ -93,8 +93,8 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: master
-      resolved-ref: "06e325712a246a0b4f9592315053246061943b00"
+      ref: "v0.1.0"
+      resolved-ref: "1e964a9add8c0d26bb71448677286d24f44a9504"
       url: "https://github.com/gwitko/conduit_vt.git"
     source: git
     version: "0.1.0"
@@ -150,10 +150,10 @@ packages:
     dependency: "direct main"
     description:
       name: dart_mosh
-      sha256: "39501345fc4747ed3832bf68950675006dee11ffb1afb8bc1da0db2c8b3bb662"
+      sha256: "30629e464838cd31ed63ca6e0de1c1a8fbb5282248e2e7e0977ac063ad571901"
       url: "https://pub.dev"
     source: hosted
-    version: "0.0.2"
+    version: "0.0.3"
   dartssh2:
     dependency: "direct main"
     description:

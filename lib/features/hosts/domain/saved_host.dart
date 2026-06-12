@@ -15,6 +15,7 @@ class SavedHost {
     this.connectionTimeoutSeconds = 12,
     this.useMosh = false,
     this.moshLocale = 'C.UTF-8',
+    this.predictiveEchoEnabled = true,
     this.lastConnectedAt,
   });
 
@@ -31,6 +32,7 @@ class SavedHost {
   final int connectionTimeoutSeconds;
   final bool useMosh;
   final String moshLocale;
+  final bool predictiveEchoEnabled;
   final DateTime? lastConnectedAt;
 
   bool get isValid =>
@@ -63,6 +65,7 @@ class SavedHost {
     int? connectionTimeoutSeconds,
     bool? useMosh,
     String? moshLocale,
+    bool? predictiveEchoEnabled,
     DateTime? lastConnectedAt,
     bool clearLastConnectedAt = false,
   }) {
@@ -81,6 +84,8 @@ class SavedHost {
           connectionTimeoutSeconds ?? this.connectionTimeoutSeconds,
       useMosh: useMosh ?? this.useMosh,
       moshLocale: moshLocale ?? this.moshLocale,
+      predictiveEchoEnabled:
+          predictiveEchoEnabled ?? this.predictiveEchoEnabled,
       lastConnectedAt: clearLastConnectedAt
           ? null
           : lastConnectedAt ?? this.lastConnectedAt,
@@ -102,6 +107,7 @@ class SavedHost {
       'connectionTimeoutSeconds': connectionTimeoutSeconds,
       'useMosh': useMosh,
       'moshLocale': moshLocale,
+      'predictiveEchoEnabled': predictiveEchoEnabled,
       'lastConnectedAt': lastConnectedAt?.toIso8601String(),
     };
   }
@@ -135,6 +141,7 @@ class SavedHost {
       moshLocale: (json['moshLocale'] as String?)?.trim().isNotEmpty == true
           ? (json['moshLocale'] as String).trim()
           : 'C.UTF-8',
+      predictiveEchoEnabled: json['predictiveEchoEnabled'] as bool? ?? true,
       lastConnectedAt: lastConnectedAtRaw == null
           ? null
           : DateTime.tryParse(lastConnectedAtRaw),

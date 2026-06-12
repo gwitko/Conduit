@@ -24,7 +24,8 @@ class AppLockController extends ChangeNotifier {
     _message = null;
     notifyListeners();
 
-    if (!await _authenticator.canAuthenticate()) {
+    final canAuthenticate = await _canAuthenticate();
+    if (!canAuthenticate) {
       _status = AppLockStatus.unavailable;
       _message =
           'Device authentication is not configured. '
@@ -33,7 +34,7 @@ class AppLockController extends ChangeNotifier {
       return;
     }
 
-    final result = await _authenticator.authenticate();
+    final result = await _authenticate();
     switch (result) {
       case AppAuthenticationResult.success:
         _status = AppLockStatus.unlocked;
@@ -48,6 +49,22 @@ class AppLockController extends ChangeNotifier {
             'Set a screen lock for better protection.';
     }
     notifyListeners();
+  }
+
+  Future<bool> _canAuthenticate() async {
+    try {
+      return await _authenticator.canAuthenticate();
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<AppAuthenticationResult> _authenticate() async {
+    try {
+      return await _authenticator.authenticate();
+    } catch (_) {
+      return AppAuthenticationResult.cancelled;
+    }
   }
 
   void continueWithoutAuth() {

@@ -4,6 +4,7 @@ class TerminalPrediction {
     required this.column,
     required this.character,
     required this.inputNum,
+    this.erase = false,
   });
 
   final int row;
@@ -13,26 +14,23 @@ class TerminalPrediction {
   final String character;
 
   final int inputNum;
+
+  final bool erase;
 }
 
 class PredictiveEcho {
-  PredictiveEcho({this.displayThreshold = const Duration(milliseconds: 60)});
-
-  final Duration displayThreshold;
-
   final List<TerminalPrediction> _predictions = <TerminalPrediction>[];
-  Duration? _srtt;
   int? _anchorRow;
   int? _nextColumn;
+  int? _lineStartRow;
+  int? _lineStartColumn;
   bool _frozen = false;
 
-  void updateSrtt(Duration? srtt) {
-    _srtt = srtt;
-  }
+  void updateSrtt(Duration? _) {}
 
   void recordInput(
     String data, {
-    required int inputNum,
+    int inputNum = 0,
     required int cursorRow,
     required int cursorColumn,
     required int viewWidth,
@@ -43,14 +41,25 @@ class PredictiveEcho {
       return;
     }
 
+    if (_frozen && _canStartAfterFreeze(data)) {
+      reset();
+    }
+
     for (final rune in data.runes) {
+      _anchorRow ??= cursorRow;
+      _nextColumn ??= cursorColumn;
+      _lineStartRow ??= cursorRow;
+      _lineStartColumn ??= cursorColumn;
+
+      if (_isBackspace(rune)) {
+        if (!_recordBackspace(inputNum)) return;
+        continue;
+      }
+
       if (!_isPrintable(rune) || _frozen) {
         _freeze();
         return;
       }
-
-      _anchorRow ??= cursorRow;
-      _nextColumn ??= cursorColumn;
 
       if (_nextColumn! >= viewWidth) {
         _freeze();
@@ -69,8 +78,10 @@ class PredictiveEcho {
     }
   }
 
-  void recordEchoAck(int ackNum) {
-    _predictions.removeWhere((p) => p.inputNum <= ackNum);
+  void recordEchoAck(int _) {}
+
+  void removeWhere(bool Function(TerminalPrediction prediction) test) {
+    _predictions.removeWhere(test);
     if (_predictions.isEmpty) {
       _anchorRow = null;
       _nextColumn = null;
@@ -82,14 +93,12 @@ class PredictiveEcho {
     _predictions.clear();
     _anchorRow = null;
     _nextColumn = null;
+    _lineStartRow = null;
+    _lineStartColumn = null;
     _frozen = false;
   }
 
   List<TerminalPrediction> get overlay {
-    final srtt = _srtt;
-    if (srtt == null || srtt < displayThreshold) {
-      return const <TerminalPrediction>[];
-    }
     return List<TerminalPrediction>.unmodifiable(_predictions);
   }
 
@@ -97,6 +106,66 @@ class PredictiveEcho {
 
   void _freeze() {
     _frozen = true;
+    _lineStartRow = null;
+    _lineStartColumn = null;
+  }
+
+  bool _canStartAfterFreeze(String data) {
+    if (data.isEmpty) {
+      return false;
+    }
+    final first = data.runes.first;
+    return _isPrintable(first) || _isBackspace(first);
+  }
+
+  bool _recordBackspace(int inputNum) {
+    if (_frozen) {
+      return false;
+    }
+    final nextColumn = _nextColumn;
+    final anchorRow = _anchorRow;
+    final lineStartColumn = _lineStartColumn;
+    if (nextColumn == null ||
+        anchorRow == null ||
+        lineStartColumn == null ||
+        nextColumn <= 0) {
+      _freeze();
+      return false;
+    }
+
+    final erasedColumn = nextColumn - 1;
+    if (erasedColumn < lineStartColumn || anchorRow != _lineStartRow) {
+      _freeze();
+      return false;
+    }
+    final pendingIndex = _predictions.lastIndexWhere(
+      (prediction) =>
+          prediction.row == anchorRow && prediction.column == erasedColumn,
+    );
+    if (pendingIndex >= 0) {
+      _predictions.removeAt(pendingIndex);
+    } else {
+      _predictions.add(
+        TerminalPrediction(
+          row: anchorRow,
+          column: erasedColumn,
+          character: '',
+          inputNum: inputNum,
+          erase: true,
+        ),
+      );
+    }
+
+    _nextColumn = erasedColumn;
+    if (_predictions.isEmpty) {
+      _anchorRow = null;
+      _nextColumn = null;
+    }
+    return true;
+  }
+
+  static bool _isBackspace(int rune) {
+    return rune == 0x08 || rune == 0x7f;
   }
 
   static bool _isPrintable(int rune) {

@@ -33,6 +33,7 @@ class _HostFormPageState extends State<HostFormPage> {
   bool _showPassword = false;
   bool _showPassphrase = false;
   bool _useMosh = false;
+  bool _predictiveEchoEnabled = true;
   List<String> _tags = const [];
 
   bool get _isEditing => widget.host != null;
@@ -54,6 +55,7 @@ class _HostFormPageState extends State<HostFormPage> {
       _authMethod = host.authMethod;
       _useMosh = host.useMosh;
       _moshLocaleController.text = host.moshLocale;
+      _predictiveEchoEnabled = host.predictiveEchoEnabled;
     }
   }
 
@@ -317,6 +319,17 @@ class _HostFormPageState extends State<HostFormPage> {
                     enableSuggestions: false,
                     textInputAction: TextInputAction.next,
                   ),
+                  const SizedBox(height: 4),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Predictive echo'),
+                    subtitle: const Text(
+                      'Show local input previews on laggy Mosh sessions.',
+                    ),
+                    value: _predictiveEchoEnabled,
+                    onChanged: (value) =>
+                        setState(() => _predictiveEchoEnabled = value),
+                  ),
                 ],
               ],
             ),
@@ -405,6 +418,7 @@ class _HostFormPageState extends State<HostFormPage> {
       moshLocale: _moshLocaleController.text.trim().isEmpty
           ? 'C.UTF-8'
           : _moshLocaleController.text.trim(),
+      predictiveEchoEnabled: _predictiveEchoEnabled,
       lastConnectedAt: currentHost?.lastConnectedAt,
     );
 

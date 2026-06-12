@@ -27,8 +27,10 @@ class TerminalSessionController extends ChangeNotifier {
     required this.host,
     required this.repository,
     this.connectivity,
+    bool predictiveEchoEnabled = true,
   }) : keyboard = TerminalKeyboardController(defaultInputHandler),
        terminal = Terminal(maxLines: 10000) {
+    _predictiveEchoEnabled = predictiveEchoEnabled;
     _configureTerminal();
   }
 
@@ -39,6 +41,7 @@ class TerminalSessionController extends ChangeNotifier {
   final Terminal terminal;
   final _outputFilter = TerminalStringSequenceFilter();
   final _predictiveEcho = PredictiveEcho();
+  final _terminalPaintNotifier = ChangeNotifier();
 
   TerminalConnectionStatus _status = TerminalConnectionStatus.idle;
   SshTerminalSession? _session;
@@ -55,21 +58,43 @@ class TerminalSessionController extends ChangeNotifier {
   int _pendingRows = 0;
   bool _disconnecting = false;
   bool _disposed = false;
+  bool _predictiveEchoEnabled = true;
   int _connectionGeneration = 0;
 
   TerminalConnectionStatus get status => _status;
   String get title => _title.isEmpty ? host.name : _title;
   bool get isConnected => _status == TerminalConnectionStatus.connected;
+  bool get predictiveEchoEnabled => _predictiveEchoEnabled;
+  Listenable get terminalPaintListenable => _terminalPaintNotifier;
 
-  List<TerminalCellOverlay> get overlays => [
-    for (final prediction in _predictiveEcho.overlay)
-      TerminalCellOverlay(
-        row: prediction.row,
-        column: prediction.column,
-        text: prediction.character,
-        opacity: 0.62,
-      ),
-  ];
+  List<TerminalCellOverlay> get overlays {
+    if (!_predictiveEchoEnabled) {
+      return const <TerminalCellOverlay>[];
+    }
+
+    return [
+      for (final prediction in _predictiveEcho.overlay)
+        TerminalCellOverlay(
+          row: prediction.row,
+          column: prediction.column,
+          text: prediction.character,
+          opacity: prediction.erase ? 1 : 0.62,
+          erase: prediction.erase,
+        ),
+    ];
+  }
+
+  set predictiveEchoEnabled(bool enabled) {
+    if (_predictiveEchoEnabled == enabled) {
+      return;
+    }
+    _predictiveEchoEnabled = enabled;
+    if (!enabled) {
+      _predictiveEcho.reset();
+    }
+    _notifyTerminalPaint();
+    notifyListeners();
+  }
 
   bool get shouldConnect =>
       !_disconnecting &&
@@ -125,13 +150,13 @@ class TerminalSessionController extends ChangeNotifier {
           .cast<List<int>>()
           .transform(const Utf8Decoder(allowMalformed: true))
           .listen(
-            (chunk) => terminal.write(_outputFilter.process(chunk)),
+            (chunk) => _writeTerminalOutput(_outputFilter.process(chunk)),
             onError: _handleStreamError,
           );
       _stderrSubscription = session.stderr
           .cast<List<int>>()
           .transform(const Utf8Decoder(allowMalformed: true))
-          .listen(terminal.write, onError: _handleStreamError);
+          .listen(_writeTerminalOutput, onError: _handleStreamError);
       _doneSubscription = session.done.asStream().listen((_) {
         if (_status == TerminalConnectionStatus.connected) {
           _status = TerminalConnectionStatus.disconnected;
@@ -152,7 +177,7 @@ class TerminalSessionController extends ChangeNotifier {
           _predictiveEcho
             ..updateSrtt(predictiveSession.smoothedRtt)
             ..recordEchoAck(ackNum);
-          notifyListeners();
+          _notifyTerminalPaint();
         }, onError: _handleStreamError);
       }
 
@@ -255,7 +280,7 @@ class TerminalSessionController extends ChangeNotifier {
     }
 
     final bytes = utf8.encode(data);
-    if (session is PredictiveTerminalSession) {
+    if (_predictiveEchoEnabled && session is PredictiveTerminalSession) {
       final predictiveSession = session as PredictiveTerminalSession;
       try {
         final inputNum = predictiveSession.sendWithInputState(bytes);
@@ -269,7 +294,7 @@ class TerminalSessionController extends ChangeNotifier {
             viewWidth: terminal.viewWidth,
             altScreen: terminal.isUsingAltBuffer,
           );
-        notifyListeners();
+        _notifyTerminalPaint();
       } catch (error, stackTrace) {
         _handleStreamError(error, stackTrace);
       }
@@ -277,6 +302,51 @@ class TerminalSessionController extends ChangeNotifier {
     }
 
     unawaited(session.send(bytes).catchError(_handleStreamError));
+  }
+
+  void _writeTerminalOutput(String data) {
+    terminal.write(data);
+    if (_predictiveEcho.hasPredictions) {
+      _predictiveEcho.removeWhere(_isConfirmedPrediction);
+      _notifyTerminalPaint();
+    }
+  }
+
+  void _notifyTerminalPaint() {
+    _terminalPaintNotifier.notifyListeners();
+  }
+
+  bool _isConfirmedPrediction(TerminalPrediction prediction) {
+    if (prediction.erase) {
+      return !_hasTerminalContentAt(prediction.row, prediction.column);
+    }
+    return _terminalCharacterAt(prediction.row, prediction.column) ==
+            prediction.character ||
+        _terminalCursorPassed(prediction.row, prediction.column);
+  }
+
+  bool _hasTerminalContentAt(int row, int column) {
+    return _terminalCharacterAt(row, column) != null;
+  }
+
+  String? _terminalCharacterAt(int row, int column) {
+    if (row < 0 || row >= terminal.buffer.lines.length) {
+      return null;
+    }
+    final line = terminal.buffer.lines[row];
+    if (column < 0 || column >= line.length) {
+      return null;
+    }
+    final codePoint = line.getCodePoint(column);
+    return codePoint == 0 ? null : String.fromCharCode(codePoint);
+  }
+
+  bool _terminalCursorPassed(int row, int column) {
+    final cursorRow = terminal.absoluteCursorRow;
+    if (row < cursorRow) {
+      return true;
+    }
+    return row == cursorRow && column < terminal.cursorColumn;
   }
 
   void _rehome() {
@@ -334,6 +404,7 @@ class TerminalSessionController extends ChangeNotifier {
       unawaited(session.close());
     }
     keyboard.dispose();
+    _terminalPaintNotifier.dispose();
     super.dispose();
   }
 }

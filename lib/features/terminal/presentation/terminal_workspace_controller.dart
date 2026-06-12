@@ -50,6 +50,7 @@ class TerminalWorkspaceController extends ChangeNotifier {
       host: host,
       repository: _repository,
       connectivity: _connectivity,
+      predictiveEchoEnabled: host.predictiveEchoEnabled,
     );
     session.addListener(notifyListeners);
     _sessions.add(session);

@@ -141,6 +141,8 @@ class _TerminalPageState extends State<TerminalPage> {
                                     .fontFamily,
                                 fontSize:
                                     widget.themeController.terminalFontSize,
+                                predictiveEchoEnabled:
+                                    session.host.predictiveEchoEnabled,
                                 focusNode: session == activeSession
                                     ? _focusNode
                                     : null,
@@ -176,6 +178,7 @@ class _TerminalSurface extends StatefulWidget {
     required this.brightness,
     required this.fontFamily,
     required this.fontSize,
+    required this.predictiveEchoEnabled,
     required this.focusNode,
     super.key,
   });
@@ -185,6 +188,7 @@ class _TerminalSurface extends StatefulWidget {
   final Brightness brightness;
   final String fontFamily;
   final double fontSize;
+  final bool predictiveEchoEnabled;
   final FocusNode? focusNode;
 
   @override
@@ -195,12 +199,17 @@ class _TerminalSurfaceState extends State<_TerminalSurface> {
   @override
   void initState() {
     super.initState();
+    widget.session.predictiveEchoEnabled = widget.predictiveEchoEnabled;
     WidgetsBinding.instance.addPostFrameCallback((_) => _connectIfNeeded());
   }
 
   @override
   void didUpdateWidget(covariant _TerminalSurface oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.predictiveEchoEnabled != widget.predictiveEchoEnabled ||
+        oldWidget.session != widget.session) {
+      widget.session.predictiveEchoEnabled = widget.predictiveEchoEnabled;
+    }
     if (oldWidget.session != widget.session) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _connectIfNeeded());
     }
@@ -214,23 +223,31 @@ class _TerminalSurfaceState extends State<_TerminalSurface> {
   @override
   Widget build(BuildContext context) {
     return ClipRect(
-      child: TerminalView(
-        widget.session.terminal,
-        focusNode: widget.focusNode,
-        autofocus: widget.focusNode != null,
-        deleteDetection: true,
-        keyboardType: TextInputType.visiblePassword,
-        keyboardAppearance: Brightness.dark,
-        theme: widget.palette.terminalThemeFor(widget.brightness),
-        overlays: widget.session.overlays,
-        textStyle: TerminalStyle(
-          fontFamily: widget.fontFamily,
-          fontSize: widget.fontSize,
-        ),
-        padding: const EdgeInsets.fromLTRB(0, 6, 0, 4),
-        cursorType: TerminalCursorType.block,
-        alwaysShowCursor: true,
-        simulateScroll: true,
+      child: ListenableBuilder(
+        listenable: widget.session.terminalPaintListenable,
+        builder: (context, _) {
+          final overlays = widget.session.overlays;
+          return TerminalView(
+            widget.session.terminal,
+            focusNode: widget.focusNode,
+            autofocus: widget.focusNode != null,
+            deleteDetection: true,
+            keyboardType: TextInputType.visiblePassword,
+            keyboardAppearance: Brightness.dark,
+            theme: widget.palette.terminalThemeFor(widget.brightness),
+            overlays: overlays,
+            textStyle: TerminalStyle(
+              fontFamily: widget.fontFamily,
+              fontSize: widget.fontSize,
+            ),
+            padding: const EdgeInsets.fromLTRB(0, 6, 0, 4),
+            cursorType: overlays.isEmpty
+                ? TerminalCursorType.block
+                : TerminalCursorType.verticalBar,
+            alwaysShowCursor: true,
+            simulateScroll: true,
+          );
+        },
       ),
     );
   }
