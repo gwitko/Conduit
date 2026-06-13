@@ -3,7 +3,9 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:conduit/core/platform/platform_support.dart';
 import 'package:conduit/core/presentation/system_navigation_insets.dart';
+import 'package:conduit/core/storage/conduit_secure_storage.dart';
 import 'package:conduit/core/theme/app_palette.dart';
 import 'package:conduit/core/theme/theme_controller.dart';
 import 'package:conduit/core/theme/theme_preferences_repository.dart';
@@ -31,10 +33,44 @@ import 'package:conduit/features/terminal/presentation/terminal_workspace_contro
 import 'package:conduit/main.dart';
 import 'package:conduit_vt/conduit_vt.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  group('platform support', () {
+    test('shows the terminal key row only on mobile platforms', () {
+      expect(shouldShowTerminalKeyboardBarFor(TargetPlatform.android), isTrue);
+      expect(shouldShowTerminalKeyboardBarFor(TargetPlatform.iOS), isTrue);
+      expect(shouldShowTerminalKeyboardBarFor(TargetPlatform.linux), isFalse);
+      expect(shouldShowTerminalKeyboardBarFor(TargetPlatform.macOS), isFalse);
+      expect(shouldShowTerminalKeyboardBarFor(TargetPlatform.windows), isFalse);
+    });
+  });
+
+  group('LinuxFallbackSecureStorage', () {
+    test(
+      'falls back to a local file when the Linux keyring is locked',
+      () async {
+        final directory = await Directory.systemTemp.createTemp(
+          'conduit_storage_test_',
+        );
+        addTearDown(() => directory.delete(recursive: true));
+        final storage = LinuxFallbackSecureStorage(
+          _LockedKeyringStorage(),
+          fallbackFile: File('${directory.path}/storage.json'),
+        );
+
+        await storage.write(key: 'host', value: 'example.com');
+
+        expect(await storage.read(key: 'host'), 'example.com');
+
+        await storage.delete(key: 'host');
+        expect(await storage.read(key: 'host'), isNull);
+      },
+    );
+  });
+
   group('system navigation insets', () {
     test('keeps Android gesture navigation edge-to-edge', () {
       expect(
@@ -624,6 +660,25 @@ void main() {
   });
 
   group('AppLockController', () {
+    test(
+      'disabled app lock starts unlocked and ignores lock requests',
+      () async {
+        final controller = AppLockController(
+          _AlwaysAuthenticates(),
+          enabled: false,
+        );
+
+        expect(controller.isEnabled, isFalse);
+        expect(controller.isUnlocked, isTrue);
+
+        controller.lock();
+        expect(controller.isUnlocked, isTrue);
+
+        await controller.unlock();
+        expect(controller.isUnlocked, isTrue);
+      },
+    );
+
     test('unavailable device shows continue-anyway path', () async {
       final controller = AppLockController(_UnavailableAuthenticator());
       await controller.unlock();
@@ -1311,5 +1366,34 @@ class _InMemorySecureStorage extends FlutterSecureStorage {
     } else {
       _store[key] = value;
     }
+  }
+}
+
+class _LockedKeyringStorage extends FlutterSecureStorage {
+  @override
+  Future<String?> read({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
+    throw PlatformException(code: 'KeyringLocked');
+  }
+
+  @override
+  Future<void> write({
+    required String key,
+    required String? value,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
+    throw PlatformException(code: 'KeyringLocked');
   }
 }

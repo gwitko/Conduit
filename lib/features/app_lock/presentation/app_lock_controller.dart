@@ -4,18 +4,31 @@ import 'package:flutter/foundation.dart';
 enum AppLockStatus { locked, checking, unlocked, unavailable }
 
 class AppLockController extends ChangeNotifier {
-  AppLockController(this._authenticator);
+  AppLockController(this._authenticator, {bool enabled = true})
+    : _enabled = enabled,
+      _status = enabled ? AppLockStatus.locked : AppLockStatus.unlocked;
 
   final AppAuthenticator _authenticator;
+  final bool _enabled;
 
-  AppLockStatus _status = AppLockStatus.locked;
+  AppLockStatus _status;
   String? _message;
 
+  bool get isEnabled => _enabled;
   AppLockStatus get status => _status;
   String? get message => _message;
   bool get isUnlocked => _status == AppLockStatus.unlocked;
 
   Future<void> unlock() async {
+    if (!_enabled) {
+      if (_status != AppLockStatus.unlocked) {
+        _status = AppLockStatus.unlocked;
+        _message = null;
+        notifyListeners();
+      }
+      return;
+    }
+
     if (_status == AppLockStatus.checking) {
       return;
     }
@@ -76,6 +89,10 @@ class AppLockController extends ChangeNotifier {
   }
 
   void lock() {
+    if (!_enabled) {
+      return;
+    }
+
     _status = AppLockStatus.locked;
     _message = null;
     notifyListeners();

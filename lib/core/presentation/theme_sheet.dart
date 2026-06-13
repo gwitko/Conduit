@@ -1,3 +1,4 @@
+import 'package:conduit/core/platform/platform_support.dart';
 import 'package:conduit/core/presentation/conduit_brand.dart';
 import 'package:conduit/core/presentation/system_navigation_insets.dart';
 import 'package:conduit/core/theme/app_theme.dart';
@@ -215,38 +216,40 @@ class _TerminalAppearanceControls extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-          decoration: BoxDecoration(
-            color: colorScheme.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: colorScheme.outlineVariant),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.keyboard_command_key_rounded, size: 18),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text('Key row', style: theme.textTheme.labelLarge),
-              ),
-              Text(
-                '${controller.terminalKeyboardActions.length}',
-                style: theme.textTheme.labelLarge?.copyWith(
-                  color: colorScheme.primary,
-                  fontWeight: FontWeight.w800,
+        if (shouldShowTerminalKeyboardBar) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+            decoration: BoxDecoration(
+              color: colorScheme.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: colorScheme.outlineVariant),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.keyboard_command_key_rounded, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text('Key row', style: theme.textTheme.labelLarge),
                 ),
-              ),
-              const SizedBox(width: 10),
-              OutlinedButton.icon(
-                onPressed: () =>
-                    _showKeyboardActionsEditor(context, controller),
-                icon: const Icon(Icons.tune_rounded, size: 17),
-                label: const Text('Edit'),
-              ),
-            ],
+                Text(
+                  '${controller.terminalKeyboardActions.length}',
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                OutlinedButton.icon(
+                  onPressed: () =>
+                      _showKeyboardActionsEditor(context, controller),
+                  icon: const Icon(Icons.tune_rounded, size: 17),
+                  label: const Text('Edit'),
+                ),
+              ],
+            ),
           ),
-        ),
+        ],
       ],
     );
   }

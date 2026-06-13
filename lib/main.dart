@@ -1,7 +1,9 @@
 import 'dart:async';
 
+import 'package:conduit/core/platform/platform_support.dart';
 import 'package:conduit/core/theme/app_theme.dart';
 import 'package:conduit/core/presentation/system_navigation_insets.dart';
+import 'package:conduit/core/storage/conduit_secure_storage.dart';
 import 'package:conduit/core/theme/theme_controller.dart';
 import 'package:conduit/core/theme/theme_preferences_repository.dart';
 import 'package:conduit/features/app_lock/data/local_app_authenticator.dart';
@@ -27,19 +29,21 @@ import 'package:conduit/features/terminal/presentation/terminal_workspace_contro
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
 
-  const secureStorage = FlutterSecureStorage();
+  final secureStorage = createConduitSecureStorage();
   final themeController = ThemeController(
-    const ThemePreferencesRepository(secureStorage),
+    ThemePreferencesRepository(secureStorage),
   );
-  final lockController = AppLockController(LocalAppAuthenticator());
+  final lockController = AppLockController(
+    LocalAppAuthenticator(),
+    enabled: !isLinuxDesktop,
+  );
   final hostsController = HostsController(
-    const SecureSavedHostsRepository(secureStorage),
+    SecureSavedHostsRepository(secureStorage),
   );
   final promptCoordinator = HostKeyPromptCoordinator();
   final hostKeyVerifier = SecureHostKeyVerifier(

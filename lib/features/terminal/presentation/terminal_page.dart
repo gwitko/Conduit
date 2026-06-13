@@ -1,3 +1,4 @@
+import 'package:conduit/core/platform/platform_support.dart';
 import 'package:conduit/core/presentation/conduit_brand.dart';
 import 'package:conduit/core/presentation/system_navigation_insets.dart';
 import 'package:conduit/core/theme/app_palette.dart';
@@ -151,15 +152,16 @@ class _TerminalPageState extends State<TerminalPage> {
                         ),
                       ),
                     ),
-                    TerminalKeyboardBar(
-                      controller: activeSession,
-                      focusNode: _focusNode,
-                      palette: palette,
-                      brightness: brightness,
-                      actions: widget.themeController.terminalKeyboardActions,
-                      fullscreen: _fullscreen,
-                      onToggleFullscreen: _toggleFullscreen,
-                    ),
+                    if (shouldShowTerminalKeyboardBar)
+                      TerminalKeyboardBar(
+                        controller: activeSession,
+                        focusNode: _focusNode,
+                        palette: palette,
+                        brightness: brightness,
+                        actions: widget.themeController.terminalKeyboardActions,
+                        fullscreen: _fullscreen,
+                        onToggleFullscreen: _toggleFullscreen,
+                      ),
                   ],
                 ),
               );
