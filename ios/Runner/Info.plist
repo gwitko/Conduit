@@ -15,7 +15,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>conduit</string>
+	<string>Conduit</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Conduit connects to computers you choose over SSH.</string>
 	<key>NSFaceIDUsageDescription</key>
