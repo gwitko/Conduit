@@ -132,7 +132,7 @@ class _HostsPageState extends State<HostsPage> {
                           controller: widget.themeController,
                         ),
                         onTrustedKeys: _openTrustedKeys,
-                        onLock: _lock,
+                        onLock: widget.lockController.isEnabled ? _lock : null,
                         onOpenSessions: widget.workspaceController.hasSessions
                             ? _openTerminalWorkspace
                             : null,
@@ -447,13 +447,14 @@ class _Hero extends StatelessWidget {
   final int activeSessionCount;
   final VoidCallback onAppearance;
   final VoidCallback onTrustedKeys;
-  final VoidCallback onLock;
+  final VoidCallback? onLock;
   final VoidCallback? onOpenSessions;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final onLock = this.onLock;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 10, 18, 18),
@@ -476,12 +477,14 @@ class _Hero extends StatelessWidget {
                 icon: Icons.palette_outlined,
                 onPressed: onAppearance,
               ),
-              const SizedBox(width: 8),
-              _GhostIconButton(
-                tooltip: 'Lock',
-                icon: Icons.lock_outline,
-                onPressed: onLock,
-              ),
+              if (onLock != null) ...[
+                const SizedBox(width: 8),
+                _GhostIconButton(
+                  tooltip: 'Lock',
+                  icon: Icons.lock_outline,
+                  onPressed: onLock,
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 20),
