@@ -1,7 +1,7 @@
 name: conduit
 description: "A minimal SSH client for Android and iOS."
 publish_to: 'none'
-version: 1.0.1+7
+version: 1.0.1+8
 
 environment:
   sdk: ^3.12.0

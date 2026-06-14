@@ -377,6 +377,27 @@ void main() {
         expect(session.sent.map(String.fromCharCodes), ['\r']);
       },
     );
+
+    test(
+      'deduplicates mixed iOS enter outputs from action and text input',
+      () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+        addTearDown(() => debugDefaultTargetPlatformOverride = null);
+
+        final session = _PredictiveTerminalSession();
+        final controller = TerminalSessionController(
+          host: _buildHost('ios-mixed-enter'),
+          repository: _ImmediateTerminalRepository(session),
+        );
+        addTearDown(controller.dispose);
+
+        await controller.connect();
+        controller.sendKey(TerminalKey.enter);
+        controller.sendText('\n');
+
+        expect(session.sent.map(String.fromCharCodes), ['\r']);
+      },
+    );
   });
 
   group('SavedHost.isValid', () {

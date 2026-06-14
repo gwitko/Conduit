@@ -329,7 +329,7 @@ class TerminalSessionController extends ChangeNotifier {
   }
 
   bool _isEnterOutput(String data) {
-    return data == '\r' || data == '\r\n';
+    return data == '\r' || data == '\n' || data == '\r\n';
   }
 
   void _writeTerminalOutput(String data) {
