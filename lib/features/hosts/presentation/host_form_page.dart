@@ -2,6 +2,7 @@ import 'package:conduit/core/presentation/conduit_brand.dart';
 import 'package:conduit/core/presentation/system_navigation_insets.dart';
 import 'package:conduit/core/theme/theme_controller.dart';
 import 'package:conduit/features/hosts/domain/saved_host.dart';
+import 'package:dartssh2/dartssh2.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
@@ -181,22 +182,9 @@ class _HostFormPageState extends State<HostFormPage> {
               title: 'Authentication',
               caption: 'Credentials are stored in platform secure storage.',
               children: [
-                SegmentedButton<SshAuthMethod>(
-                  segments: const [
-                    ButtonSegment(
-                      value: SshAuthMethod.password,
-                      icon: Icon(Icons.password_rounded),
-                      label: Text('Password'),
-                    ),
-                    ButtonSegment(
-                      value: SshAuthMethod.privateKey,
-                      icon: Icon(Icons.vpn_key_rounded),
-                      label: Text('Key'),
-                    ),
-                  ],
-                  selected: {_authMethod},
-                  onSelectionChanged: (s) =>
-                      setState(() => _authMethod = s.single),
+                _AuthMethodPicker(
+                  value: _authMethod,
+                  onChanged: (method) => setState(() => _authMethod = method),
                 ),
                 const SizedBox(height: 14),
                 if (_authMethod == SshAuthMethod.password)
@@ -204,6 +192,7 @@ class _HostFormPageState extends State<HostFormPage> {
                     controller: _passwordController,
                     decoration: InputDecoration(
                       labelText: 'Password',
+                      helperText: 'Use this for password-only SSH login.',
                       prefixIcon: const Icon(Icons.key_outlined),
                       suffixIcon: IconButton(
                         tooltip: _showPassword ? 'Hide' : 'Show',
@@ -221,11 +210,19 @@ class _HostFormPageState extends State<HostFormPage> {
                         ? _required
                         : null,
                   ),
-                if (_authMethod == SshAuthMethod.privateKey) ...[
+                if (_authMethod == SshAuthMethod.privateKey ||
+                    _authMethod == SshAuthMethod.hardwareKey) ...[
+                  _AuthExplainer(method: _authMethod),
+                  const SizedBox(height: 12),
                   TextFormField(
                     controller: _privateKeyController,
                     decoration: InputDecoration(
-                      labelText: 'Private key (PEM)',
+                      labelText: _authMethod == SshAuthMethod.hardwareKey
+                          ? 'OpenSSH hardware key stub'
+                          : 'Private key',
+                      helperText: _authMethod == SshAuthMethod.hardwareKey
+                          ? 'Paste the id_ed25519_sk or id_ecdsa_sk file.'
+                          : 'Paste a PEM or OpenSSH private key.',
                       alignLabelWithHint: true,
                       prefixIcon: const Padding(
                         padding: EdgeInsets.only(top: 12),
@@ -243,29 +240,40 @@ class _HostFormPageState extends State<HostFormPage> {
                       fontFamily: 'monospace',
                       fontSize: 12.5,
                     ),
-                    validator: _authMethod == SshAuthMethod.privateKey
-                        ? _required
+                    validator:
+                        (_authMethod == SshAuthMethod.privateKey ||
+                            _authMethod == SshAuthMethod.hardwareKey)
+                        ? _validateKeyMaterial
                         : null,
                   ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _passphraseController,
-                    decoration: InputDecoration(
-                      labelText: 'Key passphrase',
-                      prefixIcon: const Icon(Icons.shield_outlined),
-                      suffixIcon: IconButton(
-                        tooltip: _showPassphrase ? 'Hide' : 'Show',
-                        icon: Icon(
-                          _showPassphrase
-                              ? Icons.visibility_off_outlined
-                              : Icons.visibility_outlined,
+                  if (_authMethod == SshAuthMethod.privateKey ||
+                      _authMethod == SshAuthMethod.hardwareKey) ...[
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _passphraseController,
+                      decoration: InputDecoration(
+                        labelText: _authMethod == SshAuthMethod.hardwareKey
+                            ? 'Stub passphrase'
+                            : 'Key passphrase',
+                        helperText: _authMethod == SshAuthMethod.hardwareKey
+                            ? 'Only needed if the *_sk file is encrypted.'
+                            : 'Leave empty for an unencrypted key.',
+                        prefixIcon: const Icon(Icons.shield_outlined),
+                        suffixIcon: IconButton(
+                          tooltip: _showPassphrase ? 'Hide' : 'Show',
+                          icon: Icon(
+                            _showPassphrase
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                          ),
+                          onPressed: () => setState(
+                            () => _showPassphrase = !_showPassphrase,
+                          ),
                         ),
-                        onPressed: () =>
-                            setState(() => _showPassphrase = !_showPassphrase),
                       ),
+                      obscureText: !_showPassphrase,
                     ),
-                    obscureText: !_showPassphrase,
-                  ),
+                  ],
                 ],
               ],
             ),
@@ -295,15 +303,18 @@ class _HostFormPageState extends State<HostFormPage> {
                   validator: _validateTimeout,
                 ),
                 const SizedBox(height: 4),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Connect with Mosh'),
-                  subtitle: const Text(
-                    'Roaming UDP session over SSH. Requires mosh-server on the '
-                    'host and open UDP ports.',
+                Material(
+                  color: Colors.transparent,
+                  child: SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Connect with Mosh'),
+                    subtitle: const Text(
+                      'Roaming UDP session over SSH. Requires mosh-server on the '
+                      'host and open UDP ports.',
+                    ),
+                    value: _useMosh,
+                    onChanged: (value) => setState(() => _useMosh = value),
                   ),
-                  value: _useMosh,
-                  onChanged: (value) => setState(() => _useMosh = value),
                 ),
                 if (_useMosh) ...[
                   const SizedBox(height: 16),
@@ -320,15 +331,18 @@ class _HostFormPageState extends State<HostFormPage> {
                     textInputAction: TextInputAction.next,
                   ),
                   const SizedBox(height: 16),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Predictive echo (experimental)'),
-                    subtitle: const Text(
-                      'Show local input previews on laggy Mosh sessions.',
+                  Material(
+                    color: Colors.transparent,
+                    child: SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Predictive echo (experimental)'),
+                      subtitle: const Text(
+                        'Show local input previews on laggy Mosh sessions.',
+                      ),
+                      value: _predictiveEchoEnabled,
+                      onChanged: (value) =>
+                          setState(() => _predictiveEchoEnabled = value),
                     ),
-                    value: _predictiveEchoEnabled,
-                    onChanged: (value) =>
-                        setState(() => _predictiveEchoEnabled = value),
                   ),
                 ],
               ],
@@ -411,7 +425,11 @@ class _HostFormPageState extends State<HostFormPage> {
       authMethod: _authMethod,
       password: _passwordController.text,
       privateKey: _privateKeyController.text,
-      passphrase: _passphraseController.text,
+      passphrase:
+          (_authMethod == SshAuthMethod.privateKey ||
+              _authMethod == SshAuthMethod.hardwareKey)
+          ? _passphraseController.text
+          : '',
       tags: _tags,
       connectionTimeoutSeconds: int.parse(_timeoutController.text),
       useMosh: _useMosh,
@@ -427,6 +445,33 @@ class _HostFormPageState extends State<HostFormPage> {
 
   String? _required(String? value) {
     if (value == null || value.trim().isEmpty) return 'Required';
+    return null;
+  }
+
+  String? _validateKeyMaterial(String? value) {
+    final required = _required(value);
+    if (required != null) {
+      return required;
+    }
+    try {
+      final keyPairs = SSHKeyPair.fromPem(
+        value!,
+        _passphraseController.text.isEmpty ? null : _passphraseController.text,
+      );
+      final hasSecurityKey = keyPairs.any(
+        (keyPair) => keyPair is OpenSSHSecurityKeyPair,
+      );
+      if (_authMethod == SshAuthMethod.privateKey && hasSecurityKey) {
+        return 'This is a hardware-key stub. Choose Hardware key instead.';
+      }
+      if (_authMethod == SshAuthMethod.hardwareKey && !hasSecurityKey) {
+        return 'Use id_ed25519_sk or id_ecdsa_sk, not a normal private key.';
+      }
+    } catch (_) {
+      return _authMethod == SshAuthMethod.hardwareKey
+          ? 'Paste a valid OpenSSH *_sk key stub.'
+          : 'Paste a valid PEM or OpenSSH private key.';
+    }
     return null;
   }
 
@@ -564,6 +609,195 @@ class _EditableTagChip extends StatelessWidget {
                 Icons.close_rounded,
                 size: 14,
                 color: colorScheme.primary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AuthMethodPicker extends StatelessWidget {
+  const _AuthMethodPicker({required this.value, required this.onChanged});
+
+  final SshAuthMethod value;
+  final ValueChanged<SshAuthMethod> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      spacing: 8,
+      children: [
+        _AuthMethodTile(
+          value: SshAuthMethod.password,
+          groupValue: value,
+          icon: Icons.password_rounded,
+          title: 'Password',
+          subtitle: 'Use the account password for SSH login.',
+          onChanged: onChanged,
+        ),
+        _AuthMethodTile(
+          value: SshAuthMethod.privateKey,
+          groupValue: value,
+          icon: Icons.vpn_key_rounded,
+          title: 'Private key',
+          subtitle: 'Use a PEM or OpenSSH private key.',
+          onChanged: onChanged,
+        ),
+        _AuthMethodTile(
+          value: SshAuthMethod.hardwareKey,
+          groupValue: value,
+          icon: Icons.usb_rounded,
+          title: 'Hardware key',
+          subtitle: 'Use an OpenSSH *_sk stub with USB or NFC.',
+          onChanged: onChanged,
+        ),
+      ],
+    );
+  }
+}
+
+class _AuthMethodTile extends StatelessWidget {
+  const _AuthMethodTile({
+    required this.value,
+    required this.groupValue,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onChanged,
+  });
+
+  final SshAuthMethod value;
+  final SshAuthMethod groupValue;
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final ValueChanged<SshAuthMethod> onChanged;
+
+  bool get _selected => value == groupValue;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () => onChanged(value),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 140),
+          padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
+          decoration: BoxDecoration(
+            color: _selected
+                ? Color.alphaBlend(
+                    colorScheme.primary.withValues(alpha: 0.12),
+                    colorScheme.surface,
+                  )
+                : colorScheme.surface,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: _selected
+                  ? colorScheme.primary
+                  : colorScheme.outlineVariant,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                size: 20,
+                color: _selected
+                    ? colorScheme.primary
+                    : colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: _selected
+                            ? colorScheme.primary
+                            : colorScheme.onSurface,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        height: 1.15,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(
+                _selected
+                    ? Icons.radio_button_checked_rounded
+                    : Icons.radio_button_unchecked_rounded,
+                size: 20,
+                color: _selected
+                    ? colorScheme.primary
+                    : colorScheme.onSurfaceVariant,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AuthExplainer extends StatelessWidget {
+  const _AuthExplainer({required this.method});
+
+  final SshAuthMethod method;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final hardwareKey = method == SshAuthMethod.hardwareKey;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Color.alphaBlend(
+          colorScheme.primary.withValues(alpha: 0.08),
+          colorScheme.surface,
+        ),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: colorScheme.outlineVariant),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            hardwareKey ? Icons.usb_rounded : Icons.vpn_key_outlined,
+            size: 18,
+            color: colorScheme.primary,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              hardwareKey
+                  ? 'Use the OpenSSH *_sk private key stub from your computer. '
+                        'Conduit stores the stub, then asks your security key '
+                        'to sign over USB or NFC when you connect.'
+                  : 'Use a normal SSH private key. If the key is encrypted, '
+                        'enter its passphrase below.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+                height: 1.25,
               ),
             ),
           ),

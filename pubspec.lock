@@ -41,6 +41,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.2"
+  cbor:
+    dependency: "direct main"
+    description:
+      name: cbor
+      sha256: "2c5c37650f0a2d25149f03e748ab7b2857787bde338f95fe947738b80d713da2"
+      url: "https://pub.dev"
+    source: hosted
+    version: "6.5.1"
   characters:
     dependency: transitive
     description:
@@ -131,13 +139,21 @@ packages:
     source: hosted
     version: "0.3.5+2"
   crypto:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: crypto
       sha256: c8ea0233063ba03258fbcf2ca4d6dadfefe14f02fab57702265467a19f27fadf
       url: "https://pub.dev"
     source: hosted
     version: "3.0.7"
+  cryptography:
+    dependency: transitive
+    description:
+      name: cryptography
+      sha256: "3eda3029d34ec9095a27a198ac9785630fe525c0eb6a49f3d575272f8e792ef0"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.9.0"
   cupertino_icons:
     dependency: "direct main"
     description:
@@ -157,11 +173,10 @@ packages:
   dartssh2:
     dependency: "direct main"
     description:
-      name: dartssh2
-      sha256: c139babed0d6851449100010639115e1ed88decf0db7eb714ce13935c7eb590c
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.17.1"
+      path: "../dartssh2_conduit"
+      relative: true
+    source: path
+    version: "2.18.0"
   dbus:
     dependency: transitive
     description:
@@ -170,6 +185,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.7.12"
+  elliptic:
+    dependency: transitive
+    description:
+      name: elliptic
+      sha256: "67931d408faa353bdebac9f7a1df0c3f6f828f4e8439cdf084573cd1601a2f4b"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.3.12"
   equatable:
     dependency: transitive
     description:
@@ -194,6 +217,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.2.0"
+  fido2:
+    dependency: "direct main"
+    description:
+      name: fido2
+      sha256: "8396aaae66d226e4f4c0bc01baf4af906178d90b8ca2ec8fb05248a1a0556e7c"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.1.0"
   file_picker:
     dependency: "direct main"
     description:
@@ -231,6 +262,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.0.0"
+  flutter_nfc_kit:
+    dependency: "direct main"
+    description:
+      name: flutter_nfc_kit
+      sha256: a2b324785173930f1b5afac8b190637d612593b994ecfd0a5334b72a841b9298
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.6.2"
   flutter_plugin_android_lifecycle:
     dependency: transitive
     description:
@@ -297,6 +336,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  hex:
+    dependency: transitive
+    description:
+      name: hex
+      sha256: "4e7cd54e4b59ba026432a6be2dd9d96e4c5205725194997193bf871703b82c4a"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.2.0"
   hooks:
     dependency: transitive
     description:
@@ -449,6 +496,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.18.0"
+  ndef:
+    dependency: transitive
+    description:
+      name: ndef
+      sha256: "198ba3798e80cea381648569d84059dbba64cd140079fb7b0d9c3f1e0f5973f3"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.4.0"
   nm:
     dependency: transitive
     description:
@@ -662,6 +717,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.0"
+  universal_platform:
+    dependency: transitive
+    description:
+      name: universal_platform
+      sha256: "64e16458a0ea9b99260ceb5467a214c1f298d647c659af1bff6d3bf82536b1ec"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.1.0"
   uuid:
     dependency: "direct main"
     description:

@@ -1,4 +1,4 @@
-enum SshAuthMethod { password, privateKey }
+enum SshAuthMethod { password, privateKey, hardwareKey }
 
 class SavedHost {
   const SavedHost({
@@ -47,6 +47,7 @@ class SavedHost {
       switch (authMethod) {
         SshAuthMethod.password => password.isNotEmpty,
         SshAuthMethod.privateKey => privateKey.trim().isNotEmpty,
+        SshAuthMethod.hardwareKey => privateKey.trim().isNotEmpty,
       };
 
   String get endpoint => '$username@$host:$port';

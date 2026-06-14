@@ -12,8 +12,11 @@ dependencies:
     sdk: flutter
 
   connectivity_plus: ^6.1.0
+  cbor: ^6.3.7
+  crypto: ^3.0.7
   cupertino_icons: ^1.0.8
-  dartssh2: ^2.17.1
+  dartssh2:
+    path: ../dartssh2_conduit
   conduit_vt:
     git:
       url: https://github.com/gwitko/conduit_vt.git
@@ -23,6 +26,8 @@ dependencies:
   local_auth: ^3.0.1
   uuid: ^4.5.3
   file_picker: ^11.0.2
+  fido2: ^1.1.0
+  flutter_nfc_kit: ^3.6.2
 
 dev_dependencies:
   flutter_test:
