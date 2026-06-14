@@ -17,8 +17,11 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterFragmentActivity() {
+    private lateinit var fidoUsbCtapTransport: FidoUsbCtapTransport
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        fidoUsbCtapTransport = FidoUsbCtapTransport(this)
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             BACKGROUND_KEEPALIVE_CHANNEL,
@@ -40,6 +43,12 @@ class MainActivity : FlutterFragmentActivity() {
                 else -> result.notImplemented()
             }
         }
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            FIDO_USB_CHANNEL,
+        ).setMethodCallHandler { call, result ->
+            fidoUsbCtapTransport.handle(call, result)
+        }
     }
 
     private fun requestNotificationPermissionIfNeeded() {
@@ -55,6 +64,7 @@ class MainActivity : FlutterFragmentActivity() {
 
     companion object {
         const val BACKGROUND_KEEPALIVE_CHANNEL = "conduit/background_keepalive"
+        const val FIDO_USB_CHANNEL = "conduit/fido_usb"
         private const val NOTIFICATION_PERMISSION_REQUEST_CODE = 2001
     }
 }

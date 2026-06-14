@@ -18,6 +18,12 @@
 	<string>Conduit</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Conduit connects to computers you choose over SSH.</string>
+	<key>NFCReaderUsageDescription</key>
+	<string>Conduit uses NFC to authenticate SSH sessions with hardware security keys.</string>
+	<key>com.apple.developer.nfc.readersession.iso7816.select-identifiers</key>
+	<array>
+		<string>A0000006472F0001</string>
+	</array>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Conduit uses Face ID to protect saved SSH machines and credentials.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

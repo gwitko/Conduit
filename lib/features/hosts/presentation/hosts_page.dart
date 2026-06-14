@@ -878,9 +878,11 @@ class _HostCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final authIcon = host.authMethod == SshAuthMethod.privateKey
-        ? Icons.vpn_key_outlined
-        : Icons.password_rounded;
+    final authIcon = switch (host.authMethod) {
+      SshAuthMethod.password => Icons.password_rounded,
+      SshAuthMethod.privateKey => Icons.vpn_key_outlined,
+      SshAuthMethod.hardwareKey => Icons.usb_rounded,
+    };
 
     return Material(
       color: Colors.transparent,
@@ -1056,6 +1058,7 @@ class _HostCard extends StatelessWidget {
   String _authLabel(SavedHost host) => switch (host.authMethod) {
     SshAuthMethod.password => 'Password',
     SshAuthMethod.privateKey => 'Key',
+    SshAuthMethod.hardwareKey => 'Hardware key',
   };
 
   String _lastConnectedLabel(DateTime last) {

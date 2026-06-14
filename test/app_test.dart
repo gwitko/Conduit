@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:cbor/cbor.dart';
+import 'package:conduit/core/app_failure.dart';
 import 'package:conduit/core/presentation/system_navigation_insets.dart';
 import 'package:conduit/core/theme/app_palette.dart';
 import 'package:conduit/core/theme/theme_controller.dart';
@@ -11,6 +13,7 @@ import 'package:conduit/features/app_lock/presentation/app_lock_controller.dart'
 import 'package:conduit/features/hosts/domain/saved_host.dart';
 import 'package:conduit/features/hosts/domain/saved_hosts_repository.dart';
 import 'package:conduit/features/hosts/presentation/hosts_controller.dart';
+import 'package:conduit/features/hosts/presentation/host_form_page.dart';
 import 'package:conduit/features/sftp/domain/file_export.dart';
 import 'package:conduit/features/sftp/domain/sftp_entry.dart';
 import 'package:conduit/features/sftp/domain/sftp_repository.dart';
@@ -24,11 +27,16 @@ import 'package:conduit/features/terminal/domain/predictive_terminal_session.dar
 import 'package:conduit/features/terminal/domain/roaming_terminal_session.dart';
 import 'package:conduit/features/terminal/domain/ssh_terminal_repository.dart';
 import 'package:conduit/features/terminal/domain/ssh_terminal_session.dart';
+import 'package:conduit/features/terminal/data/openssh_security_key_signer.dart';
+import 'package:conduit/features/terminal/data/ssh_client_factory.dart';
 import 'package:conduit/features/terminal/presentation/host_key_prompt_coordinator.dart';
 import 'package:conduit/features/terminal/presentation/terminal_session_controller.dart';
 import 'package:conduit/features/terminal/presentation/terminal_workspace_controller.dart';
 import 'package:conduit/main.dart';
 import 'package:conduit_vt/conduit_vt.dart';
+import 'package:crypto/crypto.dart' as crypto;
+import 'package:dartssh2/dartssh2.dart';
+import 'package:fido2/fido2_client.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -446,6 +454,21 @@ void main() {
             .isValid,
         isTrue,
       );
+      expect(
+        base
+            .copyWith(authMethod: SshAuthMethod.hardwareKey, privateKey: '')
+            .isValid,
+        isFalse,
+      );
+      expect(
+        base
+            .copyWith(
+              authMethod: SshAuthMethod.hardwareKey,
+              privateKey: 'openssh-sk-stub',
+            )
+            .isValid,
+        isTrue,
+      );
     });
   });
 
@@ -487,6 +510,223 @@ void main() {
       expect(decoded.moshLocale, original.moshLocale);
       expect(decoded.predictiveEchoEnabled, original.predictiveEchoEnabled);
       expect(decoded.lastConnectedAt, original.lastConnectedAt);
+    });
+
+    test('preserves hardware key auth method', () {
+      const original = SavedHost(
+        id: 'id',
+        name: 'Hardware Host',
+        host: 'example.com',
+        port: 22,
+        username: 'root',
+        authMethod: SshAuthMethod.hardwareKey,
+        privateKey: '-----BEGIN OPENSSH PRIVATE KEY-----',
+      );
+
+      final decoded = SavedHost.fromJson(original.toJson());
+
+      expect(decoded.authMethod, SshAuthMethod.hardwareKey);
+      expect(decoded.privateKey, original.privateKey);
+      expect(decoded.passphrase, isEmpty);
+    });
+  });
+
+  group('HostFormPage auth validation', () {
+    testWidgets('private key rejects OpenSSH hardware key stubs', (
+      tester,
+    ) async {
+      await tester.pumpWidget(const MaterialApp(home: HostFormPage()));
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Display name'),
+        'Host',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Host or IP'),
+        'example.com',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Username'),
+        'root',
+      );
+      await tester.tap(find.text('Private key').first);
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Private key'),
+        _fakeSecurityKeyPem(),
+      );
+      await tester.drag(find.byType(ListView), const Offset(0, -1200));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Add machine'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('This is a hardware-key stub. Choose Hardware key instead.'),
+        findsOneWidget,
+      );
+    });
+  });
+
+  group('OpenSSH security key signer', () {
+    test('converts CTAP ECDSA assertion into OpenSSH sk signature', () async {
+      final device = _FakeCtapDevice(
+        signature: const [0x30, 0x06, 0x02, 0x01, 0x05, 0x02, 0x01, 0x07],
+        authData: [...List<int>.filled(32, 0), 0x01, 0x00, 0x00, 0x00, 0x09],
+      );
+      final signer = OpenSshSecurityKeySigner(openDevice: () async => device);
+      final keyPair = signer.attach([
+        OpenSSHSecurityKeyEcdsaKeyPair(
+          q: Uint8List.fromList([0x04, ...List<int>.filled(64, 0x01)]),
+          application: 'ssh:',
+          flags: 0x01,
+          keyHandle: Uint8List.fromList([0xAA, 0xBB]),
+          reserved: '',
+        ),
+      ]).single;
+
+      final signature = await keyPair.signAsync(Uint8List.fromList([1, 2, 3]));
+
+      expect(signature, isA<SSHSecurityKeyEcdsaSignature>());
+      final skSignature = signature as SSHSecurityKeyEcdsaSignature;
+      expect(skSignature.r, BigInt.from(5));
+      expect(skSignature.s, BigInt.from(7));
+      expect(skSignature.flags, 0x01);
+      expect(skSignature.counter, 9);
+
+      final request =
+          cbor.decode(device.commands.single.sublist(1)).toObject() as Map;
+      final allowList =
+          request[GetAssertionRequest.allowListIdx] as List<Object?>;
+      final allowedCredential = allowList.single as Map<Object?, Object?>;
+      expect(device.commands.single.first, Ctap2Commands.getAssertion.value);
+      expect(request[GetAssertionRequest.rpIdIdx], 'ssh:');
+      expect(
+        request[GetAssertionRequest.clientDataHashIdx],
+        crypto.sha256.convert([1, 2, 3]).bytes,
+      );
+      expect(allowedCredential['id'], [0xAA, 0xBB]);
+    });
+
+    test('converts CTAP Ed25519 assertion into OpenSSH sk signature', () async {
+      final rawSignature = List<int>.generate(64, (index) => index);
+      final device = _FakeCtapDevice(
+        signature: rawSignature,
+        authData: [...List<int>.filled(32, 0), 0x05, 0x00, 0x00, 0x00, 0x0A],
+      );
+      final signer = OpenSshSecurityKeySigner(openDevice: () async => device);
+      final keyPair = signer.attach([
+        OpenSSHSecurityKeyEd25519KeyPair(
+          publicKey: Uint8List.fromList(List<int>.filled(32, 0x01)),
+          application: 'ssh:',
+          flags: 0x05,
+          keyHandle: Uint8List.fromList([0xCC, 0xDD]),
+          reserved: '',
+        ),
+      ]).single;
+
+      final signature = await keyPair.signAsync(Uint8List.fromList([4, 5, 6]));
+
+      expect(signature, isA<SSHSecurityKeyEd25519Signature>());
+      final skSignature = signature as SSHSecurityKeyEd25519Signature;
+      expect(skSignature.signature, rawSignature);
+      expect(skSignature.flags, 0x05);
+      expect(skSignature.counter, 10);
+    });
+  });
+
+  group('SshClientFactory hardware key identities', () {
+    test('rejects security key stubs for private key auth', () {
+      final factory = SshClientFactory(
+        _NoopVerifier(),
+        keyPairParser: (_, _) => [
+          OpenSSHSecurityKeyEd25519KeyPair(
+            publicKey: Uint8List.fromList(List<int>.filled(32, 3)),
+            application: 'ssh:',
+            flags: 0x01,
+            keyHandle: Uint8List.fromList([0xAA]),
+            reserved: '',
+          ),
+        ],
+      );
+
+      expect(
+        () => factory.identitiesForTesting(
+          const SavedHost(
+            id: 'id',
+            name: 'Host',
+            host: 'example.com',
+            port: 22,
+            username: 'root',
+            authMethod: SshAuthMethod.privateKey,
+            privateKey: 'openssh sk key',
+          ),
+        ),
+        throwsA(isA<AppFailure>()),
+      );
+    });
+
+    test('rejects normal private keys for hardware key auth', () {
+      final factory = SshClientFactory(
+        _NoopVerifier(),
+        keyPairParser: (_, _) => [
+          OpenSSHEd25519KeyPair(
+            Uint8List.fromList(List<int>.filled(32, 1)),
+            Uint8List.fromList(List<int>.filled(64, 2)),
+            'normal key',
+          ),
+        ],
+      );
+
+      expect(
+        () => factory.identitiesForTesting(
+          const SavedHost(
+            id: 'id',
+            name: 'Host',
+            host: 'example.com',
+            port: 22,
+            username: 'root',
+            authMethod: SshAuthMethod.hardwareKey,
+            privateKey: 'normal openssh key',
+          ),
+        ),
+        throwsA(isA<AppFailure>()),
+      );
+    });
+
+    test('keeps only security key pairs for hardware key auth', () {
+      final factory = SshClientFactory(
+        _NoopVerifier(),
+        keyPairParser: (_, _) => [
+          OpenSSHEd25519KeyPair(
+            Uint8List.fromList(List<int>.filled(32, 1)),
+            Uint8List.fromList(List<int>.filled(64, 2)),
+            'normal key',
+          ),
+          OpenSSHSecurityKeyEd25519KeyPair(
+            publicKey: Uint8List.fromList(List<int>.filled(32, 3)),
+            application: 'ssh:',
+            flags: 0x01,
+            keyHandle: Uint8List.fromList([0xAA]),
+            reserved: '',
+          ),
+        ],
+      );
+
+      final identities = factory.identitiesForTesting(
+        const SavedHost(
+          id: 'id',
+          name: 'Host',
+          host: 'example.com',
+          port: 22,
+          username: 'root',
+          authMethod: SshAuthMethod.hardwareKey,
+          privateKey: 'openssh sk key',
+        ),
+      );
+
+      expect(identities, hasLength(1));
+      expect(identities!.single, isA<OpenSSHSecurityKeyPair>());
     });
   });
 
@@ -1321,6 +1561,42 @@ class _RecordingFileExport implements FileExport {
     saved.add((fileName, bytes));
     return 'Downloads/$fileName';
   }
+}
+
+class _FakeCtapDevice extends CtapDevice {
+  _FakeCtapDevice({required this.signature, required this.authData});
+
+  final List<int> signature;
+  final List<int> authData;
+  final List<List<int>> commands = [];
+
+  @override
+  Future<CtapResponse<List<int>>> transceive(List<int> command) async {
+    commands.add(List.of(command));
+    return CtapResponse(
+      CtapStatusCode.ctap1ErrSuccess.value,
+      cbor.encode(
+        CborValue({
+          GetAssertionResponse.credentialIdx: {
+            'type': 'public-key',
+            'id': CborBytes(const [0x01]),
+          },
+          GetAssertionResponse.authDataIdx: CborBytes(authData),
+          GetAssertionResponse.signatureIdx: CborBytes(signature),
+        }),
+      ),
+    );
+  }
+}
+
+String _fakeSecurityKeyPem() {
+  return OpenSSHSecurityKeyEd25519KeyPair(
+    publicKey: Uint8List.fromList(List<int>.filled(32, 3)),
+    application: 'ssh:',
+    flags: 0x01,
+    keyHandle: Uint8List.fromList([0xAA]),
+    reserved: '',
+  ).toPem();
 }
 
 class _InMemorySecureStorage extends FlutterSecureStorage {
