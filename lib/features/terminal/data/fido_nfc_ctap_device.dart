@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:fido2/fido2_client.dart';
@@ -40,7 +41,18 @@ class FidoNfcCtapDevice extends CtapDevice {
     return FidoNfcCtapDevice._();
   }
 
-  Future<void> close({String? iosAlertMessage, String? iosErrorMessage}) {
+  static Future<void> cancelPoll() {
+    return FlutterNfcKit.finish();
+  }
+
+  Future<void> close({
+    bool successful = false,
+    String? iosAlertMessage,
+    String? iosErrorMessage,
+  }) {
+    if (Platform.isAndroid && successful) {
+      return Future<void>.value();
+    }
     return FlutterNfcKit.finish(
       iosAlertMessage: iosAlertMessage,
       iosErrorMessage: iosErrorMessage,

@@ -1,8 +1,10 @@
-import 'dart:typed_data';
-
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:dartssh2/dartssh2.dart';
 import 'package:fido2/fido2_client.dart';
+import 'package:flutter/services.dart';
+
+import 'fido_nfc_ctap_device.dart';
+import 'fido_usb_ctap_device.dart';
 
 typedef CtapDeviceOpener = Future<CtapDevice> Function();
 typedef CtapDeviceCloser = Future<void> Function(CtapDevice device, bool ok);
@@ -77,37 +79,69 @@ class OpenSshSecurityKeySigner {
     OpenSSHSecurityKeyPair keyPair,
     Uint8List data,
   ) async {
-    onStatus?.call('Waiting for hardware key over USB or NFC...');
-    final device = await openDevice();
-    var ok = false;
-    try {
-      onStatus?.call(
-        'Touch your USB key, or hold your NFC key near the phone.',
-      );
-      final request = GetAssertionRequest(
-        rpId: keyPair.application,
-        clientDataHash: crypto.sha256.convert(data).bytes,
-        allowList: [
-          PublicKeyCredentialDescriptor(
-            type: 'public-key',
-            id: keyPair.keyHandle,
-          ),
-        ],
-        options: {
-          'up': true,
-          if (_requiresUserVerification(keyPair.flags)) 'uv': true,
-        },
-      );
-      final response = await device.transceive(request.encode());
-      if (response.status != CtapStatusCode.ctap1ErrSuccess.value) {
-        throw CtapError.fromCode(response.status);
+    final request = GetAssertionRequest(
+      rpId: keyPair.application,
+      clientDataHash: crypto.sha256.convert(data).bytes,
+      allowList: [
+        PublicKeyCredentialDescriptor(
+          type: 'public-key',
+          id: keyPair.keyHandle,
+        ),
+      ],
+      options: {
+        'up': true,
+        if (_requiresUserVerification(keyPair.flags)) 'uv': true,
+      },
+    );
+
+    for (var attempt = 0; attempt < 2; attempt++) {
+      onStatus?.call('Waiting for hardware key over USB or NFC...');
+      final device = await openDevice();
+      var ok = false;
+      try {
+        onStatus?.call(_interactionMessage(device));
+        final response = await device.transceive(request.encode());
+        if (response.status != CtapStatusCode.ctap1ErrSuccess.value) {
+          throw CtapError.fromCode(response.status);
+        }
+        ok = true;
+        onStatus?.call('Hardware key accepted.');
+        return GetAssertionResponse.decode(response.data);
+      } catch (error) {
+        if (attempt == 0 && _shouldRetryNfc(device, error)) {
+          onStatus?.call(
+            'NFC read was interrupted. Keep the key still near the phone; '
+            'retrying...',
+          );
+          continue;
+        }
+        rethrow;
+      } finally {
+        await closeDevice?.call(device, ok);
       }
-      ok = true;
-      onStatus?.call('Hardware key accepted.');
-      return GetAssertionResponse.decode(response.data);
-    } finally {
-      await closeDevice?.call(device, ok);
     }
+
+    throw StateError('Security key signing did not complete.');
+  }
+
+  static String _interactionMessage(CtapDevice device) {
+    if (device is FidoUsbCtapDevice) {
+      return 'Touch your USB security key.';
+    }
+    if (device is FidoNfcCtapDevice) {
+      return 'Keep your NFC security key held against the phone.';
+    }
+    return 'Touch your USB key, or hold your NFC key near the phone.';
+  }
+
+  static bool _shouldRetryNfc(CtapDevice device, Object error) {
+    if (device is! FidoNfcCtapDevice) {
+      return false;
+    }
+    if (error is PlatformException) {
+      return error.code == '500' || error.code == '503' || error.code == '406';
+    }
+    return false;
   }
 
   static bool _requiresUserVerification(int flags) => flags & 0x04 != 0;
