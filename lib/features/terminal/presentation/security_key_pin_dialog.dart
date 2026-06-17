@@ -39,7 +39,9 @@ class _SecurityKeyPinDialogState extends State<_SecurityKeyPinDialog> {
         controller: _controller,
         autofocus: true,
         obscureText: true,
-        keyboardType: TextInputType.number,
+        enableSuggestions: false,
+        autocorrect: false,
+        keyboardType: TextInputType.visiblePassword,
         decoration: InputDecoration(
           labelText: 'FIDO2 PIN',
           helperText: retriesRemaining == null

@@ -1,0 +1,3 @@
+Security key PIN entry now accepts the full alphanumeric keyboard, so FIDO2 PINs with letters and symbols work, not just digits.
+
+Hardware security keys that require a PIN now work end to end over both USB and NFC, with clearer prompts when a PIN is wrong, blocked, or times out.
