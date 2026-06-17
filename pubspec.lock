@@ -173,9 +173,11 @@ packages:
   dartssh2:
     dependency: "direct main"
     description:
-      path: "../dartssh2_conduit"
-      relative: true
-    source: path
+      path: "."
+      ref: "4566212e52fdd8de5ae4988751c19abf1ac1bdeb"
+      resolved-ref: "4566212e52fdd8de5ae4988751c19abf1ac1bdeb"
+      url: "https://github.com/gwitko/dartssh2_conduit.git"
+    source: git
     version: "2.18.0"
   dbus:
     dependency: transitive

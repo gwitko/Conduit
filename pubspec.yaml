@@ -16,7 +16,9 @@ dependencies:
   crypto: ^3.0.7
   cupertino_icons: ^1.0.8
   dartssh2:
-    path: ../dartssh2_conduit
+    git:
+      url: https://github.com/gwitko/dartssh2_conduit.git
+      ref: 4566212e52fdd8de5ae4988751c19abf1ac1bdeb
   conduit_vt:
     git:
       url: https://github.com/gwitko/conduit_vt.git

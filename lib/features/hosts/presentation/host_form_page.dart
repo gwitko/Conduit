@@ -313,7 +313,12 @@ class _HostFormPageState extends State<HostFormPage> {
                       'host and open UDP ports.',
                     ),
                     value: _useMosh,
-                    onChanged: (value) => setState(() => _useMosh = value),
+                    onChanged: (value) => setState(() {
+                      _useMosh = value;
+                      if (value) {
+                        _predictiveEchoEnabled = false;
+                      }
+                    }),
                   ),
                 ),
                 if (_useMosh) ...[

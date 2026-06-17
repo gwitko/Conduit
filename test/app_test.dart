@@ -234,6 +234,7 @@ void main() {
       final controller = TerminalSessionController(
         host: _buildHost('predict'),
         repository: _ImmediateTerminalRepository(session),
+        predictiveEchoEnabled: true,
       );
 
       await controller.connect();
@@ -258,6 +259,7 @@ void main() {
         final controller = TerminalSessionController(
           host: _buildHost('predict-no-rtt'),
           repository: _ImmediateTerminalRepository(session),
+          predictiveEchoEnabled: true,
         );
 
         await controller.connect();
@@ -269,6 +271,23 @@ void main() {
       },
     );
 
+    test('leaves predictive echo disabled by default', () async {
+      final session = _PredictiveTerminalSession();
+      final controller = TerminalSessionController(
+        host: _buildHost('predict-default-off'),
+        repository: _ImmediateTerminalRepository(session),
+      );
+
+      await controller.connect();
+      controller.sendText('x');
+
+      expect(session.sent.map(String.fromCharCodes), ['x']);
+      expect(controller.predictiveEchoEnabled, isFalse);
+      expect(controller.overlays, isEmpty);
+
+      controller.dispose();
+    });
+
     test(
       'hides predictive cells once confirmed output reaches the buffer',
       () async {
@@ -276,6 +295,7 @@ void main() {
         final controller = TerminalSessionController(
           host: _buildHost('predict-confirmed'),
           repository: _ImmediateTerminalRepository(session),
+          predictiveEchoEnabled: true,
         );
 
         await controller.connect();
@@ -302,6 +322,7 @@ void main() {
         final controller = TerminalSessionController(
           host: _buildHost('predict-stale'),
           repository: _ImmediateTerminalRepository(session),
+          predictiveEchoEnabled: true,
         );
 
         await controller.connect();
@@ -322,6 +343,7 @@ void main() {
       final controller = TerminalSessionController(
         host: _buildHost('predict-backspace'),
         repository: _ImmediateTerminalRepository(session),
+        predictiveEchoEnabled: true,
       );
 
       await controller.connect();

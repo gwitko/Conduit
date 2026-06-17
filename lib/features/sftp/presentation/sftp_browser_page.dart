@@ -107,9 +107,10 @@ class _SftpBrowserPageState extends State<SftpBrowserPage> {
   Widget _buildBody(BuildContext context) {
     switch (_controller.status) {
       case SftpBrowserStatus.connecting:
-        return const _CenterMessage(
+        return _CenterMessage(
           icon: Icons.folder_open_rounded,
           title: 'Opening files…',
+          message: _controller.securityKeyMessage,
           showSpinner: true,
         );
       case SftpBrowserStatus.failed:

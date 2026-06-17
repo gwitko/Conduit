@@ -8,6 +8,7 @@ import 'package:conduit/features/sftp/domain/file_export.dart';
 import 'package:conduit/features/sftp/domain/sftp_entry.dart';
 import 'package:conduit/features/sftp/domain/sftp_repository.dart';
 import 'package:conduit/features/sftp/domain/sftp_session.dart';
+import 'package:conduit/features/terminal/domain/security_key_interaction.dart';
 import 'package:flutter/foundation.dart';
 
 enum SftpBrowserStatus { connecting, ready, failed }
@@ -78,6 +79,8 @@ class SftpBrowserController extends ChangeNotifier {
   SftpSortMode _sortMode = SftpSortMode.name;
   bool _busy = false;
   SftpTransfer? _transfer;
+  String? _securityKeyMessage;
+  StreamSubscription<String>? _securityKeySubscription;
   bool _disposed = false;
 
   SftpBrowserStatus get status => _status;
@@ -111,6 +114,7 @@ class SftpBrowserController extends ChangeNotifier {
       visibleEntries.where((entry) => !entry.isDirectory).length;
   bool get busy => _busy;
   SftpTransfer? get transfer => _transfer;
+  String? get securityKeyMessage => _securityKeyMessage;
   bool get canGoUp => _path != '/';
 
   void setSearchQuery(String value) {
@@ -136,6 +140,15 @@ class SftpBrowserController extends ChangeNotifier {
   Future<void> connect() async {
     _status = SftpBrowserStatus.connecting;
     _errorMessage = null;
+    _securityKeyMessage = null;
+    await _securityKeySubscription?.cancel();
+    _securityKeySubscription = SecurityKeyInteraction.instance.messages.listen((
+      message,
+    ) {
+      if (_status != SftpBrowserStatus.connecting) return;
+      _securityKeyMessage = message;
+      _safeNotify();
+    });
     _safeNotify();
     try {
       final session = await repository.connect(host);
@@ -145,8 +158,10 @@ class SftpBrowserController extends ChangeNotifier {
       }
       _session = session;
       final home = await _resolveHome(session);
+      await _stopSecurityKeyStatus();
       await _load(home);
     } catch (error) {
+      await _stopSecurityKeyStatus();
       _fail(error);
     }
   }
@@ -464,6 +479,12 @@ class SftpBrowserController extends ChangeNotifier {
     }
   }
 
+  Future<void> _stopSecurityKeyStatus() async {
+    await _securityKeySubscription?.cancel();
+    _securityKeySubscription = null;
+    _securityKeyMessage = null;
+  }
+
   void _fail(Object error) {
     _status = SftpBrowserStatus.failed;
     _errorMessage = error is AppFailure ? error.toString() : '$error';
@@ -502,6 +523,8 @@ class SftpBrowserController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    unawaited(_securityKeySubscription?.cancel());
+    _securityKeySubscription = null;
     final session = _session;
     _session = null;
     if (session != null) {

@@ -28,7 +28,7 @@ class TerminalSessionController extends ChangeNotifier {
     required this.host,
     required this.repository,
     this.connectivity,
-    bool predictiveEchoEnabled = true,
+    bool predictiveEchoEnabled = false,
   }) : keyboard = TerminalKeyboardController(defaultInputHandler),
        terminal = Terminal(maxLines: 10000) {
     _predictiveEchoEnabled = predictiveEchoEnabled;
@@ -60,7 +60,7 @@ class TerminalSessionController extends ChangeNotifier {
   int _pendingRows = 0;
   bool _disconnecting = false;
   bool _disposed = false;
-  bool _predictiveEchoEnabled = true;
+  bool _predictiveEchoEnabled = false;
   int _connectionGeneration = 0;
   int? _lastIosEnterOutputMs;
 
