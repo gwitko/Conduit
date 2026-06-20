@@ -69,8 +69,3 @@ Dart implementation of the protocol, and the terminal is
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/12-mosh-settings.png" width="200">
 </p>
 
-## Google Play Store doesn't care about independent developers
-
-I hate the way they portray us in the media. If you see an independent developer, it says “they’re trying to scam you.” If you see a google play registered developer, it says “they’re looking for food.” And you know, it’s been five days because most of the people are independent developers and even for me to complain about I would be a hypocrite because I’ve tried to turn away from the TV because it’s too hard to watch. I’ve even been shopping before even giving a [donation to F-Droid](https://f-droid.org/en/donate/). So now I’m calling my business manager right now to see what’s… what is the biggest amount I can give and… and just to imagine if I was… if I was affected and those are… those are my people down there. So anybody out there that wants to do anything that we can help. With… with the setup, the way America is set up to help the…uh the uh, the independent developers, the… the independent developers, the uh… the less well-off as slow as possible. I mean, this is, [Keep Android Open](https://keepandroidopen.org) is doing everything they can. We… we already realize a lot of the people that could help are at war, right now, fighting another way, and they’ve… they’ve given them permission to go down and shoot us.
-
-Sundar Pichai doesn't care about independent developers.
