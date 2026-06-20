@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:dartssh2/dartssh2.dart';
 import 'package:fido2/fido2_client.dart';
@@ -86,7 +88,25 @@ class OpenSshSecurityKeySigner {
   ) async {
     final clientDataHash = crypto.sha256.convert(data).bytes;
 
-    for (var attempt = 0; attempt < 2; attempt++) {
+    // iOS shows a modal CoreNFC sheet over the whole app for the entire NFC
+    // session, so we can't prompt for the PIN mid-session like Android does —
+    // the PIN dialog would sit behind the sheet, and dismissing the sheet to
+    // reach it tears down the session. Instead, collect the PIN up front and
+    // run the whole exchange in a single tap. Whether a PIN is needed is known
+    // from the key flags before we ever touch the device.
+    var collectPinUpFront =
+        Platform.isIOS && _requiresUserVerification(keyPair.flags);
+    String? presetPin;
+    int? pinRetriesRemaining;
+    var pinAttempts = 0;
+    var nfcRetried = false;
+    const maxPinAttempts = 3;
+
+    while (true) {
+      if (collectPinUpFront) {
+        presetPin = await _promptForPin(retriesRemaining: pinRetriesRemaining);
+      }
+
       onStatus?.call('Waiting for hardware key over USB or NFC...');
       final device = await openDevice();
       var ok = false;
@@ -95,11 +115,18 @@ class OpenSshSecurityKeySigner {
           device: device,
           keyPair: keyPair,
           clientDataHash: clientDataHash,
+          presetPin: presetPin,
         );
         onStatus?.call(_interactionMessage(device));
         var response = await device.transceive(request.encode());
         if (response.status == CtapStatusCode.ctap2ErrPuatRequired.value &&
             request.pinAuth == null) {
+          if (Platform.isIOS) {
+            // The key demands user verification even though its flags didn't
+            // advertise it. Restart with an up-front PIN prompt and re-tap.
+            collectPinUpFront = true;
+            continue;
+          }
           final pinRequest = await _buildAssertionRequest(
             device: device,
             keyPair: keyPair,
@@ -117,8 +144,24 @@ class OpenSshSecurityKeySigner {
         ok = true;
         onStatus?.call('Hardware key accepted.');
         return GetAssertionResponse.decode(response.data);
+      } on _PinRejected catch (rejection) {
+        // iOS only: the pre-collected PIN was wrong. End the session and prompt
+        // for another tap rather than looping behind the (now torn down) sheet.
+        pinAttempts++;
+        pinRetriesRemaining = rejection.retriesRemaining;
+        presetPin = null;
+        collectPinUpFront = true;
+        final outOfRetries =
+            pinRetriesRemaining != null && pinRetriesRemaining <= 0;
+        if (pinAttempts >= maxPinAttempts || outOfRetries) {
+          onStatus?.call(describeCtapStatus(rejection.error.status));
+          throw rejection.error;
+        }
+        onStatus?.call('Security key PIN was incorrect. Try again.');
+        continue;
       } catch (error) {
-        if (attempt == 0 && _shouldRetryNfc(device, error)) {
+        if (!nfcRetried && _shouldRetryNfc(device, error)) {
+          nfcRetried = true;
           onStatus?.call(
             'NFC read was interrupted. Keep the key still near the phone; '
             'retrying...',
@@ -130,8 +173,6 @@ class OpenSshSecurityKeySigner {
         await closeDevice?.call(device, ok);
       }
     }
-
-    throw StateError('Security key signing did not complete.');
   }
 
   Future<GetAssertionRequest> _buildAssertionRequest({
@@ -139,14 +180,17 @@ class OpenSshSecurityKeySigner {
     required OpenSSHSecurityKeyPair keyPair,
     required List<int> clientDataHash,
     bool forceUserVerification = false,
+    String? presetPin,
   }) async {
-    final requiresUserVerification =
-        forceUserVerification || _requiresUserVerification(keyPair.flags);
+    final requiresUserVerification = forceUserVerification ||
+        presetPin != null ||
+        _requiresUserVerification(keyPair.flags);
     final pinAuth = requiresUserVerification
         ? await _pinAuthFor(
             device: device,
             clientDataHash: clientDataHash,
             rpId: keyPair.application,
+            presetPin: presetPin,
           )
         : null;
 
@@ -165,19 +209,54 @@ class OpenSshSecurityKeySigner {
     );
   }
 
-  Future<_PinAuth> _pinAuthFor({
-    required CtapDevice device,
-    required List<int> clientDataHash,
-    required String rpId,
-  }) async {
+  Future<String> _promptForPin({int? retriesRemaining}) async {
     final pinRequest = onPinRequest;
     if (pinRequest == null) {
       throw StateError('Security key PIN is required.');
     }
+    onStatus?.call('Security key PIN required.');
+    final pin = await pinRequest(retriesRemaining: retriesRemaining);
+    if (pin == null || pin.isEmpty) {
+      throw StateError('Security key PIN entry was cancelled.');
+    }
+    return pin;
+  }
 
+  Future<_PinAuth> _pinAuthFor({
+    required CtapDevice device,
+    required List<int> clientDataHash,
+    required String rpId,
+    String? presetPin,
+  }) async {
     final ctap = await Ctap2.create(device);
     final pinProtocol = _pinProtocolFor(ctap.info);
     final clientPin = ClientPin(ctap, pinProtocol: pinProtocol);
+
+    if (presetPin != null) {
+      // iOS: the PIN was collected before the NFC session started. Use it
+      // directly; a wrong PIN is surfaced as _PinRejected so the caller can end
+      // the session and prompt for another tap.
+      try {
+        final token = await clientPin.getPinToken(
+          presetPin,
+          permissions: [ClientPinPermission.getAssertion],
+          permissionsRpId: rpId,
+        );
+        onStatus?.call('Security key PIN accepted.');
+        final auth = await pinProtocol.authenticate(token, clientDataHash);
+        return _PinAuth(authParam: auth, protocolVersion: pinProtocol.version);
+      } on CtapError catch (error) {
+        if (error.status == CtapStatusCode.ctap2ErrPinInvalid) {
+          throw _PinRejected(error, await _pinRetries(clientPin));
+        }
+        rethrow;
+      }
+    }
+
+    final pinRequest = onPinRequest;
+    if (pinRequest == null) {
+      throw StateError('Security key PIN is required.');
+    }
 
     for (var attempt = 0; attempt < 3; attempt++) {
       final retriesRemaining = await _pinRetries(clientPin);
@@ -284,6 +363,15 @@ class _PinAuth {
 
   final List<int> authParam;
   final int protocolVersion;
+}
+
+/// Thrown when a PIN collected before the NFC session is rejected by the key,
+/// so the session can be closed and the user prompted to tap again.
+class _PinRejected implements Exception {
+  const _PinRejected(this.error, this.retriesRemaining);
+
+  final CtapError error;
+  final int? retriesRemaining;
 }
 
 class _DerReader {
