@@ -6,6 +6,7 @@ Features:
 
 * SSH terminal sessions
 * Mosh roaming for unreliable mobile networks
+* Tmux auto attach/create per host, with start directories, prefix keys, action shortcuts, and scrollback mode
 * SFTP file browsing and export
 * OpenSSH FIDO hardware-key authentication, tested with YubiKey
 * USB and NFC support for CTAP-compatible security keys

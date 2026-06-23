@@ -20,7 +20,9 @@ anything. Hosts, keys, and trusted fingerprints stay on the device - no account,
 no cloud sync, no subscription. Open a normal SSH shell, or a Mosh session that
 rides out Wi-Fi drops and cellular handoffs instead of dying with them. Sessions
 live in tabs, with on-screen modifier, arrow, and function keys for the things a
-phone keyboard doesn't have.
+phone keyboard doesn't have. Per-host tmux integration can attach or create a
+session on connect, choose the start directory, and expose tmux prefix, action,
+and scrollback controls from the key row.
 
 There's an SFTP browser for moving files around, host-key trust you manage
 yourself, an optional device-auth app lock, and a stack of built-in terminal
@@ -34,6 +36,8 @@ Dart implementation of the protocol, and the terminal is
 
 - SSH terminal sessions with saved machine profiles and tabbed workspaces.
 - Mosh sessions for roaming across Wi-Fi drops and network changes.
+- Per-host tmux integration with auto attach/create, start directories, prefix
+  key selection, action shortcuts, and scrollback mode.
 - SFTP browser for navigating, downloading, uploading, renaming, and deleting files.
 - OpenSSH private key, password, and hardware security key authentication.
 - OpenSSH FIDO security-key auth for `ed25519-sk` and `ecdsa-sk` credentials,
@@ -68,4 +72,3 @@ Dart implementation of the protocol, and the terminal is
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/11-hardware-key.png" width="200">
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/12-mosh-settings.png" width="200">
 </p>
-
