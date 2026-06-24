@@ -37,3 +37,19 @@ app.*.map.json
 /android/key.properties
 /android/*.jks
 /android/app/*.jks
+
+# iOS / Flutter build artifacts (generated, not source)
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+ios/Flutter/Flutter.framework/
+ios/Flutter/App.framework/
+ios/Flutter/Flutter.podspec
+ios/Flutter/ephemeral/
+ios/Pods/
+ios/Podfile
+ios/Podfile.lock
+ios/.symlinks/
+ios/Runner.xcworkspace/xcuserdata/
+ios/Runner.xcodeproj/xcuserdata/
+ios/Runner.xcodeproj/project.xcworkspace/xcuserdata/
+**/GeneratedPluginRegistrant.*
