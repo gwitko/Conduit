@@ -21,8 +21,8 @@ dependencies:
       ref: abfb6677b65d523c29a9dc7f69588029fad03a57
   conduit_vt:
     git:
-      url: https://github.com/gwitko/conduit_vt.git
-      ref: 294e2a3b3cb2681b7600eb143f623835370cf1c9
+      url: https://github.com/dorokuma/conduit_vt.git
+      ref: master
   dart_mosh: ^0.0.4
   flutter_secure_storage: ^10.3.1
   local_auth: ^3.0.1
