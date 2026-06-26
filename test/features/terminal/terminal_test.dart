@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:cbor/cbor.dart';
 import 'package:conduit/core/app_failure.dart';
+import 'package:conduit/core/theme/app_palette.dart';
+import 'package:conduit/core/theme/terminal_appearance.dart';
 import 'package:conduit/features/hosts/domain/saved_host.dart';
 import 'package:conduit/features/terminal/data/openssh_security_key_signer.dart';
 import 'package:conduit/features/terminal/data/secure_host_key_verifier.dart';
@@ -10,12 +12,15 @@ import 'package:conduit/features/terminal/domain/host_key_prompt.dart';
 import 'package:conduit/features/terminal/domain/host_key_verifier.dart';
 import 'package:conduit/features/terminal/domain/security_key_interaction.dart';
 import 'package:conduit/features/terminal/presentation/host_key_prompt_coordinator.dart';
+import 'package:conduit/features/terminal/presentation/terminal_keyboard_bar.dart';
+import 'package:conduit/features/terminal/presentation/terminal_keyboard_controller.dart';
 import 'package:conduit/features/terminal/presentation/terminal_session_controller.dart';
 import 'package:conduit_vt/conduit_vt.dart';
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:dartssh2/dartssh2.dart';
 import 'package:fido2/fido2_client.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/test_doubles.dart';
@@ -216,6 +221,82 @@ void main() {
       expect(controller.overlays.single.erase, isTrue);
 
       controller.dispose();
+    });
+
+    testWidgets('repeats held keyboard row navigation keys', (tester) async {
+      final controller = _RecordingTerminalSessionController();
+      final focusNode = FocusNode();
+      addTearDown(focusNode.dispose);
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TerminalKeyboardBar(
+              controller: controller,
+              focusNode: focusNode,
+              palette: AppPalette.catppuccin,
+              brightness: Brightness.dark,
+              actions: const [TerminalKeyboardAction.arrowDown],
+              fullscreen: false,
+              onToggleFullscreen: () {},
+              onEnterTmuxScrollMode: () {},
+              tmuxPrefixKey: TmuxPrefixKey.controlB,
+            ),
+          ),
+        ),
+      );
+
+      final key = find.byIcon(Icons.keyboard_arrow_down_rounded);
+      final gesture = await tester.press(key);
+
+      expect(controller.sentKeys, [TerminalKey.arrowDown]);
+
+      await tester.pump(const Duration(milliseconds: 249));
+      expect(controller.sentKeys, [TerminalKey.arrowDown]);
+
+      await tester.pump(const Duration(milliseconds: 1));
+      expect(controller.sentKeys, [
+        TerminalKey.arrowDown,
+        TerminalKey.arrowDown,
+      ]);
+
+      await tester.pump(const Duration(milliseconds: 60));
+      expect(controller.sentKeys, [
+        TerminalKey.arrowDown,
+        TerminalKey.arrowDown,
+        TerminalKey.arrowDown,
+      ]);
+
+      await gesture.up();
+      await tester.pump(const Duration(milliseconds: 180));
+      expect(controller.sentKeys, [
+        TerminalKey.arrowDown,
+        TerminalKey.arrowDown,
+        TerminalKey.arrowDown,
+      ]);
+    });
+
+    test('keyboard input clears toggled row modifiers after one key', () {
+      final handler = _RecordingInputHandler();
+      final keyboard = TerminalKeyboardController(handler)..ctrl = true;
+      final terminal = Terminal();
+
+      final output = keyboard(
+        TerminalKeyboardEvent(
+          key: TerminalKey.keyC,
+          shift: false,
+          ctrl: false,
+          alt: false,
+          state: terminal,
+          altBuffer: false,
+          platform: TerminalTargetPlatform.unknown,
+        ),
+      );
+
+      expect(output, 'ok');
+      expect(handler.events.single.ctrl, isTrue);
+      expect(keyboard.ctrl, isFalse);
     });
 
     test('can disable predictive overlays while keeping mosh input', () async {
@@ -816,4 +897,30 @@ void main() {
       },
     );
   });
+}
+
+class _RecordingTerminalSessionController extends TerminalSessionController {
+  _RecordingTerminalSessionController()
+    : super(
+        host: buildHost('repeat'),
+        repository: NoNetworkTerminalRepository(),
+      );
+
+  final List<TerminalKey> sentKeys = <TerminalKey>[];
+
+  @override
+  void sendKey(TerminalKey key) {
+    sentKeys.add(key);
+    keyboard.clearModifiers();
+  }
+}
+
+class _RecordingInputHandler extends TerminalInputHandler {
+  final List<TerminalKeyboardEvent> events = <TerminalKeyboardEvent>[];
+
+  @override
+  String? call(TerminalKeyboardEvent event) {
+    events.add(event);
+    return 'ok';
+  }
 }

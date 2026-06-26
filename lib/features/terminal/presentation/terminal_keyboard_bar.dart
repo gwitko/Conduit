@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:conduit/core/presentation/system_navigation_insets.dart';
 import 'package:conduit/core/theme/app_palette.dart';
 import 'package:conduit/core/theme/terminal_appearance.dart';
@@ -105,24 +107,28 @@ class TerminalKeyboardBar extends StatelessWidget {
         icon: Icons.keyboard_arrow_up_rounded,
         palette: palette,
         brightness: brightness,
+        repeat: true,
         onPressed: () => _sendKey(TerminalKey.arrowUp),
       ),
       TerminalKeyboardAction.arrowDown => _Key(
         icon: Icons.keyboard_arrow_down_rounded,
         palette: palette,
         brightness: brightness,
+        repeat: true,
         onPressed: () => _sendKey(TerminalKey.arrowDown),
       ),
       TerminalKeyboardAction.arrowLeft => _Key(
         icon: Icons.keyboard_arrow_left_rounded,
         palette: palette,
         brightness: brightness,
+        repeat: true,
         onPressed: () => _sendKey(TerminalKey.arrowLeft),
       ),
       TerminalKeyboardAction.arrowRight => _Key(
         icon: Icons.keyboard_arrow_right_rounded,
         palette: palette,
         brightness: brightness,
+        repeat: true,
         onPressed: () => _sendKey(TerminalKey.arrowRight),
       ),
       TerminalKeyboardAction.paste => _Key(
@@ -172,6 +178,7 @@ class TerminalKeyboardBar extends StatelessWidget {
         label: action.label,
         palette: palette,
         brightness: brightness,
+        repeat: _repeatableActions.contains(action),
         onPressed: () => _triggerAction(action),
       ),
     };
@@ -350,13 +357,23 @@ const _functionKeys = [
   (label: 'F12', key: TerminalKey.f12),
 ];
 
-class _Key extends StatelessWidget {
+const _repeatInitialDelay = Duration(milliseconds: 250);
+const _repeatInterval = Duration(milliseconds: 60);
+const _repeatableActions = {
+  TerminalKeyboardAction.home,
+  TerminalKeyboardAction.end,
+  TerminalKeyboardAction.pageUp,
+  TerminalKeyboardAction.pageDown,
+};
+
+class _Key extends StatefulWidget {
   const _Key({
     required this.palette,
     required this.brightness,
     this.onPressed,
     this.label,
     this.icon,
+    this.repeat = false,
   });
 
   final AppPalette palette;
@@ -364,47 +381,103 @@ class _Key extends StatelessWidget {
   final String? label;
   final IconData? icon;
   final VoidCallback? onPressed;
+  final bool repeat;
+
+  @override
+  State<_Key> createState() => _KeyState();
+}
+
+class _KeyState extends State<_Key> {
+  Timer? _delayTimer;
+  Timer? _repeatTimer;
+  bool _holding = false;
+
+  @override
+  void dispose() {
+    _stopRepeat();
+    super.dispose();
+  }
+
+  void _press() {
+    final onPressed = widget.onPressed;
+    if (onPressed == null) {
+      return;
+    }
+    onPressed();
+    if (!widget.repeat) {
+      return;
+    }
+    _holding = true;
+    _delayTimer?.cancel();
+    _repeatTimer?.cancel();
+    _delayTimer = Timer(_repeatInitialDelay, () {
+      if (!_holding) {
+        return;
+      }
+      onPressed();
+      _repeatTimer = Timer.periodic(_repeatInterval, (_) {
+        if (_holding) {
+          onPressed();
+        }
+      });
+    });
+  }
+
+  void _stopRepeat() {
+    _holding = false;
+    _delayTimer?.cancel();
+    _delayTimer = null;
+    _repeatTimer?.cancel();
+    _repeatTimer = null;
+  }
 
   @override
   Widget build(BuildContext context) {
-    final isIconKey = icon != null;
-    final enabled = onPressed != null;
+    final isIconKey = widget.icon != null;
+    final enabled = widget.onPressed != null;
     final foreground = enabled
-        ? palette.foregroundFor(brightness)
-        : palette.mutedForegroundFor(brightness);
+        ? widget.palette.foregroundFor(widget.brightness)
+        : widget.palette.mutedForegroundFor(widget.brightness);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 2),
       child: Material(
-        color: palette.panelFor(brightness),
+        color: widget.palette.panelFor(widget.brightness),
         borderRadius: BorderRadius.circular(8),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(8),
-          onTap: onPressed,
-          child: Container(
-            height: 36,
-            constraints: BoxConstraints(minWidth: isIconKey ? 44 : 46),
-            padding: EdgeInsets.symmetric(horizontal: isIconKey ? 0 : 10),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: enabled
-                    ? palette.hairlineFor(brightness)
-                    : palette.hairlineFor(brightness).withValues(alpha: 0.55),
+        child: Listener(
+          onPointerDown: enabled ? (_) => _press() : null,
+          onPointerUp: enabled ? (_) => _stopRepeat() : null,
+          onPointerCancel: enabled ? (_) => _stopRepeat() : null,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: enabled ? () {} : null,
+            child: Container(
+              height: 36,
+              constraints: BoxConstraints(minWidth: isIconKey ? 44 : 46),
+              padding: EdgeInsets.symmetric(horizontal: isIconKey ? 0 : 10),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: enabled
+                      ? widget.palette.hairlineFor(widget.brightness)
+                      : widget.palette
+                            .hairlineFor(widget.brightness)
+                            .withValues(alpha: 0.55),
+                ),
               ),
+              child: widget.icon == null
+                  ? Text(
+                      widget.label ?? '',
+                      style: TextStyle(
+                        color: foreground,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      maxLines: 1,
+                      softWrap: false,
+                    )
+                  : Icon(widget.icon, color: foreground, size: 20),
             ),
-            child: icon == null
-                ? Text(
-                    label ?? '',
-                    style: TextStyle(
-                      color: foreground,
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    maxLines: 1,
-                    softWrap: false,
-                  )
-                : Icon(icon, color: foreground, size: 20),
           ),
         ),
       ),

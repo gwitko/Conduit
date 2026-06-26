@@ -40,8 +40,13 @@ class TerminalKeyboardController extends TerminalInputHandler
 
   @override
   String? call(TerminalKeyboardEvent event) {
-    return _delegate.call(
+    final usesToggledModifier = _ctrl || _alt;
+    final result = _delegate.call(
       event.copyWith(ctrl: event.ctrl || _ctrl, alt: event.alt || _alt),
     );
+    if (usesToggledModifier) {
+      clearModifiers();
+    }
+    return result;
   }
 }
