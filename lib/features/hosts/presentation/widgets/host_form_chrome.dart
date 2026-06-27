@@ -19,7 +19,8 @@ class HostFormHeader extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     return Row(
       children: [
-        IconButton.outlined(
+        IconButton(
+          tooltip: 'Back',
           onPressed: onBack,
           icon: const Icon(Icons.arrow_back_rounded),
         ),

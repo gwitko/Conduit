@@ -1,1 +1,1 @@
-Local-first SSH, Mosh, and SFTP for mobile
+SSH, Mosh, SFTP & local Linux terminal

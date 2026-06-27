@@ -88,12 +88,6 @@ class OpenSshSecurityKeySigner {
   ) async {
     final clientDataHash = crypto.sha256.convert(data).bytes;
 
-    // iOS shows a modal CoreNFC sheet over the whole app for the entire NFC
-    // session, so we can't prompt for the PIN mid-session like Android does —
-    // the PIN dialog would sit behind the sheet, and dismissing the sheet to
-    // reach it tears down the session. Instead, collect the PIN up front and
-    // run the whole exchange in a single tap. Whether a PIN is needed is known
-    // from the key flags before we ever touch the device.
     var collectPinUpFront =
         Platform.isIOS && _requiresUserVerification(keyPair.flags);
     String? presetPin;
@@ -122,8 +116,6 @@ class OpenSshSecurityKeySigner {
         if (response.status == CtapStatusCode.ctap2ErrPuatRequired.value &&
             request.pinAuth == null) {
           if (Platform.isIOS) {
-            // The key demands user verification even though its flags didn't
-            // advertise it. Restart with an up-front PIN prompt and re-tap.
             collectPinUpFront = true;
             continue;
           }
@@ -145,8 +137,6 @@ class OpenSshSecurityKeySigner {
         onStatus?.call('Hardware key accepted.');
         return GetAssertionResponse.decode(response.data);
       } on _PinRejected catch (rejection) {
-        // iOS only: the pre-collected PIN was wrong. End the session and prompt
-        // for another tap rather than looping behind the (now torn down) sheet.
         pinAttempts++;
         pinRetriesRemaining = rejection.retriesRemaining;
         presetPin = null;
@@ -234,9 +224,6 @@ class OpenSshSecurityKeySigner {
     final clientPin = ClientPin(ctap, pinProtocol: pinProtocol);
 
     if (presetPin != null) {
-      // iOS: the PIN was collected before the NFC session started. Use it
-      // directly; a wrong PIN is surfaced as _PinRejected so the caller can end
-      // the session and prompt for another tap.
       try {
         final token = await clientPin.getPinToken(
           presetPin,
@@ -366,8 +353,6 @@ class _PinAuth {
   final int protocolVersion;
 }
 
-/// Thrown when a PIN collected before the NFC session is rejected by the key,
-/// so the session can be closed and the user prompted to tap again.
 class _PinRejected implements Exception {
   const _PinRejected(this.error, this.retriesRemaining);
 

@@ -49,6 +49,21 @@ class MainActivity : FlutterFragmentActivity() {
         ).setMethodCallHandler { call, result ->
             fidoUsbCtapTransport.handle(call, result)
         }
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            LOCAL_SHELL_CHANNEL,
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "environment" -> result.success(
+                    mapOf(
+                        "nativeLibraryDir" to applicationInfo.nativeLibraryDir,
+                        "filesDir" to filesDir.absolutePath,
+                        "supportedAbis" to Build.SUPPORTED_ABIS.toList(),
+                    ),
+                )
+                else -> result.notImplemented()
+            }
+        }
     }
 
     private fun requestNotificationPermissionIfNeeded() {
@@ -65,6 +80,7 @@ class MainActivity : FlutterFragmentActivity() {
     companion object {
         const val BACKGROUND_KEEPALIVE_CHANNEL = "conduit/background_keepalive"
         const val FIDO_USB_CHANNEL = "conduit/fido_usb"
+        const val LOCAL_SHELL_CHANNEL = "conduit/local_shell"
         private const val NOTIFICATION_PERMISSION_REQUEST_CODE = 2001
     }
 }
@@ -98,10 +114,10 @@ class BackgroundConnectionService : Service() {
         val manager = getSystemService(NotificationManager::class.java)
         val channel = NotificationChannel(
             CHANNEL_ID,
-            "SSH sessions",
+            "Active sessions",
             NotificationManager.IMPORTANCE_LOW,
         ).apply {
-            description = "Keeps active SSH sessions connected while Conduit is in the background."
+            description = "Keeps active sessions running while Conduit is in the background."
             setShowBadge(false)
         }
         manager.createNotificationChannel(channel)
@@ -128,7 +144,7 @@ class BackgroundConnectionService : Service() {
         return builder
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle("Conduit")
-            .setContentText("$sessionCount active SSH $sessionLabel")
+            .setContentText("$sessionCount active $sessionLabel")
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .build()

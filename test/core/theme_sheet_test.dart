@@ -7,6 +7,49 @@ import 'package:flutter_test/flutter_test.dart';
 import '../support/test_doubles.dart';
 
 void main() {
+  testWidgets('appearance sheet toggles local shell visibility', (
+    tester,
+  ) async {
+    final controller = ThemeController(InMemoryThemePreferences());
+    await controller.load();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) {
+            return Scaffold(
+              body: Center(
+                child: FilledButton(
+                  onPressed: () {
+                    showThemeSheet(context: context, controller: controller);
+                  },
+                  child: const Text('Appearance'),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Appearance'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Show local shell'),
+      120,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Show local shell'), findsOneWidget);
+    expect(controller.showLocalShell, isTrue);
+
+    await tester.tap(find.text('Show local shell'));
+    await tester.pumpAndSettle();
+
+    expect(controller.showLocalShell, isFalse);
+  });
+
   testWidgets('key row editor adds and saves a custom text key', (
     tester,
   ) async {

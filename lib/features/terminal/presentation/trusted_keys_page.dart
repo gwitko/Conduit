@@ -268,7 +268,7 @@ class _EmptyState extends StatelessWidget {
             Text('No trusted keys yet', style: theme.textTheme.titleLarge),
             const SizedBox(height: 6),
             Text(
-              'Connect to a host and you’ll be asked to trust its key — the '
+              'Connect to a host and you’ll be asked to trust its key - the '
               'fingerprint lands here.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(

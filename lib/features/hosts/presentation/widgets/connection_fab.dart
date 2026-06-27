@@ -10,12 +10,8 @@ class ConnectionFab extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
+        color: colorScheme.primary,
         borderRadius: BorderRadius.circular(16),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [colorScheme.primary, colorScheme.secondary],
-        ),
         boxShadow: [
           BoxShadow(
             color: colorScheme.primary.withValues(alpha: 0.35),
@@ -41,7 +37,6 @@ class ConnectionFab extends StatelessWidget {
                   style: TextStyle(
                     color: colorScheme.onPrimary,
                     fontWeight: FontWeight.w800,
-                    letterSpacing: 0.1,
                   ),
                 ),
               ],

@@ -1,10 +1,13 @@
-Conduit is a local-first SSH, Mosh, and SFTP workspace.
+Conduit is a local-first terminal workspace for SSH, Mosh, SFTP, and local shells.
 
-It is built for people who need to reach real machines from a phone without creating an account, syncing credentials through a service, or paying a subscription to open a shell.
+It is built for people who need terminals from a phone without creating an account, syncing credentials through a service, or paying a subscription to open a shell.
+
+Connect to remote machines over SSH or Mosh, browse files with SFTP, or run a full Arch Linux shell right on the device - pacman and all - with no root and no remote server.
 
 Features:
 
 * SSH terminal sessions
+* Local Arch Linux shell on-device (Android, arm64) with pacman, running unprivileged through proot - no root, no server; downloads an Arch Linux ARM image on first use
 * Mosh roaming for unreliable mobile networks
 * Tmux auto attach/create per host, with start directories, prefix keys, action shortcuts, and scrollback mode
 * SFTP file browsing and export
@@ -26,3 +29,5 @@ Features:
 Conduit does not require a Conduit account and does not use a Conduit sync service. Saved connection profiles, credentials, and trusted host keys are stored on device using platform secure storage.
 
 Mosh support requires mosh-server on the remote host and reachable UDP ports. Predictive echo is experimental and opt-in.
+
+The local Arch Linux shell uses tooling packaged by Termux, including proot, proot-distro, busybox, tar, xz, and supporting libraries. Conduit's own source is Apache-2.0; bundled third-party components keep their own licenses. Source-offer details are in THIRD_PARTY_NOTICES and third_party/source-offer.

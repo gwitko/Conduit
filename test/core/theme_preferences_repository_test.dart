@@ -57,5 +57,22 @@ void main() {
         custom,
       ]);
     });
+
+    test('persists local shell visibility', () async {
+      final storage = InMemorySecureStorage();
+      final repository = ThemePreferencesRepository(storage);
+
+      await repository.save(
+        const ThemePreferences(
+          themeMode: ThemeMode.dark,
+          palette: AppPalette.synthwave,
+          showLocalShell: false,
+        ),
+      );
+
+      final preferences = await repository.load();
+
+      expect(preferences.showLocalShell, isFalse);
+    });
   });
 }

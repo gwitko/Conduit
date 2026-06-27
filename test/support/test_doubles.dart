@@ -50,10 +50,14 @@ HostKeyPromptRequest request(String host) {
 }
 
 class InMemoryThemePreferences implements ThemePreferencesRepository {
-  ThemePreferences _preferences = const ThemePreferences(
-    themeMode: ThemeMode.system,
-    palette: AppPalette.catppuccin,
-  );
+  InMemoryThemePreferences([
+    ThemePreferences preferences = const ThemePreferences(
+      themeMode: ThemeMode.system,
+      palette: AppPalette.catppuccin,
+    ),
+  ]) : _preferences = preferences;
+
+  ThemePreferences _preferences;
 
   @override
   Future<ThemePreferences> load() async => _preferences;

@@ -1,0 +1,15 @@
+libandroid-selinux
+==================
+
+Termux package metadata:
+
+  Package: libandroid-selinux
+  Version: 14.0.0.11
+  License: Public Domain
+  Homepage: https://selinuxproject.org
+  Source: https://android.googlesource.com/platform/external/selinux
+  Git branch: android-14.0.0_r11
+
+This file records the exact Termux package license metadata for the bundled
+`libandroid-selinux.so`. The Termux package does not ship a separate LICENSE
+file alongside its build recipe.

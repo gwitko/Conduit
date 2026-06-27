@@ -39,7 +39,20 @@ class SavedHost {
     this.tmuxSessionName = defaultTmuxSessionName,
     this.tmuxStartDirectory = '',
     this.lastConnectedAt,
+    this.isLocal = false,
   });
+
+  factory SavedHost.localShell({required String id}) {
+    return SavedHost(
+      id: id,
+      name: 'Arch Linux',
+      host: 'localhost',
+      port: 0,
+      username: 'root',
+      authMethod: SshAuthMethod.external,
+      isLocal: true,
+    );
+  }
 
   final String id;
   final String name;
@@ -62,6 +75,7 @@ class SavedHost {
   final String tmuxSessionName;
   final String tmuxStartDirectory;
   final DateTime? lastConnectedAt;
+  final bool isLocal;
 
   bool get isValid =>
       id.isNotEmpty &&
@@ -110,6 +124,7 @@ class SavedHost {
     String? tmuxStartDirectory,
     DateTime? lastConnectedAt,
     bool clearLastConnectedAt = false,
+    bool? isLocal,
   }) {
     return SavedHost(
       id: id ?? this.id,
@@ -137,6 +152,7 @@ class SavedHost {
       lastConnectedAt: clearLastConnectedAt
           ? null
           : lastConnectedAt ?? this.lastConnectedAt,
+      isLocal: isLocal ?? this.isLocal,
     );
   }
 
@@ -163,6 +179,7 @@ class SavedHost {
       'tmuxSessionName': tmuxSessionName,
       'tmuxStartDirectory': tmuxStartDirectory,
       'lastConnectedAt': lastConnectedAt?.toIso8601String(),
+      'isLocal': isLocal,
     };
   }
 
@@ -211,6 +228,7 @@ class SavedHost {
       lastConnectedAt: lastConnectedAtRaw == null
           ? null
           : DateTime.tryParse(lastConnectedAtRaw),
+      isLocal: json['isLocal'] as bool? ?? false,
     );
   }
 }

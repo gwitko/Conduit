@@ -12,6 +12,7 @@ class ThemePreferences {
     this.terminalFont = TerminalFontOption.atkynsonNerdFont,
     this.terminalFontSize = terminalFontSizeDefault,
     this.terminalKeyboardItems = defaultTerminalKeyboardItems,
+    this.showLocalShell = true,
   });
 
   final ThemeMode themeMode;
@@ -19,6 +20,7 @@ class ThemePreferences {
   final TerminalFontOption terminalFont;
   final double terminalFontSize;
   final List<TerminalKeyboardItem> terminalKeyboardItems;
+  final bool showLocalShell;
 }
 
 class ThemePreferencesRepository {
@@ -30,6 +32,7 @@ class ThemePreferencesRepository {
   static const _terminalFontSizeKey = 'conduit.terminal_font_size.v1';
   static const _terminalKeyboardActionsKey =
       'conduit.terminal_keyboard_actions.v1';
+  static const _showLocalShellKey = 'conduit.show_local_shell.v1';
 
   final FlutterSecureStorage _storage;
 
@@ -41,6 +44,7 @@ class ThemePreferencesRepository {
     final rawTerminalKeyboardActions = await _storage.read(
       key: _terminalKeyboardActionsKey,
     );
+    final rawShowLocalShell = await _storage.read(key: _showLocalShellKey);
     final terminalFontSize = double.tryParse(rawTerminalFontSize ?? '');
     final terminalKeyboardItems = _parseTerminalKeyboardItems(
       rawTerminalKeyboardActions,
@@ -63,6 +67,7 @@ class ThemePreferencesRepository {
           ? terminalFontSizeDefault
           : clampTerminalFontSize(terminalFontSize),
       terminalKeyboardItems: terminalKeyboardItems,
+      showLocalShell: rawShowLocalShell == null || rawShowLocalShell == 'true',
     );
   }
 
@@ -82,6 +87,10 @@ class ThemePreferencesRepository {
       value: jsonEncode(
         preferences.terminalKeyboardItems.map(_keyboardItemToJson).toList(),
       ),
+    );
+    await _storage.write(
+      key: _showLocalShellKey,
+      value: preferences.showLocalShell.toString(),
     );
   }
 

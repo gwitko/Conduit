@@ -15,6 +15,9 @@ import 'package:conduit/features/hosts/presentation/widgets/host_search_field.da
 import 'package:conduit/features/hosts/presentation/widgets/hosts_hero.dart';
 import 'package:conduit/features/hosts/presentation/widgets/message_state.dart';
 import 'package:conduit/features/hosts/presentation/widgets/tag_filter_bar.dart';
+import 'package:conduit/features/local_shell/presentation/local_shell_controller.dart';
+import 'package:conduit/features/local_shell/presentation/local_shell_page.dart';
+import 'package:conduit/features/local_shell/presentation/widgets/local_shell_card.dart';
 import 'package:conduit/features/sftp/domain/file_export.dart';
 import 'package:conduit/features/sftp/domain/sftp_repository.dart';
 import 'package:conduit/features/sftp/presentation/sftp_browser_page.dart';
@@ -36,6 +39,7 @@ class HostsPage extends StatefulWidget {
     required this.lockController,
     required this.terminalRepository,
     required this.workspaceController,
+    required this.localShellController,
     required this.themeController,
     required this.hostKeyVerifier,
     required this.promptCoordinator,
@@ -48,6 +52,7 @@ class HostsPage extends StatefulWidget {
   final AppLockController lockController;
   final SshTerminalRepository terminalRepository;
   final TerminalWorkspaceController workspaceController;
+  final LocalShellController localShellController;
   final ThemeController themeController;
   final HostKeyVerifier hostKeyVerifier;
   final HostKeyPromptCoordinator promptCoordinator;
@@ -70,6 +75,7 @@ class _HostsPageState extends State<HostsPage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(widget.hostsController.load());
+      unawaited(widget.localShellController.refresh());
       _handlePromptChanged();
     });
     widget.promptCoordinator.addListener(_handlePromptChanged);
@@ -113,7 +119,18 @@ class _HostsPageState extends State<HostsPage> {
   Widget build(BuildContext context) {
     final palette = widget.themeController.palette;
     return Scaffold(
-      floatingActionButton: ConnectionFab(onTap: _openForm),
+      floatingActionButton: ListenableBuilder(
+        listenable: widget.hostsController,
+        builder: (context, _) {
+          final hideFab =
+              !widget.hostsController.isLoading &&
+              widget.hostsController.errorMessage == null &&
+              widget.hostsController.hosts.isEmpty;
+          return hideFab
+              ? const SizedBox.shrink()
+              : ConnectionFab(onTap: _openForm);
+        },
+      ),
       body: ConduitBackdrop(
         palette: palette,
         child: SafeArea(
@@ -143,6 +160,28 @@ class _HostsPageState extends State<HostsPage> {
                         onOpenSessions: widget.workspaceController.hasSessions
                             ? _openTerminalWorkspace
                             : null,
+                      );
+                    },
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: ListenableBuilder(
+                    listenable: Listenable.merge([
+                      widget.workspaceController,
+                      widget.themeController,
+                    ]),
+                    builder: (context, _) {
+                      if (!widget.themeController.showLocalShell) {
+                        return const SizedBox.shrink();
+                      }
+                      final active = widget.workspaceController.sessions.any(
+                        (session) => session.host.id == localShellHostId,
+                      );
+                      return LocalShellCard(
+                        controller: widget.localShellController,
+                        active: active,
+                        onOpenSession: _openLocalSession,
+                        onManage: _openLocalShell,
                       );
                     },
                   ),
@@ -185,16 +224,22 @@ class _HostsPageState extends State<HostsPage> {
     }
 
     if (controller.hosts.isEmpty) {
-      return SliverFillRemaining(
-        hasScrollBody: false,
-        child: MessageState(
-          icon: Icons.dns_outlined,
-          title: 'No machines yet',
-          message:
-              'Add a server and Conduit will keep its credentials in your '
-              'device’s secure storage.',
-          actionLabel: 'Add machine',
-          onAction: _openForm,
+      return SliverPadding(
+        padding: const EdgeInsets.fromLTRB(18, 0, 18, 120),
+        sliver: SliverList(
+          delegate: SliverChildListDelegate.fixed([
+            const _MachineSectionHeader(),
+            const SizedBox(height: 24),
+            MessageState(
+              icon: Icons.dns_outlined,
+              title: 'No saved machines yet',
+              message:
+                  'Add an SSH or Mosh server and Conduit will keep its '
+                  'credentials in your device’s secure storage.',
+              actionLabel: 'Add machine',
+              onAction: _openForm,
+            ),
+          ]),
         ),
       );
     }
@@ -206,6 +251,8 @@ class _HostsPageState extends State<HostsPage> {
       padding: const EdgeInsets.fromLTRB(18, 0, 18, 120),
       sliver: SliverList(
         delegate: SliverChildListDelegate.fixed([
+          const _MachineSectionHeader(),
+          const SizedBox(height: 12),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -316,6 +363,33 @@ class _HostsPageState extends State<HostsPage> {
       ),
     );
     _terminalPageOpen = false;
+  }
+
+  Future<void> _openLocalShell() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => LocalShellPage(
+          controller: widget.localShellController,
+          onOpenSession: _openLocalSession,
+          onCloseSession: _closeLocalSession,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openLocalSession() async {
+    widget.workspaceController.open(widget.localShellController.localHost());
+    if (!mounted) return;
+    await _openTerminalWorkspace();
+  }
+
+  Future<void> _closeLocalSession() async {
+    final sessions = widget.workspaceController.sessions.where(
+      (session) => session.host.id == localShellHostId,
+    );
+    for (final session in List.of(sessions)) {
+      await widget.workspaceController.close(session);
+    }
   }
 
   Future<void> _openTrustedKeys() async {
@@ -447,6 +521,35 @@ class _HostsPageState extends State<HostsPage> {
     if (shouldDelete ?? false) {
       await widget.hostsController.remove(host);
     }
+  }
+}
+
+class _MachineSectionHeader extends StatelessWidget {
+  const _MachineSectionHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Saved machines',
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          'SSH and Mosh connections you have saved.',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+            height: 1.25,
+          ),
+        ),
+      ],
+    );
   }
 }
 

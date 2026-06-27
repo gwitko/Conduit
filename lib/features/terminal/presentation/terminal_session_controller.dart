@@ -118,7 +118,11 @@ class TerminalSessionController extends ChangeNotifier {
     _outputFilter.reset();
     _predictiveEcho.reset();
     _status = TerminalConnectionStatus.connecting;
-    terminal.write('Connecting to ${host.endpoint}...\r\n');
+    terminal.write(
+      host.isLocal
+          ? 'Starting ${host.name}...\r\n'
+          : 'Connecting to ${host.endpoint}...\r\n',
+    );
     notifyListeners();
 
     StreamSubscription<String>? securityKeySubscription;
@@ -166,7 +170,11 @@ class TerminalSessionController extends ChangeNotifier {
       _doneSubscription = session.done.asStream().listen((_) {
         if (_status == TerminalConnectionStatus.connected) {
           _status = TerminalConnectionStatus.disconnected;
-          terminal.write('\r\nConnection closed.\r\n');
+          terminal.write(
+            host.isLocal
+                ? '\r\nShell exited.\r\n'
+                : '\r\nConnection closed.\r\n',
+          );
           notifyListeners();
         }
       }, onError: _handleStreamError);

@@ -21,9 +21,6 @@ class HostsHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 10, 18, 18),
       child: Column(
@@ -31,9 +28,8 @@ class HostsHero extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Expanded(
-                child: ConduitWordmark(size: 32, showSubtitle: true),
-              ),
+              const ConduitGlyph(size: 30),
+              const Spacer(),
               _GhostIconButton(
                 tooltip: 'Trusted keys',
                 icon: Icons.shield_outlined,
@@ -65,26 +61,6 @@ class HostsHero extends StatelessWidget {
               onOpenSessions: onOpenSessions,
             ),
           ],
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Text(
-                'Machines',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                '$hostCount',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
         ],
       ),
     );

@@ -1,9 +1,13 @@
 import 'package:conduit/core/presentation/system_navigation_insets.dart';
+import 'package:conduit/core/theme/app_palette.dart';
 import 'package:conduit/core/theme/terminal_appearance.dart';
 import 'package:conduit/core/theme/theme_controller.dart';
+import 'package:conduit/core/theme/theme_preferences_repository.dart';
 import 'package:conduit/features/app_lock/presentation/app_lock_controller.dart';
 import 'package:conduit/features/hosts/domain/saved_host.dart';
 import 'package:conduit/features/hosts/presentation/hosts_controller.dart';
+import 'package:conduit/features/local_shell/domain/local_shell_state.dart';
+import 'package:conduit/features/local_shell/presentation/local_shell_controller.dart';
 import 'package:conduit/features/terminal/presentation/host_key_prompt_coordinator.dart';
 import 'package:conduit/features/terminal/presentation/terminal_page.dart';
 import 'package:conduit/features/terminal/presentation/terminal_workspace_controller.dart';
@@ -72,6 +76,7 @@ void main() {
         workspaceController: TerminalWorkspaceController(
           NoNetworkTerminalRepository(),
         ),
+        localShellController: LocalShellController(),
         hostKeyVerifier: verifier,
         promptCoordinator: promptCoordinator,
         sftpRepository: NoNetworkSftpRepository(),
@@ -81,9 +86,50 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Conduit'), findsWidgets);
-    expect(find.text('No machines yet'), findsOneWidget);
+    expect(find.text('Saved machines'), findsOneWidget);
+    expect(find.text('No saved machines yet'), findsOneWidget);
     expect(find.text('Add machine'), findsOneWidget);
+    expect(find.text('New machine'), findsNothing);
+  });
+
+  testWidgets('hides local shell entry when disabled in appearance', (
+    tester,
+  ) async {
+    final promptCoordinator = HostKeyPromptCoordinator();
+    final verifier = NoopVerifier();
+    final themeController = ThemeController(
+      InMemoryThemePreferences(
+        const ThemePreferences(
+          themeMode: ThemeMode.system,
+          palette: AppPalette.catppuccin,
+          showLocalShell: false,
+        ),
+      ),
+    );
+    await themeController.load();
+
+    await tester.pumpWidget(
+      ConduitApp(
+        lockController: AppLockController(AlwaysAuthenticates()),
+        themeController: themeController,
+        hostsController: HostsController(EmptyHostsRepository()),
+        terminalRepository: NoNetworkTerminalRepository(),
+        workspaceController: TerminalWorkspaceController(
+          NoNetworkTerminalRepository(),
+        ),
+        localShellController: _VisibleLocalShellController(),
+        hostKeyVerifier: verifier,
+        promptCoordinator: promptCoordinator,
+        sftpRepository: NoNetworkSftpRepository(),
+        fileExport: RecordingFileExport(),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Device'), findsNothing);
+    expect(find.text('Local shell'), findsNothing);
+    expect(find.text('Saved machines'), findsOneWidget);
   });
 
   test('workspace opens, focuses, and closes machine tabs', () async {
@@ -185,4 +231,12 @@ void main() {
     await themeController.setTerminalFontSize(terminalFontSizeMax + 1);
     expect(themeController.terminalFontSize, terminalFontSizeMax);
   });
+}
+
+class _VisibleLocalShellController extends LocalShellController {
+  @override
+  LocalShellState get state => LocalShellState.notInstalled;
+
+  @override
+  Future<void> refresh() async {}
 }

@@ -1,0 +1,5 @@
+This release adds a local Arch Linux shell that runs right on your device.
+
+* New: run a full Arch Linux shell on-device (Android, arm64) with pacman - no root, no server. It runs unprivileged through proot and appears as a normal terminal tab.
+* Find it as the "Local shell" card at the top of your machine list; it downloads an Arch Linux ARM image on first use.
+* Uses tooling packaged by Termux; see the in-app open-source licenses, THIRD_PARTY_NOTICES, and third_party/source-offer.

@@ -1,4 +1,4 @@
-# Conduit: SSH, Mosh & SFTP
+# Conduit: Terminal, SSH, Mosh & SFTP
 
 [![Latest release](https://img.shields.io/github/v/release/gwitko/Conduit)](https://github.com/gwitko/Conduit/releases/latest)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
@@ -13,7 +13,10 @@
 > [!CAUTION]
 > Android is on track to become a locked-down platform. [Help keep it open](https://keepandroidopen.org).
 
-A modern, privacy-focused SSH, Mosh, and SFTP client for Android and iOS.
+Conduit's own source code is Apache-2.0. Android builds that include the local
+shell also redistribute third-party binaries under their own licenses; see
+[Acknowledgements](#acknowledgements) and
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 Conduit is for reaching real machines from your phone without signing into
 anything. Hosts, keys, and trusted fingerprints stay on the device - no account,
@@ -24,9 +27,14 @@ phone keyboard doesn't have. Per-host tmux integration can attach or create a
 session on connect, choose the start directory, and expose tmux prefix, action,
 and scrollback controls from the key row.
 
+On Android arm64, Conduit can also run an optional local Arch Linux shell
+through `proot`. It downloads an Arch Linux ARM image on first use and opens it
+like any other terminal tab.
+
 There's an SFTP browser for moving files around, host-key trust you manage
 yourself, an optional device-auth app lock, and a stack of built-in terminal
-themes (Catppuccin, Tokyo Night, Gruvbox, Nord, etc.). E-ink device support is coming!
+themes (Catppuccin, Tokyo Night, Gruvbox, Nord, etc.). E-ink device support is
+coming!
 
 Mosh runs on [dart_mosh](https://github.com/gwitko/dart_mosh), a clean-room
 Dart implementation of the protocol, and the terminal is
@@ -55,7 +63,41 @@ Dart implementation of the protocol, and the terminal is
   repeat, latching modifiers, and your own text snippets and control-key combos.
 - Optional device-auth app lock for protecting saved machines and credentials.
 - Built-in terminal themes, font sizing, palette choices, and appearance controls.
+- On-device **local Arch Linux shell** (Android, arm64) with `pacman`, running
+  unprivileged via `proot` - no root, no server. Uses Termux-packaged tooling.
 - Local-first storage: no account, no cloud sync, no subscription.
+
+## Acknowledgements
+
+The local shell uses Android builds of open-source tools maintained and packaged
+by the [Termux](https://termux.dev) project:
+
+- **[proot](https://github.com/termux/proot)** - the userspace
+  `chroot`/`ptrace` engine used for the unprivileged Linux userland.
+- The **Arch Linux ARM** root filesystem, distributed via Termux's
+  **[proot-distro](https://github.com/termux/proot-distro)**. Arch Linux ARM
+  itself is maintained by the [Arch Linux ARM](https://archlinuxarm.org) project.
+- `busybox`, GNU `tar`, `xz`/`liblzma`, `libtalloc`, and the `libandroid-*`
+  shims.
+
+If the local shell is useful to you, consider supporting
+[Termux](https://github.com/sponsors/termux),
+[GNU/FSF](https://www.fsf.org/about/ways-to-donate), or
+[Arch Linux ARM](https://archlinuxarm.org/about/donate).
+
+Conduit redistributes these components under their own licenses and provides a
+corresponding source offer for GPL/LGPL components. The component list, license
+texts, upstream source archives, exact package checksums, and pinned source
+recipe snapshot are in
+**[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)**. GPL/LGPL source-offer
+details live in
+**[third_party/source-offer](third_party/source-offer)**.
+
+Conduit's own source code is licensed [Apache-2.0](LICENSE). Bundled
+third-party binaries and downloaded rootfs packages are not relicensed by
+Conduit. Mosh runs on
+[dart_mosh](https://github.com/gwitko/dart_mosh) and the terminal is
+[conduit_vt](https://github.com/gwitko/conduit_vt), a fork of xterm.dart.
 
 ## Contributors
 

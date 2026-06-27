@@ -14,6 +14,7 @@ class ThemeController extends ChangeNotifier {
   double _terminalFontSize = terminalFontSizeDefault;
   List<TerminalKeyboardItem> _terminalKeyboardItems =
       defaultTerminalKeyboardItems;
+  bool _showLocalShell = true;
 
   ThemeMode get themeMode => _themeMode;
   AppPalette get palette => _palette;
@@ -21,6 +22,7 @@ class ThemeController extends ChangeNotifier {
   double get terminalFontSize => _terminalFontSize;
   List<TerminalKeyboardItem> get terminalKeyboardItems =>
       List.unmodifiable(_terminalKeyboardItems);
+  bool get showLocalShell => _showLocalShell;
 
   Future<void> load() async {
     final preferences = await _repository.load();
@@ -29,6 +31,7 @@ class ThemeController extends ChangeNotifier {
     _terminalFont = preferences.terminalFont;
     _terminalFontSize = preferences.terminalFontSize;
     _terminalKeyboardItems = List.of(preferences.terminalKeyboardItems);
+    _showLocalShell = preferences.showLocalShell;
     notifyListeners();
   }
 
@@ -97,6 +100,15 @@ class ThemeController extends ChangeNotifier {
     return setTerminalKeyboardItems(defaultTerminalKeyboardItems);
   }
 
+  Future<void> setShowLocalShell(bool show) async {
+    if (_showLocalShell == show) {
+      return;
+    }
+    _showLocalShell = show;
+    notifyListeners();
+    await _save();
+  }
+
   Future<void> _save() {
     return _repository.save(
       ThemePreferences(
@@ -105,6 +117,7 @@ class ThemeController extends ChangeNotifier {
         terminalFont: _terminalFont,
         terminalFontSize: _terminalFontSize,
         terminalKeyboardItems: _terminalKeyboardItems,
+        showLocalShell: _showLocalShell,
       ),
     );
   }

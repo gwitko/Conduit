@@ -67,6 +67,10 @@ class _ThemeSheet extends StatelessWidget {
                   const SizedBox(height: 10),
                   _TerminalAppearanceControls(controller: controller),
                   const SizedBox(height: 22),
+                  const ConduitSectionLabel('Home'),
+                  const SizedBox(height: 10),
+                  _HomeAppearanceControls(controller: controller),
+                  const SizedBox(height: 22),
                   const ConduitSectionLabel('Palette'),
                   const SizedBox(height: 10),
                   GridView.builder(
@@ -95,6 +99,38 @@ class _ThemeSheet extends StatelessWidget {
           },
         );
       },
+    );
+  }
+}
+
+class _HomeAppearanceControls extends StatelessWidget {
+  const _HomeAppearanceControls({required this.controller});
+
+  final ThemeController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    return Material(
+      color: colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        side: BorderSide(color: colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: SwitchListTile(
+        secondary: const Icon(Icons.terminal_rounded),
+        title: const Text('Show local shell'),
+        subtitle: Text(
+          'Show the local terminal shortcut on the home screen.',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ),
+        value: controller.showLocalShell,
+        onChanged: controller.setShowLocalShell,
+      ),
     );
   }
 }
