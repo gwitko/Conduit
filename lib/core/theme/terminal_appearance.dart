@@ -53,6 +53,7 @@ enum TerminalKeyboardAction {
   paste,
   functionKeys,
   tmuxPrefix,
+  tmuxScrollback,
   tmuxMenu,
 }
 
@@ -142,6 +143,7 @@ const defaultTerminalKeyboardActions = [
   TerminalKeyboardAction.pageDown,
   TerminalKeyboardAction.functionKeys,
   TerminalKeyboardAction.tmuxPrefix,
+  TerminalKeyboardAction.tmuxScrollback,
   TerminalKeyboardAction.tmuxMenu,
   TerminalKeyboardAction.fullscreen,
 ];
@@ -174,6 +176,7 @@ const legacyDefaultTerminalKeyboardActions = [
 
 const tmuxTerminalKeyboardActions = [
   TerminalKeyboardAction.tmuxPrefix,
+  TerminalKeyboardAction.tmuxScrollback,
   TerminalKeyboardAction.tmuxMenu,
 ];
 
@@ -201,12 +204,14 @@ const defaultTerminalKeyboardItems = [
   TerminalKeyboardItem.builtIn(TerminalKeyboardAction.pageDown),
   TerminalKeyboardItem.builtIn(TerminalKeyboardAction.functionKeys),
   TerminalKeyboardItem.builtIn(TerminalKeyboardAction.tmuxPrefix),
+  TerminalKeyboardItem.builtIn(TerminalKeyboardAction.tmuxScrollback),
   TerminalKeyboardItem.builtIn(TerminalKeyboardAction.tmuxMenu),
   TerminalKeyboardItem.builtIn(TerminalKeyboardAction.fullscreen),
 ];
 
 const tmuxTerminalKeyboardItems = [
   TerminalKeyboardItem.builtIn(TerminalKeyboardAction.tmuxPrefix),
+  TerminalKeyboardItem.builtIn(TerminalKeyboardAction.tmuxScrollback),
   TerminalKeyboardItem.builtIn(TerminalKeyboardAction.tmuxMenu),
 ];
 
@@ -265,6 +270,7 @@ extension TerminalKeyboardActionDetails on TerminalKeyboardAction {
     TerminalKeyboardAction.paste => 'Paste',
     TerminalKeyboardAction.functionKeys => 'Fn',
     TerminalKeyboardAction.tmuxPrefix => 'Tmux',
+    TerminalKeyboardAction.tmuxScrollback => 'Scroll',
     TerminalKeyboardAction.tmuxMenu => 'Tmux+',
   };
 }

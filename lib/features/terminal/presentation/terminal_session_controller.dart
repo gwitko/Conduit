@@ -431,6 +431,14 @@ class TerminalSessionController extends ChangeNotifier {
     unawaited(roaming.rehome().catchError(_handleStreamError));
   }
 
+  void forceResize() {
+    if (_session == null || _status != TerminalConnectionStatus.connected) return;
+    _pendingColumns = terminal.viewWidth;
+    _pendingRows = terminal.viewHeight;
+    _resizeTimer?.cancel();
+    _flushResize();
+  }
+
   void _flushResize() {
     final session = _session;
     if (session == null) return;

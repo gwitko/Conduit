@@ -1,0 +1,6 @@
+Improved terminal touch controls and tmux scrolling.
+
+* Added a Scroll key for tmux scrollback mode.
+* Removed the tmux scroll overlay; drag the terminal while Scroll is active.
+* Made tmux scrollback dragging faster and less prone to accidental jumps.
+* Fixed key-row scrolling so dragging the key row does not send the touched key.

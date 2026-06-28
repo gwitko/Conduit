@@ -106,7 +106,7 @@ class _TerminalSurfaceState extends State<TerminalSurface> {
 
   void _handleTmuxScrollDrag(DragUpdateDetails details) {
     _tmuxScrollDelta += details.primaryDelta ?? 0;
-    const step = 28.0;
+    const step = 12.0;
     while (_tmuxScrollDelta.abs() >= step) {
       if (_tmuxScrollDelta > 0) {
         widget.session.sendKey(TerminalKey.arrowUp);
@@ -119,16 +119,6 @@ class _TerminalSurfaceState extends State<TerminalSurface> {
   }
 
   void _handleTmuxScrollEnd(DragEndDetails details) {
-    final velocity = details.primaryVelocity ?? 0;
-    if (velocity.abs() < 700) {
-      _tmuxScrollDelta = 0;
-      return;
-    }
-    final key = velocity > 0 ? TerminalKey.pageUp : TerminalKey.pageDown;
-    final pages = (velocity.abs() / 900).clamp(1, 4).round();
-    for (var index = 0; index < pages; index += 1) {
-      widget.session.sendKey(key);
-    }
     _tmuxScrollDelta = 0;
   }
 
@@ -182,122 +172,12 @@ class _TerminalSurfaceState extends State<TerminalSurface> {
                   behavior: HitTestBehavior.translucent,
                   onVerticalDragUpdate: _handleTmuxScrollDrag,
                   onVerticalDragEnd: _handleTmuxScrollEnd,
-                  child: _TmuxScrollOverlay(
-                    palette: widget.palette,
-                    brightness: widget.brightness,
-                    onKey: widget.session.sendKey,
-                    onExit: () {
-                      widget.session.sendKey(TerminalKey.escape);
-                      widget.onExitTmuxScrollMode();
-                    },
-                  ),
+                  child: const SizedBox.expand(),
                 ),
               ),
           ],
         ),
       ),
-    );
-  }
-}
-
-class _TmuxScrollOverlay extends StatelessWidget {
-  const _TmuxScrollOverlay({
-    required this.palette,
-    required this.brightness,
-    required this.onKey,
-    required this.onExit,
-  });
-
-  final AppPalette palette;
-  final Brightness brightness;
-  final ValueChanged<TerminalKey> onKey;
-  final VoidCallback onExit;
-
-  @override
-  Widget build(BuildContext context) {
-    final background = Color.alphaBlend(
-      palette.accent.withValues(alpha: 0.16),
-      palette.canvasFor(brightness).withValues(alpha: 0.92),
-    );
-    final foreground = palette.foregroundFor(brightness);
-    return Align(
-      alignment: Alignment.bottomCenter,
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(10, 0, 10, 10),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-        decoration: BoxDecoration(
-          color: background,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: palette.accent.withValues(alpha: 0.45)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _TmuxScrollButton(
-              tooltip: 'Line up',
-              icon: Icons.keyboard_arrow_up_rounded,
-              foreground: foreground,
-              onPressed: () => onKey(TerminalKey.arrowUp),
-            ),
-            _TmuxScrollButton(
-              tooltip: 'Page up',
-              icon: Icons.vertical_align_top_rounded,
-              foreground: foreground,
-              onPressed: () => onKey(TerminalKey.pageUp),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Text(
-                'tmux scroll',
-                style: TextStyle(
-                  color: foreground,
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-            _TmuxScrollButton(
-              tooltip: 'Page down',
-              icon: Icons.vertical_align_bottom_rounded,
-              foreground: foreground,
-              onPressed: () => onKey(TerminalKey.pageDown),
-            ),
-            _TmuxScrollButton(
-              tooltip: 'Line down',
-              icon: Icons.keyboard_arrow_down_rounded,
-              foreground: foreground,
-              onPressed: () => onKey(TerminalKey.arrowDown),
-            ),
-            const SizedBox(width: 4),
-            TextButton(onPressed: onExit, child: const Text('Exit')),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _TmuxScrollButton extends StatelessWidget {
-  const _TmuxScrollButton({
-    required this.tooltip,
-    required this.icon,
-    required this.foreground,
-    required this.onPressed,
-  });
-
-  final String tooltip;
-  final IconData icon;
-  final Color foreground;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return IconButton(
-      tooltip: tooltip,
-      color: foreground,
-      visualDensity: VisualDensity.compact,
-      icon: Icon(icon, size: 20),
-      onPressed: onPressed,
     );
   }
 }

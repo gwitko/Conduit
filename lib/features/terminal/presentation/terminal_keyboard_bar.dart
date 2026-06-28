@@ -6,6 +6,7 @@ import 'package:conduit/core/theme/terminal_appearance.dart';
 import 'package:conduit/features/hosts/domain/saved_host.dart';
 import 'package:conduit/features/terminal/presentation/terminal_session_controller.dart';
 import 'package:conduit_vt/conduit_vt.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -19,7 +20,9 @@ class TerminalKeyboardBar extends StatelessWidget {
     required this.fullscreen,
     required this.onToggleFullscreen,
     required this.onEnterTmuxScrollMode,
+    required this.onExitTmuxScrollMode,
     required this.tmuxPrefixKey,
+    required this.tmuxScrollMode,
     super.key,
   });
 
@@ -31,7 +34,9 @@ class TerminalKeyboardBar extends StatelessWidget {
   final bool fullscreen;
   final VoidCallback onToggleFullscreen;
   final VoidCallback onEnterTmuxScrollMode;
+  final VoidCallback onExitTmuxScrollMode;
   final TmuxPrefixKey tmuxPrefixKey;
+  final bool tmuxScrollMode;
 
   @override
   Widget build(BuildContext context) {
@@ -167,6 +172,13 @@ class TerminalKeyboardBar extends StatelessWidget {
         brightness: brightness,
         onPressed: _sendTmuxPrefix,
       ),
+      TerminalKeyboardAction.tmuxScrollback => _Key(
+        label: action.label,
+        palette: palette,
+        brightness: brightness,
+        selected: tmuxScrollMode,
+        onPressed: _toggleTmuxScrollMode,
+      ),
       TerminalKeyboardAction.tmuxMenu => _MenuKey<_TmuxAction>(
         label: 'Tmux+',
         tooltip: 'Tmux actions',
@@ -237,6 +249,7 @@ class TerminalKeyboardBar extends StatelessWidget {
       case TerminalKeyboardAction.paste:
       case TerminalKeyboardAction.functionKeys:
       case TerminalKeyboardAction.tmuxPrefix:
+      case TerminalKeyboardAction.tmuxScrollback:
       case TerminalKeyboardAction.tmuxMenu:
         break;
     }
@@ -254,6 +267,16 @@ class TerminalKeyboardBar extends StatelessWidget {
       onEnterTmuxScrollMode();
     }
     _focusTerminal();
+  }
+
+  void _toggleTmuxScrollMode() {
+    if (tmuxScrollMode) {
+      controller.sendText('q');
+      onExitTmuxScrollMode();
+      _focusTerminal();
+      return;
+    }
+    _triggerTmuxAction(_TmuxAction.copyMode);
   }
 
   void _triggerCustomItem(TerminalKeyboardItem item) {
@@ -435,7 +458,7 @@ TerminalKey? _controlKeyFor(String? key) {
   };
 }
 
-class _Key extends StatefulWidget {
+class _Key extends StatelessWidget {
   const _Key({
     required this.palette,
     required this.brightness,
@@ -443,6 +466,7 @@ class _Key extends StatefulWidget {
     this.label,
     this.icon,
     this.repeat = false,
+    this.selected = false,
   });
 
   final AppPalette palette;
@@ -451,15 +475,85 @@ class _Key extends StatefulWidget {
   final IconData? icon;
   final VoidCallback? onPressed;
   final bool repeat;
+  final bool selected;
 
   @override
-  State<_Key> createState() => _KeyState();
+  Widget build(BuildContext context) {
+    final isIconKey = icon != null;
+    final enabled = onPressed != null;
+    final foreground = enabled
+        ? selected
+              ? palette.accent
+              : palette.foregroundFor(brightness)
+        : palette.mutedForegroundFor(brightness);
+    final background = selected
+        ? Color.alphaBlend(
+            palette.accent.withValues(alpha: 0.22),
+            palette.panelFor(brightness),
+          )
+        : palette.panelFor(brightness);
+    return _KeySurface(
+      color: background,
+      onPressed: onPressed,
+      repeat: repeat,
+      child: Container(
+        height: 36,
+        constraints: BoxConstraints(minWidth: isIconKey ? 44 : 46),
+        padding: EdgeInsets.symmetric(horizontal: isIconKey ? 0 : 10),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: selected
+                ? palette.accent.withValues(alpha: 0.7)
+                : enabled
+                ? palette.hairlineFor(brightness)
+                : palette.hairlineFor(brightness).withValues(alpha: 0.55),
+            width: selected ? 1.3 : 1,
+          ),
+        ),
+        child: icon == null
+            ? Text(
+                label ?? '',
+                style: TextStyle(
+                  color: foreground,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                softWrap: false,
+              )
+            : Icon(icon, color: foreground, size: 20),
+      ),
+    );
+  }
 }
 
-class _KeyState extends State<_Key> {
+class _KeySurface extends StatefulWidget {
+  const _KeySurface({
+    required this.color,
+    required this.child,
+    this.onPressed,
+    this.repeat = false,
+  });
+
+  final Color color;
+  final Widget child;
+  final VoidCallback? onPressed;
+  final bool repeat;
+
+  @override
+  State<_KeySurface> createState() => _KeySurfaceState();
+}
+
+class _KeySurfaceState extends State<_KeySurface> {
   Timer? _delayTimer;
   Timer? _repeatTimer;
   bool _holding = false;
+  bool _dragCanceled = false;
+  bool _repeatStarted = false;
+  Offset? _pointerStart;
 
   @override
   void dispose() {
@@ -467,12 +561,22 @@ class _KeyState extends State<_Key> {
     super.dispose();
   }
 
-  void _press() {
+  void _pressOnce() {
     final onPressed = widget.onPressed;
     if (onPressed == null) {
       return;
     }
     onPressed();
+  }
+
+  void _startPress(Offset position) {
+    final onPressed = widget.onPressed;
+    if (onPressed == null) {
+      return;
+    }
+    _pointerStart = position;
+    _dragCanceled = false;
+    _repeatStarted = false;
     if (!widget.repeat) {
       return;
     }
@@ -480,16 +584,45 @@ class _KeyState extends State<_Key> {
     _delayTimer?.cancel();
     _repeatTimer?.cancel();
     _delayTimer = Timer(_repeatInitialDelay, () {
-      if (!_holding) {
+      if (!_holding || _dragCanceled) {
         return;
       }
+      _repeatStarted = true;
       onPressed();
       _repeatTimer = Timer.periodic(_repeatInterval, (_) {
-        if (_holding) {
+        if (_holding && !_dragCanceled) {
           onPressed();
         }
       });
     });
+  }
+
+  void _trackMove(Offset position) {
+    final pointerStart = _pointerStart;
+    if (pointerStart == null || _dragCanceled) {
+      return;
+    }
+    if ((position - pointerStart).distance <= kTouchSlop) {
+      return;
+    }
+    _dragCanceled = true;
+    _stopRepeat();
+  }
+
+  void _endPress() {
+    final shouldPress =
+        widget.onPressed != null && !_dragCanceled && !_repeatStarted;
+    _stopRepeat();
+    _pointerStart = null;
+    if (shouldPress) {
+      _pressOnce();
+    }
+  }
+
+  void _cancelPress() {
+    _dragCanceled = true;
+    _pointerStart = null;
+    _stopRepeat();
   }
 
   void _stopRepeat() {
@@ -502,52 +635,25 @@ class _KeyState extends State<_Key> {
 
   @override
   Widget build(BuildContext context) {
-    final isIconKey = widget.icon != null;
     final enabled = widget.onPressed != null;
-    final foreground = enabled
-        ? widget.palette.foregroundFor(widget.brightness)
-        : widget.palette.mutedForegroundFor(widget.brightness);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 2),
       child: Material(
-        color: widget.palette.panelFor(widget.brightness),
+        color: widget.color,
         borderRadius: BorderRadius.circular(8),
         child: Listener(
-          onPointerDown: enabled ? (_) => _press() : null,
-          onPointerUp: enabled ? (_) => _stopRepeat() : null,
-          onPointerCancel: enabled ? (_) => _stopRepeat() : null,
+          onPointerDown: enabled
+              ? (event) => _startPress(event.localPosition)
+              : null,
+          onPointerMove: enabled
+              ? (event) => _trackMove(event.localPosition)
+              : null,
+          onPointerUp: enabled ? (_) => _endPress() : null,
+          onPointerCancel: enabled ? (_) => _cancelPress() : null,
           child: InkWell(
             borderRadius: BorderRadius.circular(8),
             onTap: enabled ? () {} : null,
-            child: Container(
-              height: 36,
-              constraints: BoxConstraints(minWidth: isIconKey ? 44 : 46),
-              padding: EdgeInsets.symmetric(horizontal: isIconKey ? 0 : 10),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: enabled
-                      ? widget.palette.hairlineFor(widget.brightness)
-                      : widget.palette
-                            .hairlineFor(widget.brightness)
-                            .withValues(alpha: 0.55),
-                ),
-              ),
-              child: widget.icon == null
-                  ? Text(
-                      widget.label ?? '',
-                      style: TextStyle(
-                        color: foreground,
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w700,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      softWrap: false,
-                    )
-                  : Icon(widget.icon, color: foreground, size: 20),
-            ),
+            child: widget.child,
           ),
         ),
       ),
@@ -573,42 +679,36 @@ class _ToggleKey extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = palette.accent;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 2),
-      child: Material(
-        color: selected
-            ? Color.alphaBlend(
-                accent.withValues(alpha: 0.22),
-                palette.panelFor(brightness),
-              )
-            : palette.panelFor(brightness),
-        borderRadius: BorderRadius.circular(8),
-        child: InkWell(
+    final background = selected
+        ? Color.alphaBlend(
+            accent.withValues(alpha: 0.22),
+            palette.panelFor(brightness),
+          )
+        : palette.panelFor(brightness);
+    return _KeySurface(
+      color: background,
+      onPressed: onPressed,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        width: 50,
+        height: 36,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(8),
-          onTap: onPressed,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 120),
-            width: 50,
-            height: 36,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: selected
-                    ? accent.withValues(alpha: 0.7)
-                    : palette.hairlineFor(brightness),
-                width: selected ? 1.3 : 1,
-              ),
-            ),
-            child: Text(
-              label,
-              style: TextStyle(
-                color: selected ? accent : palette.foregroundFor(brightness),
-                fontSize: 12.5,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.4,
-              ),
-            ),
+          border: Border.all(
+            color: selected
+                ? accent.withValues(alpha: 0.7)
+                : palette.hairlineFor(brightness),
+            width: selected ? 1.3 : 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? accent : palette.foregroundFor(brightness),
+            fontSize: 12.5,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.4,
           ),
         ),
       ),

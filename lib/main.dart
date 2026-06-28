@@ -131,6 +131,12 @@ class _ConduitAppState extends State<ConduitApp> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _lifecycleState = state;
     _syncBackgroundKeepalive();
+
+    if (state == AppLifecycleState.resumed) {
+      for (final session in widget.workspaceController.sessions) {
+        session.forceResize();
+      }
+    }
   }
 
   void _syncBackgroundKeepalive() {

@@ -1,0 +1,3 @@
+Fixed terminal layout distortion after returning to the app from the background.
+
+Conduit now re-sends the terminal size to the server when the app resumes, so full-screen TUI apps redraw correctly instead of appearing misaligned.

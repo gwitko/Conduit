@@ -193,8 +193,13 @@ class _TerminalPageState extends State<TerminalPage> {
                       fullscreen: _fullscreen,
                       onToggleFullscreen: _toggleFullscreen,
                       tmuxPrefixKey: activeSession.host.tmuxPrefixKey,
+                      tmuxScrollMode: _tmuxScrollMode,
                       onEnterTmuxScrollMode: () {
                         setState(() => _tmuxScrollMode = true);
+                        _focusNode.requestFocus();
+                      },
+                      onExitTmuxScrollMode: () {
+                        setState(() => _tmuxScrollMode = false);
                         _focusNode.requestFocus();
                       },
                     ),
