@@ -55,6 +55,7 @@ enum TerminalKeyboardAction {
   tmuxPrefix,
   tmuxScrollback,
   tmuxMenu,
+  compose,
 }
 
 enum TerminalKeyboardItemKind { builtIn, customText, customControl }
@@ -272,5 +273,6 @@ extension TerminalKeyboardActionDetails on TerminalKeyboardAction {
     TerminalKeyboardAction.tmuxPrefix => 'Tmux',
     TerminalKeyboardAction.tmuxScrollback => 'Scroll',
     TerminalKeyboardAction.tmuxMenu => 'Tmux+',
+    TerminalKeyboardAction.compose => 'Compose',
   };
 }

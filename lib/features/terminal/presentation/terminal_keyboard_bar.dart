@@ -19,6 +19,8 @@ class TerminalKeyboardBar extends StatelessWidget {
     required this.items,
     required this.fullscreen,
     required this.onToggleFullscreen,
+    this.composeActive = false,
+    this.onToggleCompose,
     required this.onEnterTmuxScrollMode,
     required this.onExitTmuxScrollMode,
     required this.tmuxPrefixKey,
@@ -33,6 +35,8 @@ class TerminalKeyboardBar extends StatelessWidget {
   final List<TerminalKeyboardItem> items;
   final bool fullscreen;
   final VoidCallback onToggleFullscreen;
+  final bool composeActive;
+  final VoidCallback? onToggleCompose;
   final VoidCallback onEnterTmuxScrollMode;
   final VoidCallback onExitTmuxScrollMode;
   final TmuxPrefixKey tmuxPrefixKey;
@@ -109,6 +113,13 @@ class TerminalKeyboardBar extends StatelessWidget {
           controller.keyboard.alt = !controller.keyboard.alt;
           _focusTerminal();
         },
+      ),
+      TerminalKeyboardAction.compose => _ToggleKey(
+        label: action.label,
+        palette: palette,
+        brightness: brightness,
+        selected: composeActive,
+        onPressed: () => onToggleCompose?.call(),
       ),
       TerminalKeyboardAction.fullscreen => _Key(
         icon: fullscreen
@@ -251,6 +262,7 @@ class TerminalKeyboardBar extends StatelessWidget {
       case TerminalKeyboardAction.tmuxPrefix:
       case TerminalKeyboardAction.tmuxScrollback:
       case TerminalKeyboardAction.tmuxMenu:
+      case TerminalKeyboardAction.compose:
         break;
     }
   }
@@ -702,13 +714,18 @@ class _ToggleKey extends StatelessWidget {
             width: selected ? 1.3 : 1,
           ),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: selected ? accent : palette.foregroundFor(brightness),
-            fontSize: 12.5,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0.4,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            label,
+            maxLines: 1,
+            softWrap: false,
+            style: TextStyle(
+              color: selected ? accent : palette.foregroundFor(brightness),
+              fontSize: 12.5,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.4,
+            ),
           ),
         ),
       ),

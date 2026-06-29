@@ -14,6 +14,7 @@ import 'package:conduit/features/terminal/presentation/widgets/empty_terminal_st
 import 'package:conduit/features/terminal/presentation/widgets/session_tabs.dart';
 import 'package:conduit/features/terminal/presentation/widgets/terminal_header.dart';
 import 'package:conduit/features/terminal/presentation/widgets/terminal_surface.dart';
+import 'package:conduit_vt/conduit_vt.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -36,6 +37,7 @@ class _TerminalPageState extends State<TerminalPage> {
   TerminalSessionController? _focusedSession;
   bool _fullscreen = false;
   bool _tmuxScrollMode = false;
+  bool _composeMode = false;
 
   @override
   void initState() {
@@ -184,25 +186,42 @@ class _TerminalPageState extends State<TerminalPage> {
                         ),
                       ),
                     ),
-                    TerminalKeyboardBar(
-                      controller: activeSession,
-                      focusNode: _focusNode,
-                      palette: palette,
-                      brightness: brightness,
-                      items: widget.themeController.terminalKeyboardItems,
-                      fullscreen: _fullscreen,
-                      onToggleFullscreen: _toggleFullscreen,
-                      tmuxPrefixKey: activeSession.host.tmuxPrefixKey,
-                      tmuxScrollMode: _tmuxScrollMode,
-                      onEnterTmuxScrollMode: () {
-                        setState(() => _tmuxScrollMode = true);
-                        _focusNode.requestFocus();
-                      },
-                      onExitTmuxScrollMode: () {
-                        setState(() => _tmuxScrollMode = false);
-                        _focusNode.requestFocus();
-                      },
-                    ),
+                    if (_composeMode)
+                      _ComposeInputBar(
+                        palette: palette,
+                        brightness: brightness,
+                        onSend: (line) {
+                          activeSession.sendText(line);
+                          activeSession.sendKey(TerminalKey.enter);
+                        },
+                        onClose: () {
+                          setState(() => _composeMode = false);
+                          _focusNode.requestFocus();
+                        },
+                      )
+                    else
+                      TerminalKeyboardBar(
+                        controller: activeSession,
+                        focusNode: _focusNode,
+                        palette: palette,
+                        brightness: brightness,
+                        items: widget.themeController.terminalKeyboardItems,
+                        fullscreen: _fullscreen,
+                        onToggleFullscreen: _toggleFullscreen,
+                        composeActive: _composeMode,
+                        onToggleCompose: () =>
+                            setState(() => _composeMode = !_composeMode),
+                        tmuxPrefixKey: activeSession.host.tmuxPrefixKey,
+                        tmuxScrollMode: _tmuxScrollMode,
+                        onEnterTmuxScrollMode: () {
+                          setState(() => _tmuxScrollMode = true);
+                          _focusNode.requestFocus();
+                        },
+                        onExitTmuxScrollMode: () {
+                          setState(() => _tmuxScrollMode = false);
+                          _focusNode.requestFocus();
+                        },
+                      ),
                   ],
                 ),
               );
@@ -210,6 +229,117 @@ class _TerminalPageState extends State<TerminalPage> {
           ),
         );
       },
+    );
+  }
+}
+
+class _ComposeInputBar extends StatefulWidget {
+  const _ComposeInputBar({
+    required this.palette,
+    required this.brightness,
+    required this.onSend,
+    required this.onClose,
+  });
+
+  final AppPalette palette;
+  final Brightness brightness;
+  final ValueChanged<String> onSend;
+  final VoidCallback onClose;
+
+  @override
+  State<_ComposeInputBar> createState() => _ComposeInputBarState();
+}
+
+class _ComposeInputBarState extends State<_ComposeInputBar> {
+  final _controller = TextEditingController();
+  final _focusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _focusNode.requestFocus(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _send() {
+    final text = _controller.text.replaceAll(RegExp(r'[\r\n]'), '');
+    _controller.clear();
+    if (text.isEmpty) {
+      return;
+    }
+    widget.onSend(text);
+    _focusNode.requestFocus();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: widget.palette.panelFor(widget.brightness),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 6, 4, 6),
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _controller,
+                focusNode: _focusNode,
+                autofocus: true,
+                autocorrect: true,
+                keyboardType: TextInputType.text,
+                textInputAction: TextInputAction.send,
+                onSubmitted: (_) => _send(),
+                inputFormatters: [
+                  // Gboard's action key is inconsistent: sometimes 'Send' (fires
+                  // onSubmitted), sometimes 'Enter' (inserts a newline into the
+                  // field). Catch the newline-insert path here so submitting is
+                  // deterministic regardless of which the IME chooses.
+                  TextInputFormatter.withFunction((oldValue, newValue) {
+                    if (newValue.text.contains('\n') ||
+                        newValue.text.contains('\r')) {
+                      WidgetsBinding.instance.addPostFrameCallback(
+                        (_) => _send(),
+                      );
+                      final clean = newValue.text.replaceAll(
+                        RegExp(r'[\r\n]'),
+                        '',
+                      );
+                      return TextEditingValue(
+                        text: clean,
+                        selection: TextSelection.collapsed(
+                          offset: clean.length,
+                        ),
+                      );
+                    }
+                    return newValue;
+                  }),
+                ],
+                decoration: const InputDecoration(
+                  isDense: true,
+                  hintText: 'Compose a line, Enter to send …',
+                  border: OutlineInputBorder(),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
+                ),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close_rounded),
+              tooltip: 'Close compose',
+              onPressed: widget.onClose,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
