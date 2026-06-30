@@ -361,6 +361,54 @@ void main() {
       expect(controller.keyboard.ctrl, isFalse);
     });
 
+    testWidgets('sizes keyboard row toggles to fit longer labels', (
+      tester,
+    ) async {
+      final controller = _RecordingTerminalSessionController();
+      final focusNode = FocusNode();
+      addTearDown(focusNode.dispose);
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TerminalKeyboardBar(
+              controller: controller,
+              focusNode: focusNode,
+              palette: AppPalette.catppuccin,
+              brightness: Brightness.dark,
+              items: const [
+                TerminalKeyboardItem.builtIn(TerminalKeyboardAction.control),
+                TerminalKeyboardItem.builtIn(TerminalKeyboardAction.compose),
+              ],
+              fullscreen: false,
+              onToggleFullscreen: () {},
+              onToggleCompose: () {},
+              onEnterTmuxScrollMode: () {},
+              onExitTmuxScrollMode: () {},
+              tmuxPrefixKey: TmuxPrefixKey.controlB,
+              tmuxScrollMode: false,
+            ),
+          ),
+        ),
+      );
+
+      final controlKey = find.ancestor(
+        of: find.text('Ctrl'),
+        matching: find.byType(AnimatedContainer),
+      );
+      final composeKey = find.ancestor(
+        of: find.text('Compose'),
+        matching: find.byType(AnimatedContainer),
+      );
+
+      expect(tester.getSize(composeKey).width, greaterThan(50));
+      expect(
+        tester.getSize(composeKey).width,
+        greaterThan(tester.getSize(controlKey).width),
+      );
+    });
+
     testWidgets('sends custom keyboard row items', (tester) async {
       final controller = _RecordingTerminalSessionController();
       final focusNode = FocusNode();

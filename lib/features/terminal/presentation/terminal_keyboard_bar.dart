@@ -437,6 +437,10 @@ const _repeatableActions = {
   TerminalKeyboardAction.pageUp,
   TerminalKeyboardAction.pageDown,
 };
+const _keyHeight = 36.0;
+const _iconKeyMinWidth = 44.0;
+const _textKeyMinWidth = 46.0;
+const _textKeyHorizontalPadding = 10.0;
 
 TerminalKey? _controlKeyFor(String? key) {
   return switch (key) {
@@ -509,9 +513,13 @@ class _Key extends StatelessWidget {
       onPressed: onPressed,
       repeat: repeat,
       child: Container(
-        height: 36,
-        constraints: BoxConstraints(minWidth: isIconKey ? 44 : 46),
-        padding: EdgeInsets.symmetric(horizontal: isIconKey ? 0 : 10),
+        height: _keyHeight,
+        constraints: BoxConstraints(
+          minWidth: isIconKey ? _iconKeyMinWidth : _textKeyMinWidth,
+        ),
+        padding: EdgeInsets.symmetric(
+          horizontal: isIconKey ? 0 : _textKeyHorizontalPadding,
+        ),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(8),
@@ -702,8 +710,11 @@ class _ToggleKey extends StatelessWidget {
       onPressed: onPressed,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 120),
-        width: 50,
-        height: 36,
+        height: _keyHeight,
+        constraints: const BoxConstraints(minWidth: _textKeyMinWidth),
+        padding: const EdgeInsets.symmetric(
+          horizontal: _textKeyHorizontalPadding,
+        ),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(8),
@@ -714,18 +725,16 @@ class _ToggleKey extends StatelessWidget {
             width: selected ? 1.3 : 1,
           ),
         ),
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
-            label,
-            maxLines: 1,
-            softWrap: false,
-            style: TextStyle(
-              color: selected ? accent : palette.foregroundFor(brightness),
-              fontSize: 12.5,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.4,
-            ),
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          softWrap: false,
+          style: TextStyle(
+            color: selected ? accent : palette.foregroundFor(brightness),
+            fontSize: 12.5,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.4,
           ),
         ),
       ),

@@ -1,0 +1,1 @@
+Compose mode: stage a line with the native keyboard and send it to the terminal when ready, improving IME input for complex text.
