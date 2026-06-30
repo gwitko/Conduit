@@ -2,6 +2,9 @@
 
 Thanks to the people who have contributed fixes, testing, and improvements to Conduit.
 
+- [guguji666666](https://github.com/guguji666666)
+  - Added the iOS privacy manifest for App Store privacy requirements.
+
 - [lakofsth](https://github.com/lakofsth)
   - Added optional compose-mode staging input for full native IME support.
 
