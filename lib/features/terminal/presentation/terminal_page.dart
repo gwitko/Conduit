@@ -191,8 +191,18 @@ class _TerminalPageState extends State<TerminalPage> {
                         palette: palette,
                         brightness: brightness,
                         onSend: (line) {
+                          // Send the line, then deliver Enter as a SEPARATE write a
+                          // short moment later. Some remote TUIs (e.g. Claude Code
+                          // and other Ink/readline apps) classify a single terminal
+                          // read that contains a long line ending in CR as a *paste*
+                          // and insert the trailing CR as a literal newline instead
+                          // of submitting — so a wrapping compose line silently fails
+                          // to send. Delivering Enter in its own read makes it an
+                          // isolated keypress that submits regardless of line length.
                           activeSession.sendText(line);
-                          activeSession.sendKey(TerminalKey.enter);
+                          Future.delayed(const Duration(milliseconds: 120), () {
+                            activeSession.sendKey(TerminalKey.enter);
+                          });
                         },
                         onClose: () {
                           setState(() => _composeMode = false);
