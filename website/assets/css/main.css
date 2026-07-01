@@ -1,0 +1,114 @@
+@import 'tailwindcss';
+
+@font-face {
+  font-family: 'Atkynson Mono';
+  src: url('/fonts/AtkynsonMonoNerdFontMono-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme {
+  --font-sans:
+    'Hanken Grotesk Variable', ui-sans-serif, system-ui, -apple-system,
+    'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono:
+    'Atkynson Mono', ui-monospace, 'SFMono-Regular', 'JetBrains Mono', Menlo,
+    monospace;
+
+  --color-canvas: #0b0b12;
+  --color-canvas-raised: #101019;
+  --color-panel: #14141f;
+  --color-panel-raised: #1a1a28;
+  --color-hairline: #23233440;
+  --color-border: #2a2a3c;
+
+  --color-ink: #e6e7f2;
+  --color-ink-muted: #a6adc8;
+  --color-ink-faint: #6c7086;
+
+  --color-mauve: #cba6f7;
+  --color-mauve-deep: #b48ef0;
+  --color-blush: #f5c2e7;
+  --color-mint: #a6e3a1;
+  --color-sky: #89dceb;
+  --color-gold: #f9e2af;
+
+  --shadow-frame: 0 40px 80px -30px rgba(0, 0, 0, 0.85);
+  --shadow-soft: 0 24px 60px -32px rgba(0, 0, 0, 0.7);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    background-color: var(--color-canvas);
+    font-optical-sizing: auto;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-synthesis: none;
+    line-height: 1.6;
+    letter-spacing: -0.006em;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--color-mauve) 30%, transparent);
+    color: #fff;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  h1 {
+    letter-spacing: -0.035em;
+    line-height: 1.03;
+  }
+
+  h2 {
+    letter-spacing: -0.028em;
+    line-height: 1.08;
+  }
+
+  h3 {
+    letter-spacing: -0.018em;
+    line-height: 1.2;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+}
+
+@utility container-page {
+  width: 100%;
+  max-width: 76rem;
+  margin-inline: auto;
+  padding-inline: 1.5rem;
+}
+
+@utility kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--color-mauve);
+
+  &::before {
+    content: '';
+    width: 1.6rem;
+    height: 1px;
+    background: color-mix(in srgb, var(--color-mauve) 60%, transparent);
+  }
+}
