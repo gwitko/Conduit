@@ -1,0 +1,1 @@
+Hardware keys: enroll multiple YubiKeys (or other FIDO keys) on one machine and connect with whichever one you have on hand.

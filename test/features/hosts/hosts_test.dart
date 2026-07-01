@@ -70,7 +70,10 @@ void main() {
       );
       expect(
         base
-            .copyWith(authMethod: SshAuthMethod.hardwareKey, privateKey: '')
+            .copyWith(
+              authMethod: SshAuthMethod.hardwareKey,
+              hardwareKeys: const [],
+            )
             .isValid,
         isFalse,
       );
@@ -78,7 +81,16 @@ void main() {
         base
             .copyWith(
               authMethod: SshAuthMethod.hardwareKey,
-              privateKey: 'openssh-sk-stub',
+              hardwareKeys: const ['   '],
+            )
+            .isValid,
+        isFalse,
+      );
+      expect(
+        base
+            .copyWith(
+              authMethod: SshAuthMethod.hardwareKey,
+              hardwareKeys: const ['openssh-sk-stub-1', 'openssh-sk-stub-2'],
             )
             .isValid,
         isTrue,
@@ -98,9 +110,10 @@ void main() {
         host: 'example.com',
         port: 2222,
         username: 'root',
-        authMethod: SshAuthMethod.privateKey,
+        authMethod: SshAuthMethod.hardwareKey,
         privateKey: '-----BEGIN-----',
         passphrase: 'pp',
+        hardwareKeys: const ['stub-a', 'stub-b'],
         tags: const ['prod', 'edge'],
         connectionTimeoutSeconds: 30,
         useMosh: true,
@@ -123,6 +136,7 @@ void main() {
       expect(decoded.authMethod, original.authMethod);
       expect(decoded.privateKey, original.privateKey);
       expect(decoded.passphrase, original.passphrase);
+      expect(decoded.hardwareKeys, original.hardwareKeys);
       expect(decoded.tags, original.tags);
       expect(
         decoded.connectionTimeoutSeconds,
@@ -173,7 +187,7 @@ void main() {
       expect(decoded.tmuxSessionName, defaultTmuxSessionName);
     });
 
-    test('preserves hardware key auth method', () {
+    test('preserves hardware key auth method with multiple keys', () {
       const original = SavedHost(
         id: 'id',
         name: 'Hardware Host',
@@ -181,14 +195,49 @@ void main() {
         port: 22,
         username: 'root',
         authMethod: SshAuthMethod.hardwareKey,
-        privateKey: '-----BEGIN OPENSSH PRIVATE KEY-----',
+        hardwareKeys: [
+          '-----BEGIN OPENSSH PRIVATE KEY-----a',
+          '-----BEGIN OPENSSH PRIVATE KEY-----b',
+        ],
       );
 
       final decoded = SavedHost.fromJson(original.toJson());
 
       expect(decoded.authMethod, SshAuthMethod.hardwareKey);
-      expect(decoded.privateKey, original.privateKey);
+      expect(decoded.hardwareKeys, original.hardwareKeys);
       expect(decoded.passphrase, isEmpty);
+    });
+
+    test('adopts a legacy single hardware-key stub from privateKey', () {
+      final decoded = SavedHost.fromJson(const {
+        'id': 'id',
+        'name': 'Legacy Hardware Host',
+        'host': 'example.com',
+        'port': 22,
+        'username': 'root',
+        'authMethod': 'hardwareKey',
+        'privateKey': '-----BEGIN OPENSSH PRIVATE KEY-----legacy',
+      });
+
+      expect(decoded.authMethod, SshAuthMethod.hardwareKey);
+      expect(decoded.hardwareKeys, [
+        '-----BEGIN OPENSSH PRIVATE KEY-----legacy',
+      ]);
+      expect(decoded.isValid, isTrue);
+    });
+
+    test('does not adopt privateKey for non-hardware auth', () {
+      final decoded = SavedHost.fromJson(const {
+        'id': 'id',
+        'name': 'Key Host',
+        'host': 'example.com',
+        'port': 22,
+        'username': 'root',
+        'authMethod': 'privateKey',
+        'privateKey': '-----BEGIN OPENSSH PRIVATE KEY-----',
+      });
+
+      expect(decoded.hardwareKeys, isEmpty);
     });
 
     test('preserves external auth method without credentials', () {

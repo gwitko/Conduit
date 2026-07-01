@@ -797,7 +797,7 @@ void main() {
             port: 22,
             username: 'root',
             authMethod: SshAuthMethod.hardwareKey,
-            privateKey: 'normal openssh key',
+            hardwareKeys: ['normal openssh key'],
           ),
         ),
         throwsA(isA<AppFailure>()),
@@ -831,12 +831,45 @@ void main() {
           port: 22,
           username: 'root',
           authMethod: SshAuthMethod.hardwareKey,
-          privateKey: 'openssh sk key',
+          hardwareKeys: ['openssh sk key'],
         ),
       );
 
       expect(identities, hasLength(1));
       expect(identities!.single, isA<OpenSSHSecurityKeyPair>());
+    });
+
+    test('attaches a signer for every enrolled hardware key', () {
+      final factory = SshClientFactory(
+        NoopVerifier(),
+        keyPairParser: (_, _) => [
+          OpenSSHSecurityKeyEd25519KeyPair(
+            publicKey: Uint8List.fromList(List<int>.filled(32, 3)),
+            application: 'ssh:',
+            flags: 0x01,
+            keyHandle: Uint8List.fromList([0xAA]),
+            reserved: '',
+          ),
+        ],
+      );
+
+      final identities = factory.identitiesForTesting(
+        const SavedHost(
+          id: 'id',
+          name: 'Host',
+          host: 'example.com',
+          port: 22,
+          username: 'root',
+          authMethod: SshAuthMethod.hardwareKey,
+          hardwareKeys: ['sk stub one', 'sk stub two', 'sk stub three'],
+        ),
+      );
+
+      expect(identities, hasLength(3));
+      expect(
+        identities!.every((identity) => identity is OpenSSHSecurityKeyPair),
+        isTrue,
+      );
     });
   });
 
@@ -974,7 +1007,7 @@ void main() {
             port: 22,
             username: 'root',
             authMethod: SshAuthMethod.hardwareKey,
-            privateKey: 'openssh sk key',
+            hardwareKeys: ['openssh sk key'],
             forwardAgent: true,
           ),
         ),

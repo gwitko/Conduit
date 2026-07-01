@@ -59,6 +59,9 @@ class _HostFormPageState extends State<HostFormPage> {
   TmuxPrefixKey _tmuxPrefixKey = defaultTmuxPrefixKey;
   List<String> _tags = const [];
   SshKeyInspection? _keyInspection;
+  List<String> _hardwareKeys = const [];
+  List<SshKeyInspection> _hardwareKeyInspections = const [];
+  String? _hardwareKeyError;
   Timer? _verifyTimer;
   int _verifyToken = 0;
 
@@ -84,6 +87,7 @@ class _HostFormPageState extends State<HostFormPage> {
       _passwordController.text = host.password;
       _privateKeyController.text = host.privateKey;
       _passphraseController.text = host.passphrase;
+      _hardwareKeys = List<String>.from(host.hardwareKeys);
       _tags = List<String>.from(host.tags);
       _timeoutController.text = host.connectionTimeoutSeconds.toString();
       _authMethod = host.authMethod;
@@ -98,10 +102,15 @@ class _HostFormPageState extends State<HostFormPage> {
       _tmuxStartDirectoryController.text = host.tmuxStartDirectory;
     }
     _keyInspection = _cheapPreview();
+    _hardwareKeyInspections = _inspectHardwareKeys();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _recomputeKeyInspection();
     });
   }
+
+  List<SshKeyInspection> _inspectHardwareKeys() => [
+    for (final stub in _hardwareKeys) widget.keyService.inspect(stub),
+  ];
 
   SshKeyInspection? _cheapPreview() {
     if (!_usesKeyAuth || _privateKeyController.text.trim().isEmpty) {
@@ -218,6 +227,8 @@ class _HostFormPageState extends State<HostFormPage> {
               forwardAgent: _forwardAgent,
               externalAuthOfferKey: _externalAuthOfferKey,
               keyInspection: _keyInspection,
+              hardwareKeyInspections: _hardwareKeyInspections,
+              hardwareKeyError: _hardwareKeyError,
               requiredValidator: _required,
               keyMaterialValidator: _validateKeyMaterial,
               onAuthMethodChanged: (method) {
@@ -232,6 +243,10 @@ class _HostFormPageState extends State<HostFormPage> {
               onImportKeyFile: _importKeyFile,
               onGenerateKey: _generateKey,
               onViewPublicKey: _viewPublicKey,
+              onPasteHardwareKey: _pasteHardwareKey,
+              onImportHardwareKey: _importHardwareKey,
+              onRemoveHardwareKey: _removeHardwareKey,
+              onViewHardwareKey: _viewHardwareKey,
               onForwardAgentChanged: (value) =>
                   setState(() => _forwardAgent = value),
               onExternalAuthOfferKeyChanged: (value) =>
@@ -376,6 +391,77 @@ class _HostFormPageState extends State<HostFormPage> {
     showPublicKeySheet(context: context, details: details);
   }
 
+  Future<void> _pasteHardwareKey() async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    _addHardwareKey(data?.text ?? '');
+  }
+
+  Future<void> _importHardwareKey() async {
+    final FilePickerResult? result;
+    try {
+      result = await FilePicker.pickFiles(withData: true);
+    } catch (_) {
+      if (mounted) _showSnack('Could not open the file picker.');
+      return;
+    }
+    if (result == null || result.files.isEmpty) return;
+    final bytes = result.files.first.bytes;
+    if (bytes == null) {
+      if (mounted) _showSnack('That file could not be read.');
+      return;
+    }
+    final String text;
+    try {
+      text = utf8.decode(bytes);
+    } catch (_) {
+      if (mounted) _showSnack("That file isn't a text key stub.");
+      return;
+    }
+    _addHardwareKey(text);
+  }
+
+  void _addHardwareKey(String raw) {
+    final stub = raw.trim();
+    if (stub.isEmpty) {
+      _showSnack('Nothing to add.');
+      return;
+    }
+    final inspection = widget.keyService.inspect(stub);
+    if (inspection.status != SshKeyStatus.securityKeyStub) {
+      _showSnack('Use an id_ed25519_sk or id_ecdsa_sk hardware key stub.');
+      return;
+    }
+    final fingerprint = inspection.details?.fingerprintSha256;
+    final alreadyAdded = fingerprint != null &&
+        _hardwareKeyInspections.any(
+          (existing) => existing.details?.fingerprintSha256 == fingerprint,
+        );
+    if (alreadyAdded) {
+      _showSnack('That hardware key is already added.');
+      return;
+    }
+    setState(() {
+      _hardwareKeys = [..._hardwareKeys, stub];
+      _hardwareKeyInspections = _inspectHardwareKeys();
+      _hardwareKeyError = null;
+    });
+  }
+
+  void _removeHardwareKey(int index) {
+    if (index < 0 || index >= _hardwareKeys.length) return;
+    setState(() {
+      _hardwareKeys = [..._hardwareKeys]..removeAt(index);
+      _hardwareKeyInspections = _inspectHardwareKeys();
+    });
+  }
+
+  void _viewHardwareKey(int index) {
+    if (index < 0 || index >= _hardwareKeyInspections.length) return;
+    final details = _hardwareKeyInspections[index].details;
+    if (details == null) return;
+    showPublicKeySheet(context: context, details: details);
+  }
+
   Future<bool> _confirmReplaceKey() async {
     final replace = await showDialog<bool>(
       context: context,
@@ -468,7 +554,14 @@ class _HostFormPageState extends State<HostFormPage> {
   }
 
   void _save() {
-    if (!_formKey.currentState!.validate()) return;
+    final formValid = _formKey.currentState!.validate();
+
+    if (_authMethod == SshAuthMethod.hardwareKey && _hardwareKeys.isEmpty) {
+      setState(() => _hardwareKeyError = 'Add at least one hardware key.');
+      return;
+    }
+
+    if (!formValid) return;
 
     if (_tagController.text.trim().isNotEmpty) {
       _addTag(_tagController.text);
@@ -485,8 +578,15 @@ class _HostFormPageState extends State<HostFormPage> {
       password: _authMethod == SshAuthMethod.password
           ? _passwordController.text
           : '',
-      privateKey: _usesKeyAuth ? _privateKeyController.text : '',
-      passphrase: _usesKeyAuth ? _passphraseController.text : '',
+      privateKey: _authMethod == SshAuthMethod.privateKey
+          ? _privateKeyController.text
+          : '',
+      passphrase: _authMethod == SshAuthMethod.privateKey
+          ? _passphraseController.text
+          : '',
+      hardwareKeys: _authMethod == SshAuthMethod.hardwareKey
+          ? _hardwareKeys
+          : const [],
       externalAuthOfferKey: _externalAuthOfferKey,
       forwardAgent: _usesKeyAuth && _forwardAgent,
       tags: _tags,
@@ -526,18 +626,10 @@ class _HostFormPageState extends State<HostFormPage> {
       SshKeyStatus.needsPassphrase => 'Enter the key passphrase to unlock it.',
       SshKeyStatus.verifying => null,
       SshKeyStatus.wrongPassphrase => 'That passphrase did not match this key.',
-      SshKeyStatus.invalid =>
-        _authMethod == SshAuthMethod.hardwareKey
-            ? 'Use a valid OpenSSH *_sk key stub.'
-            : 'Use a valid PEM or OpenSSH private key.',
+      SshKeyStatus.invalid => 'Use a valid PEM or OpenSSH private key.',
       SshKeyStatus.securityKeyStub =>
-        _authMethod == SshAuthMethod.privateKey
-            ? 'This is a hardware-key stub. Choose Hardware key instead.'
-            : null,
-      SshKeyStatus.valid =>
-        _authMethod == SshAuthMethod.hardwareKey
-            ? 'Use id_ed25519_sk or id_ecdsa_sk, not a normal private key.'
-            : null,
+        'This is a hardware-key stub. Choose Hardware key instead.',
+      SshKeyStatus.valid => null,
     };
   }
 

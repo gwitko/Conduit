@@ -27,6 +27,7 @@ class SavedHost {
     this.password = '',
     this.privateKey = '',
     this.passphrase = '',
+    this.hardwareKeys = const [],
     this.externalAuthOfferKey = true,
     this.forwardAgent = false,
     this.tags = const [],
@@ -63,6 +64,7 @@ class SavedHost {
   final String password;
   final String privateKey;
   final String passphrase;
+  final List<String> hardwareKeys;
   final bool externalAuthOfferKey;
   final bool forwardAgent;
   final List<String> tags;
@@ -88,7 +90,9 @@ class SavedHost {
       switch (authMethod) {
         SshAuthMethod.password => password.isNotEmpty,
         SshAuthMethod.privateKey => privateKey.trim().isNotEmpty,
-        SshAuthMethod.hardwareKey => privateKey.trim().isNotEmpty,
+        SshAuthMethod.hardwareKey =>
+          hardwareKeys.isNotEmpty &&
+              hardwareKeys.every((stub) => stub.trim().isNotEmpty),
         SshAuthMethod.external => true,
       };
 
@@ -111,6 +115,7 @@ class SavedHost {
     String? password,
     String? privateKey,
     String? passphrase,
+    List<String>? hardwareKeys,
     bool? externalAuthOfferKey,
     bool? forwardAgent,
     List<String>? tags,
@@ -136,6 +141,7 @@ class SavedHost {
       password: password ?? this.password,
       privateKey: privateKey ?? this.privateKey,
       passphrase: passphrase ?? this.passphrase,
+      hardwareKeys: hardwareKeys ?? this.hardwareKeys,
       externalAuthOfferKey: externalAuthOfferKey ?? this.externalAuthOfferKey,
       forwardAgent: forwardAgent ?? this.forwardAgent,
       tags: tags ?? this.tags,
@@ -167,6 +173,7 @@ class SavedHost {
       'password': password,
       'privateKey': privateKey,
       'passphrase': passphrase,
+      'hardwareKeys': hardwareKeys,
       'externalAuthOfferKey': externalAuthOfferKey,
       'forwardAgent': forwardAgent,
       'tags': tags,
@@ -196,6 +203,19 @@ class SavedHost {
         .where((tag) => tag.isNotEmpty)
         .toList(growable: false);
 
+    final privateKey = json['privateKey'] as String? ?? '';
+
+    final storedHardwareKeys = (json['hardwareKeys'] as List? ?? const [])
+        .whereType<String>()
+        .where((stub) => stub.trim().isNotEmpty)
+        .toList(growable: false);
+    final hardwareKeys =
+        storedHardwareKeys.isEmpty &&
+            authMethod == SshAuthMethod.hardwareKey &&
+            privateKey.trim().isNotEmpty
+        ? [privateKey]
+        : storedHardwareKeys;
+
     return SavedHost(
       id: json['id'] as String? ?? '',
       name: json['name'] as String? ?? '',
@@ -204,8 +224,9 @@ class SavedHost {
       username: json['username'] as String? ?? '',
       authMethod: authMethod,
       password: json['password'] as String? ?? '',
-      privateKey: json['privateKey'] as String? ?? '',
+      privateKey: privateKey,
       passphrase: json['passphrase'] as String? ?? '',
+      hardwareKeys: hardwareKeys,
       externalAuthOfferKey: json['externalAuthOfferKey'] as bool? ?? true,
       forwardAgent: json['forwardAgent'] as bool? ?? false,
       tags: tags,

@@ -70,34 +70,50 @@ class SshClientFactory {
         host.externalAuthOfferKey) {
       return [_externalAuthIdentity ??= _generateExternalAuthIdentity()];
     }
-    if (host.authMethod != SshAuthMethod.privateKey &&
-        host.authMethod != SshAuthMethod.hardwareKey) {
-      return null;
+    if (host.authMethod == SshAuthMethod.privateKey) {
+      return _privateKeyIdentities(host);
     }
+    if (host.authMethod == SshAuthMethod.hardwareKey) {
+      return _hardwareKeyIdentities(host);
+    }
+    return null;
+  }
+
+  List<SSHKeyPair>? _privateKeyIdentities(SavedHost host) {
     try {
       final keyPairs = _keyPairParser(
         host.privateKey,
         host.passphrase.isEmpty ? null : host.passphrase,
       );
-      if (host.authMethod == SshAuthMethod.privateKey &&
-          keyPairs.any((keyPair) => keyPair is OpenSSHSecurityKeyPair)) {
+      if (keyPairs.any((keyPair) => keyPair is OpenSSHSecurityKeyPair)) {
         throw const AppFailure(
           'This is a hardware-key stub. Choose Hardware key instead.',
         );
       }
-      if (host.authMethod == SshAuthMethod.hardwareKey) {
-        final securityKeyPairs = keyPairs
-            .whereType<OpenSSHSecurityKeyPair>()
-            .toList(growable: false);
-        if (securityKeyPairs.isEmpty) {
-          throw const AppFailure(
-            'Hardware key auth requires an OpenSSH security-key stub '
-            '(id_ed25519_sk or id_ecdsa_sk), not a normal private key.',
-          );
-        }
-        return _securityKeySigner.attach(securityKeyPairs);
-      }
       return _securityKeySigner.attach(keyPairs);
+    } catch (error) {
+      if (error is AppFailure) {
+        rethrow;
+      }
+      throw AppFailure('Private key could not be loaded.', error);
+    }
+  }
+
+  List<SSHKeyPair>? _hardwareKeyIdentities(SavedHost host) {
+    try {
+      final securityKeyPairs = <SSHKeyPair>[];
+      for (final stub in host.hardwareKeys) {
+        if (stub.trim().isEmpty) continue;
+        final keyPairs = _keyPairParser(stub, null);
+        securityKeyPairs.addAll(keyPairs.whereType<OpenSSHSecurityKeyPair>());
+      }
+      if (securityKeyPairs.isEmpty) {
+        throw const AppFailure(
+          'Hardware key auth requires an OpenSSH security-key stub '
+          '(id_ed25519_sk or id_ecdsa_sk), not a normal private key.',
+        );
+      }
+      return _securityKeySigner.attach(securityKeyPairs);
     } catch (error) {
       if (error is AppFailure) {
         rethrow;
