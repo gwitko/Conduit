@@ -682,12 +682,17 @@ void main() {
       expect(skSignature.flags, 0x01);
       expect(skSignature.counter, 9);
 
+      expect(device.commands, hasLength(2));
+      expect(isSilentProbe(device.commands.first), isTrue);
+      expect(allowedCredentialIdOf(device.commands.first), [0xAA, 0xBB]);
+
       final request =
-          cbor.decode(device.commands.single.sublist(1)).toObject() as Map;
+          cbor.decode(device.commands.last.sublist(1)).toObject() as Map;
       final allowList =
           request[GetAssertionRequest.allowListIdx] as List<Object?>;
       final allowedCredential = allowList.single as Map<Object?, Object?>;
-      expect(device.commands.single.first, Ctap2Commands.getAssertion.value);
+      expect(device.commands.last.first, Ctap2Commands.getAssertion.value);
+      expect(isSilentProbe(device.commands.last), isFalse);
       expect(request[GetAssertionRequest.rpIdIdx], 'ssh:');
       expect(
         request[GetAssertionRequest.clientDataHashIdx],
@@ -720,6 +725,148 @@ void main() {
       expect(skSignature.signature, rawSignature);
       expect(skSignature.flags, 0x05);
       expect(skSignature.counter, 10);
+    });
+
+    test('skips to the sibling stub held by the presented key', () async {
+      final authData = [
+        ...List<int>.filled(32, 0),
+        0x01,
+        0x00,
+        0x00,
+        0x00,
+        0x09,
+      ];
+      final device = FakeCtapDevice(
+        signature: List<int>.generate(64, (index) => index),
+        authData: authData,
+        respond: (command) =>
+            allowedCredentialIdOf(command).first == 0xAA
+            ? CtapResponse(
+                CtapStatusCode.ctap2ErrNoCredentials.value,
+                const [],
+              )
+            : null,
+      );
+      var opens = 0;
+      final messages = <String>[];
+      final signer = OpenSshSecurityKeySigner(
+        openDevice: () async {
+          opens++;
+          return device;
+        },
+        onStatus: messages.add,
+      );
+      final missingKey = OpenSSHSecurityKeyEd25519KeyPair(
+        publicKey: Uint8List.fromList(List<int>.filled(32, 3)),
+        application: 'ssh:',
+        flags: 0x01,
+        keyHandle: Uint8List.fromList([0xAA]),
+        reserved: '',
+      );
+      final presentKey = OpenSSHSecurityKeyEd25519KeyPair(
+        publicKey: Uint8List.fromList(List<int>.filled(32, 4)),
+        application: 'ssh:',
+        flags: 0x01,
+        keyHandle: Uint8List.fromList([0xBB]),
+        reserved: '',
+      );
+      final attached = signer.attach(
+        [missingKey, presentKey],
+        labels: ['work', 'backup'],
+      );
+
+      Object? error;
+      try {
+        await attached.first.signAsync(Uint8List.fromList([1, 2, 3]));
+      } catch (caught) {
+        error = caught;
+      }
+
+      expect(error, isA<SSHSecurityKeyNotPresentError>());
+      expect(
+        (error as SSHSecurityKeyNotPresentError).preferredPublicKey,
+        presentKey.toPublicKey().encode(),
+      );
+      expect(opens, 1);
+      expect(
+        messages,
+        contains('This security key holds "backup". Switching to it...'),
+      );
+
+      final signature = await attached.last.signAsync(
+        Uint8List.fromList([1, 2, 3]),
+      );
+      expect(signature, isA<SSHSecurityKeyEd25519Signature>());
+      expect(opens, 2);
+
+      await expectLater(
+        Future.sync(
+          () => attached.first.signAsync(Uint8List.fromList([1, 2, 3])),
+        ),
+        throwsA(isA<SSHSecurityKeyNotPresentError>()),
+      );
+      expect(opens, 2);
+    });
+
+    test('signs normally when the key rejects silent probes', () async {
+      final device = FakeCtapDevice(
+        signature: List<int>.generate(64, (index) => index),
+        authData: [...List<int>.filled(32, 0), 0x01, 0x00, 0x00, 0x00, 0x09],
+        respond: (command) => isSilentProbe(command)
+            ? CtapResponse(
+                CtapStatusCode.ctap2ErrUnsupportedOption.value,
+                const [],
+              )
+            : null,
+      );
+      final signer = OpenSshSecurityKeySigner(openDevice: () async => device);
+      final keyPair = signer.attach([
+        OpenSSHSecurityKeyEd25519KeyPair(
+          publicKey: Uint8List.fromList(List<int>.filled(32, 3)),
+          application: 'ssh:',
+          flags: 0x01,
+          keyHandle: Uint8List.fromList([0xAA]),
+          reserved: '',
+        ),
+      ]).single;
+
+      final signature = await keyPair.signAsync(Uint8List.fromList([7, 8]));
+
+      expect(signature, isA<SSHSecurityKeyEd25519Signature>());
+      expect(device.commands, hasLength(2));
+      expect(isSilentProbe(device.commands.first), isTrue);
+      expect(isSilentProbe(device.commands.last), isFalse);
+    });
+
+    test('reports a mismatch when the real assertion is refused', () async {
+      final device = FakeCtapDevice(
+        signature: const [],
+        authData: const [],
+        respond: (command) => isSilentProbe(command)
+            ? CtapResponse(
+                CtapStatusCode.ctap2ErrUnsupportedOption.value,
+                const [],
+              )
+            : CtapResponse(
+                CtapStatusCode.ctap2ErrNoCredentials.value,
+                const [],
+              ),
+      );
+      final signer = OpenSshSecurityKeySigner(openDevice: () async => device);
+      final keyPair = signer.attach([
+        OpenSSHSecurityKeyEd25519KeyPair(
+          publicKey: Uint8List.fromList(List<int>.filled(32, 3)),
+          application: 'ssh:',
+          flags: 0x01,
+          keyHandle: Uint8List.fromList([0xAA]),
+          reserved: '',
+        ),
+      ], labels: ['solo']).single;
+
+      await expectLater(
+        Future.sync(() => keyPair.signAsync(Uint8List.fromList([1]))),
+        throwsA(isA<SSHSecurityKeyNotPresentError>()),
+      );
     });
   });
 
@@ -837,6 +984,82 @@ void main() {
 
       expect(identities, hasLength(1));
       expect(identities!.single, isA<OpenSSHSecurityKeyPair>());
+    });
+
+    test('builds one identity per hardware key entry', () {
+      final parsedPassphrases = <String, String?>{};
+      final factory = SshClientFactory(
+        NoopVerifier(),
+        keyPairParser: (pem, passphrase) {
+          parsedPassphrases[pem] = passphrase;
+          final marker = pem.codeUnitAt(pem.length - 1);
+          return [
+            OpenSSHSecurityKeyEd25519KeyPair(
+              publicKey: Uint8List.fromList(List<int>.filled(32, marker)),
+              application: 'ssh:',
+              flags: 0x01,
+              keyHandle: Uint8List.fromList([marker]),
+              reserved: '',
+            ),
+          ];
+        },
+      );
+
+      final identities = factory.identitiesForTesting(
+        const SavedHost(
+          id: 'id',
+          name: 'Host',
+          host: 'example.com',
+          port: 22,
+          username: 'root',
+          authMethod: SshAuthMethod.hardwareKey,
+          hardwareKeys: [
+            HardwareKeyEntry(id: 'a', privateKey: 'stub-a', label: 'work'),
+            HardwareKeyEntry(id: 'b', privateKey: 'stub-b', passphrase: 'pw'),
+          ],
+        ),
+      );
+
+      expect(identities, hasLength(2));
+      expect(identities, everyElement(isA<OpenSSHSecurityKeyPair>()));
+      expect(parsedPassphrases['stub-a'], isNull);
+      expect(parsedPassphrases['stub-b'], 'pw');
+    });
+
+    test('names the offending entry when a stub is invalid', () {
+      final factory = SshClientFactory(
+        NoopVerifier(),
+        keyPairParser: (_, _) => [
+          OpenSSHEd25519KeyPair(
+            Uint8List.fromList(List<int>.filled(32, 1)),
+            Uint8List.fromList(List<int>.filled(64, 2)),
+            'normal key',
+          ),
+        ],
+      );
+
+      expect(
+        () => factory.identitiesForTesting(
+          const SavedHost(
+            id: 'id',
+            name: 'Host',
+            host: 'example.com',
+            port: 22,
+            username: 'root',
+            authMethod: SshAuthMethod.hardwareKey,
+            hardwareKeys: [
+              HardwareKeyEntry(id: 'a', privateKey: 'stub', label: 'backup'),
+            ],
+          ),
+        ),
+        throwsA(
+          isA<AppFailure>().having(
+            (failure) => failure.message,
+            'message',
+            contains('backup'),
+          ),
+        ),
+      );
     });
   });
 

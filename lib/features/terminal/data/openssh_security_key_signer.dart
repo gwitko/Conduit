@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart' as crypto;
@@ -28,37 +29,63 @@ class OpenSshSecurityKeySigner {
   final SecurityKeyStatusHandler? onStatus;
   final SecurityKeyPinRequester? onPinRequest;
 
-  List<SSHKeyPair> attach(List<SSHKeyPair> keyPairs) {
-    return [
-      for (final keyPair in keyPairs)
-        switch (keyPair) {
-          OpenSSHSecurityKeyEcdsaKeyPair() => OpenSSHSecurityKeyEcdsaKeyPair(
-            q: keyPair.q,
-            application: keyPair.application,
-            flags: keyPair.flags,
-            keyHandle: keyPair.keyHandle,
-            reserved: keyPair.reserved,
-            signer: (data) => _signEcdsa(keyPair, data),
-          ),
-          OpenSSHSecurityKeyEd25519KeyPair() =>
+  List<SSHKeyPair> attach(List<SSHKeyPair> keyPairs, {List<String>? labels}) {
+    assert(labels == null || labels.length == keyPairs.length);
+    final session = _SecurityKeySession();
+    final attached = <SSHKeyPair>[];
+    for (var i = 0; i < keyPairs.length; i++) {
+      final keyPair = keyPairs[i];
+      switch (keyPair) {
+        case OpenSSHSecurityKeyEcdsaKeyPair():
+          final entry = _register(session, keyPair, labels?[i]);
+          attached.add(
+            OpenSSHSecurityKeyEcdsaKeyPair(
+              q: keyPair.q,
+              application: keyPair.application,
+              flags: keyPair.flags,
+              keyHandle: keyPair.keyHandle,
+              reserved: keyPair.reserved,
+              signer: (data) => _signEcdsa(entry, session, data),
+            ),
+          );
+        case OpenSSHSecurityKeyEd25519KeyPair():
+          final entry = _register(session, keyPair, labels?[i]);
+          attached.add(
             OpenSSHSecurityKeyEd25519KeyPair(
               publicKey: keyPair.publicKey,
               application: keyPair.application,
               flags: keyPair.flags,
               keyHandle: keyPair.keyHandle,
               reserved: keyPair.reserved,
-              signer: (data) => _signEd25519(keyPair, data),
+              signer: (data) => _signEd25519(entry, session, data),
             ),
-          _ => keyPair,
-        },
-    ];
+          );
+        default:
+          attached.add(keyPair);
+      }
+    }
+    return attached;
+  }
+
+  _SecurityKeyEntry _register(
+    _SecurityKeySession session,
+    OpenSSHSecurityKeyPair keyPair,
+    String? label,
+  ) {
+    final effectiveLabel = label == null || label.trim().isEmpty
+        ? 'hardware key ${session.entries.length + 1}'
+        : label.trim();
+    final entry = _SecurityKeyEntry(keyPair: keyPair, label: effectiveLabel);
+    session.entries.add(entry);
+    return entry;
   }
 
   Future<SSHSecurityKeyEcdsaSignature> _signEcdsa(
-    OpenSSHSecurityKeyEcdsaKeyPair keyPair,
+    _SecurityKeyEntry entry,
+    _SecurityKeySession session,
     Uint8List data,
   ) async {
-    final assertion = await _getAssertion(keyPair, data);
+    final assertion = await _getAssertion(entry, session, data);
     final (r, s) = _decodeDerEcdsaSignature(assertion.signature);
     final (flags, counter) = _parseAuthenticatorData(assertion.authData);
     return SSHSecurityKeyEcdsaSignature(
@@ -70,10 +97,11 @@ class OpenSshSecurityKeySigner {
   }
 
   Future<SSHSecurityKeyEd25519Signature> _signEd25519(
-    OpenSSHSecurityKeyEd25519KeyPair keyPair,
+    _SecurityKeyEntry entry,
+    _SecurityKeySession session,
     Uint8List data,
   ) async {
-    final assertion = await _getAssertion(keyPair, data);
+    final assertion = await _getAssertion(entry, session, data);
     final (flags, counter) = _parseAuthenticatorData(assertion.authData);
     return SSHSecurityKeyEd25519Signature(
       signature: Uint8List.fromList(assertion.signature),
@@ -83,9 +111,15 @@ class OpenSshSecurityKeySigner {
   }
 
   Future<GetAssertionResponse> _getAssertion(
-    OpenSSHSecurityKeyPair keyPair,
+    _SecurityKeyEntry entry,
+    _SecurityKeySession session,
     Uint8List data,
   ) async {
+    if (session.isKnownAbsent(entry)) {
+      throw _mismatchError(entry, session, announce: false);
+    }
+
+    final keyPair = entry.keyPair;
     final clientDataHash = crypto.sha256.convert(data).bytes;
 
     var collectPinUpFront =
@@ -101,10 +135,13 @@ class OpenSshSecurityKeySigner {
         presetPin = await _promptForPin(retriesRemaining: pinRetriesRemaining);
       }
 
-      onStatus?.call('Waiting for hardware key over USB or NFC...');
+      onStatus?.call(_waitingMessage(session));
       final device = await openDevice();
       var ok = false;
       try {
+        if (!entry.requiresUserVerification) {
+          await _checkPresence(device, entry, session, clientDataHash);
+        }
         final request = await _buildAssertionRequest(
           device: device,
           keyPair: keyPair,
@@ -128,12 +165,18 @@ class OpenSshSecurityKeySigner {
           onStatus?.call(_interactionMessage(device));
           response = await device.transceive(pinRequest.encode());
         }
+        if (response.status == CtapStatusCode.ctap2ErrNoCredentials.value) {
+          session.record(entry, present: false);
+          await _probeSiblings(device, entry, session, clientDataHash);
+          throw _mismatchError(entry, session);
+        }
         if (response.status != CtapStatusCode.ctap1ErrSuccess.value) {
           final error = CtapError.fromCode(response.status);
           onStatus?.call(describeCtapStatus(error.status));
           throw error;
         }
         ok = true;
+        session.record(entry, present: true);
         onStatus?.call('Hardware key accepted.');
         return GetAssertionResponse.decode(response.data);
       } on _PinRejected catch (rejection) {
@@ -163,6 +206,113 @@ class OpenSshSecurityKeySigner {
         await closeDevice?.call(device, ok);
       }
     }
+  }
+
+  String _waitingMessage(_SecurityKeySession session) {
+    return session.entries.length > 1
+        ? 'Waiting for hardware key over USB or NFC. Any of your '
+              '${session.entries.length} enrolled keys will work...'
+        : 'Waiting for hardware key over USB or NFC...';
+  }
+
+  Future<void> _checkPresence(
+    CtapDevice device,
+    _SecurityKeyEntry entry,
+    _SecurityKeySession session,
+    List<int> clientDataHash,
+  ) async {
+    final presence = await _probeCredential(
+      device,
+      entry.keyPair,
+      clientDataHash,
+    );
+    if (presence == _CredentialPresence.present) {
+      session.record(entry, present: true);
+      return;
+    }
+    if (presence == _CredentialPresence.absent) {
+      session.record(entry, present: false);
+      await _probeSiblings(device, entry, session, clientDataHash);
+      throw _mismatchError(entry, session);
+    }
+  }
+
+  Future<_CredentialPresence> _probeCredential(
+    CtapDevice device,
+    OpenSSHSecurityKeyPair keyPair,
+    List<int> clientDataHash,
+  ) async {
+    final request = GetAssertionRequest(
+      rpId: keyPair.application,
+      clientDataHash: clientDataHash,
+      allowList: [
+        PublicKeyCredentialDescriptor(
+          type: 'public-key',
+          id: keyPair.keyHandle,
+        ),
+      ],
+      options: {'up': false},
+    );
+    final response = await device.transceive(request.encode());
+    if (response.status == CtapStatusCode.ctap1ErrSuccess.value) {
+      return _CredentialPresence.present;
+    }
+    if (response.status == CtapStatusCode.ctap2ErrNoCredentials.value) {
+      return _CredentialPresence.absent;
+    }
+    return _CredentialPresence.inconclusive;
+  }
+
+  Future<void> _probeSiblings(
+    CtapDevice device,
+    _SecurityKeyEntry entry,
+    _SecurityKeySession session,
+    List<int> clientDataHash,
+  ) async {
+    for (final sibling in session.entries) {
+      if (identical(sibling, entry) ||
+          sibling.requiresUserVerification ||
+          session.hasFreshResult(sibling)) {
+        continue;
+      }
+      final presence = await _probeCredential(
+        device,
+        sibling.keyPair,
+        clientDataHash,
+      );
+      if (presence != _CredentialPresence.inconclusive) {
+        session.record(
+          sibling,
+          present: presence == _CredentialPresence.present,
+        );
+      }
+    }
+  }
+
+  SSHSecurityKeyNotPresentError _mismatchError(
+    _SecurityKeyEntry entry,
+    _SecurityKeySession session, {
+    bool announce = true,
+  }) {
+    final present = session.presentEntry();
+    if (announce) {
+      if (present != null) {
+        onStatus?.call(
+          'This security key holds "${present.label}". Switching to it...',
+        );
+      } else if (session.allOthersKnownAbsent(entry)) {
+        onStatus?.call(
+          'This security key does not hold any of the keys saved for '
+          'this host.',
+        );
+      } else {
+        onStatus?.call('"${entry.label}" is not on this security key.');
+      }
+    }
+    return SSHSecurityKeyNotPresentError(
+      '"${entry.label}" is not on the presented security key.',
+      preferredPublicKey: present?.keyPair.toPublicKey().encode(),
+    );
   }
 
   Future<GetAssertionRequest> _buildAssertionRequest({
@@ -343,6 +493,70 @@ class OpenSshSecurityKeySigner {
       throw const FormatException('Malformed DER ECDSA signature.');
     }
     return (r, s);
+  }
+}
+
+enum _CredentialPresence { present, absent, inconclusive }
+
+class _SecurityKeyEntry {
+  _SecurityKeyEntry({required this.keyPair, required this.label});
+
+  final OpenSSHSecurityKeyPair keyPair;
+  final String label;
+
+  String get credentialId => base64.encode(keyPair.keyHandle);
+
+  bool get requiresUserVerification => keyPair.flags & 0x04 != 0;
+}
+
+/// Probe results describe the physical key presented moments ago, so they
+/// expire quickly: skipping stale entries could reject a key the user has
+/// since swapped in, and agent-forwarded signatures may arrive much later.
+class _SecurityKeySession {
+  static const _presenceTtl = Duration(seconds: 20);
+
+  final entries = <_SecurityKeyEntry>[];
+  final _presence = <String, bool>{};
+  DateTime? _recordedAt;
+
+  bool get _fresh =>
+      _recordedAt != null &&
+      DateTime.now().difference(_recordedAt!) < _presenceTtl;
+
+  void record(_SecurityKeyEntry entry, {required bool present}) {
+    if (!_fresh) {
+      _presence.clear();
+    }
+    _presence[entry.credentialId] = present;
+    _recordedAt = DateTime.now();
+  }
+
+  bool hasFreshResult(_SecurityKeyEntry entry) =>
+      _fresh && _presence.containsKey(entry.credentialId);
+
+  bool isKnownAbsent(_SecurityKeyEntry entry) =>
+      _fresh && _presence[entry.credentialId] == false;
+
+  _SecurityKeyEntry? presentEntry() {
+    if (!_fresh) {
+      return null;
+    }
+    for (final entry in entries) {
+      if (_presence[entry.credentialId] == true) {
+        return entry;
+      }
+    }
+    return null;
+  }
+
+  bool allOthersKnownAbsent(_SecurityKeyEntry entry) {
+    if (!_fresh) {
+      return false;
+    }
+    return entries.every(
+      (other) =>
+          identical(other, entry) || _presence[other.credentialId] == false,
+    );
   }
 }
 

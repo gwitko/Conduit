@@ -7,6 +7,7 @@ import 'package:conduit/features/hosts/domain/ssh_key.dart';
 import 'package:conduit/features/hosts/presentation/host_form_page.dart';
 import 'package:conduit/features/hosts/presentation/hosts_controller.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/test_doubles.dart';
@@ -86,6 +87,28 @@ void main() {
       expect(
         base.copyWith(authMethod: SshAuthMethod.external, password: '').isValid,
         isTrue,
+      );
+      expect(
+        base
+            .copyWith(
+              authMethod: SshAuthMethod.hardwareKey,
+              privateKey: '',
+              hardwareKeys: const [
+                HardwareKeyEntry(id: 'a', privateKey: 'stub'),
+              ],
+            )
+            .isValid,
+        isTrue,
+      );
+      expect(
+        base
+            .copyWith(
+              authMethod: SshAuthMethod.hardwareKey,
+              privateKey: '',
+              hardwareKeys: const [HardwareKeyEntry(id: 'a', privateKey: ' ')],
+            )
+            .isValid,
+        isFalse,
       );
     });
   });
@@ -189,6 +212,113 @@ void main() {
       expect(decoded.authMethod, SshAuthMethod.hardwareKey);
       expect(decoded.privateKey, original.privateKey);
       expect(decoded.passphrase, isEmpty);
+    });
+
+    test('round-trips multiple hardware keys', () {
+      const original = SavedHost(
+        id: 'id',
+        name: 'Hardware Host',
+        host: 'example.com',
+        port: 22,
+        username: 'root',
+        authMethod: SshAuthMethod.hardwareKey,
+        hardwareKeys: [
+          HardwareKeyEntry(
+            id: 'a',
+            privateKey: 'stub-a',
+            label: 'work',
+            passphrase: 'pw',
+          ),
+          HardwareKeyEntry(id: 'b', privateKey: 'stub-b', label: 'backup'),
+        ],
+      );
+
+      final decoded = SavedHost.fromJson(original.toJson());
+
+      expect(decoded.hardwareKeys, hasLength(2));
+      expect(decoded.hardwareKeys.first.id, 'a');
+      expect(decoded.hardwareKeys.first.label, 'work');
+      expect(decoded.hardwareKeys.first.privateKey, 'stub-a');
+      expect(decoded.hardwareKeys.first.passphrase, 'pw');
+      expect(decoded.hardwareKeys.last.label, 'backup');
+      expect(decoded.isValid, isTrue);
+    });
+
+    test('mirrors the first hardware key into the legacy stub fields', () {
+      const host = SavedHost(
+        id: 'id',
+        name: 'Hardware Host',
+        host: 'example.com',
+        port: 22,
+        username: 'root',
+        authMethod: SshAuthMethod.hardwareKey,
+        hardwareKeys: [
+          HardwareKeyEntry(id: 'a', privateKey: 'stub-a', passphrase: 'pw'),
+          HardwareKeyEntry(id: 'b', privateKey: 'stub-b'),
+        ],
+      );
+
+      final json = host.toJson();
+
+      expect(json['privateKey'], 'stub-a');
+      expect(json['passphrase'], 'pw');
+    });
+
+    test('migrates a legacy single-stub host to a hardware key entry', () {
+      final decoded = SavedHost.fromJson(const {
+        'id': 'id',
+        'name': 'Legacy Hardware Host',
+        'host': 'example.com',
+        'port': 22,
+        'username': 'root',
+        'authMethod': 'hardwareKey',
+        'privateKey': 'legacy-stub',
+        'passphrase': 'legacy-pw',
+      });
+
+      expect(decoded.hardwareKeys, hasLength(1));
+      expect(decoded.hardwareKeys.single.privateKey, 'legacy-stub');
+      expect(decoded.hardwareKeys.single.passphrase, 'legacy-pw');
+      expect(decoded.isValid, isTrue);
+    });
+
+    test('ignores malformed hardware key entries', () {
+      final decoded = SavedHost.fromJson(const {
+        'id': 'id',
+        'name': 'Hardware Host',
+        'host': 'example.com',
+        'port': 22,
+        'username': 'root',
+        'authMethod': 'hardwareKey',
+        'hardwareKeys': [
+          'garbage',
+          42,
+          {'id': 'no-key'},
+          {'id': 7, 'privateKey': 'wrong-id-type'},
+          {'id': 'wrong-label', 'privateKey': 'stub', 'label': 3},
+          {'id': 'ok', 'privateKey': 'stub-ok'},
+        ],
+      });
+
+      expect(decoded.hardwareKeys, hasLength(2));
+      expect(decoded.hardwareKeys.first.id, 'wrong-label');
+      expect(decoded.hardwareKeys.first.label, isEmpty);
+      expect(decoded.hardwareKeys.last.id, 'ok');
+    });
+
+    test('does not migrate legacy keys for other auth methods', () {
+      final decoded = SavedHost.fromJson(const {
+        'id': 'id',
+        'name': 'Key Host',
+        'host': 'example.com',
+        'port': 22,
+        'username': 'root',
+        'authMethod': 'privateKey',
+        'privateKey': 'normal-key',
+      });
+
+      expect(decoded.hardwareKeys, isEmpty);
+      expect(decoded.privateKey, 'normal-key');
     });
 
     test('preserves external auth method without credentials', () {
@@ -435,6 +565,180 @@ void main() {
         find.text('That passphrase did not match this key.'),
         findsNothing,
       );
+    });
+  });
+
+  group('HostFormPage hardware keys', () {
+    Future<void> scrollToAndTap(WidgetTester tester, Finder finder) async {
+      final listPosition =
+          ((find.byType(Scrollable).evaluate().first as StatefulElement).state
+                  as ScrollableState)
+              .position;
+      for (var i = 0; i < 40 && finder.evaluate().isEmpty; i++) {
+        listPosition.jumpTo(
+          (listPosition.pixels + 200).clamp(0.0, listPosition.maxScrollExtent),
+        );
+        await tester.pump();
+      }
+      await tester.ensureVisible(finder);
+      await tester.pumpAndSettle();
+      await tester.tap(finder);
+      await tester.pumpAndSettle();
+    }
+
+    void mockClipboard(WidgetTester tester, String text) {
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'Clipboard.getData') {
+            return <String, Object?>{'text': text};
+          }
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+    }
+
+    testWidgets('requires at least one hardware key to save', (tester) async {
+      await tester.pumpWidget(const MaterialApp(home: HostFormPage()));
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Display name'),
+        'Host',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Host or IP'),
+        'example.com',
+      );
+      await tester.tap(find.text('Hardware key').first);
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('No hardware keys yet'), findsOneWidget);
+
+      await scrollToAndTap(tester, find.text('Add machine'));
+
+      expect(find.text('Add at least one hardware key.'), findsOneWidget);
+    });
+
+    testWidgets('adopts a pasted stub when switching to hardware key', (
+      tester,
+    ) async {
+      await tester.pumpWidget(const MaterialApp(home: HostFormPage()));
+
+      await tester.tap(find.text('Private key').first);
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Private key'),
+        fakeSecurityKeyPem(),
+      );
+      await tester.pump();
+
+      await tester.ensureVisible(find.text('Hardware key').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Hardware key').first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Hardware keys (1)'), findsOneWidget);
+      expect(find.text('Hardware key 1'), findsOneWidget);
+      expect(find.text('View public key'), findsOneWidget);
+      expect(find.textContaining('No hardware keys yet'), findsNothing);
+    });
+
+    testWidgets('adds a key through the paste flow in the sheet', (
+      tester,
+    ) async {
+      mockClipboard(tester, fakeSecurityKeyPem());
+      await tester.pumpWidget(const MaterialApp(home: HostFormPage()));
+
+      await tester.tap(find.text('Hardware key').first);
+      await tester.pumpAndSettle();
+      await scrollToAndTap(tester, find.text('Add hardware key'));
+      await tester.tap(find.text('Paste'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Ed25519 SK'), findsOneWidget);
+
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Label'),
+        'backup',
+      );
+      await tester.ensureVisible(find.text('Add key'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Add key'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Hardware keys (1)'), findsOneWidget);
+      expect(find.text('backup'), findsOneWidget);
+
+      await scrollToAndTap(tester, find.text('Add hardware key'));
+      await tester.tap(find.text('Paste'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('This key is already added to this host.'),
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.ancestor(
+                of: find.text('Add key'),
+                matching: find.byType(FilledButton),
+              ),
+            )
+            .onPressed,
+        isNull,
+      );
+    });
+
+    testWidgets('adds a key typed into the sheet input field', (
+      tester,
+    ) async {
+      await tester.pumpWidget(const MaterialApp(home: HostFormPage()));
+
+      await tester.tap(find.text('Hardware key').first);
+      await tester.pumpAndSettle();
+      await scrollToAndTap(tester, find.text('Add hardware key'));
+
+      await tester.enterText(
+        find.widgetWithText(TextField, 'OpenSSH hardware key stub'),
+        fakeSecurityKeyPem(),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Ed25519 SK'), findsOneWidget);
+
+      await tester.ensureVisible(find.text('Add key'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Add key'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Hardware keys (1)'), findsOneWidget);
+    });
+
+    testWidgets('shows a legacy single-stub host as one entry', (
+      tester,
+    ) async {
+      final host = SavedHost(
+        id: 'id',
+        name: 'Legacy',
+        host: 'example.com',
+        port: 22,
+        username: 'root',
+        authMethod: SshAuthMethod.hardwareKey,
+        privateKey: fakeSecurityKeyPem(),
+      );
+
+      await tester.pumpWidget(MaterialApp(home: HostFormPage(host: host)));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Hardware keys (1)'), findsOneWidget);
+      expect(find.text('Hardware key 1'), findsOneWidget);
     });
   });
 

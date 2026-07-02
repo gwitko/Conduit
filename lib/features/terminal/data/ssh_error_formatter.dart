@@ -12,6 +12,10 @@ String describeSshConnectionError(Object error) {
   if (unwrapped is PlatformException) {
     return _describePlatformException(unwrapped);
   }
+  if (unwrapped is SSHSecurityKeyNotPresentError) {
+    return 'The presented security key does not hold any usable key for '
+        'this host.';
+  }
   if (unwrapped is SSHAuthFailError) {
     return 'SSH server rejected the configured credentials.';
   }

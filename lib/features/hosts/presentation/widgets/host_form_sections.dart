@@ -1,6 +1,7 @@
 import 'package:conduit/features/hosts/domain/saved_host.dart';
 import 'package:conduit/features/hosts/domain/ssh_key.dart';
 import 'package:conduit/features/hosts/presentation/widgets/auth_method_picker.dart';
+import 'package:conduit/features/hosts/presentation/widgets/hardware_key_list.dart';
 import 'package:conduit/features/hosts/presentation/widgets/host_form_chrome.dart';
 import 'package:conduit/features/hosts/presentation/widgets/key_source_actions.dart';
 import 'package:conduit/features/hosts/presentation/widgets/ssh_key_summary.dart';
@@ -99,6 +100,9 @@ class HostAuthenticationSection extends StatelessWidget {
     required this.forwardAgent,
     required this.externalAuthOfferKey,
     required this.keyInspection,
+    required this.hardwareKeys,
+    required this.hardwareKeyInspections,
+    required this.hardwareKeysError,
     required this.requiredValidator,
     required this.keyMaterialValidator,
     required this.onAuthMethodChanged,
@@ -108,6 +112,10 @@ class HostAuthenticationSection extends StatelessWidget {
     required this.onImportKeyFile,
     required this.onGenerateKey,
     required this.onViewPublicKey,
+    required this.onAddHardwareKey,
+    required this.onRenameHardwareKey,
+    required this.onRemoveHardwareKey,
+    required this.onViewHardwareKeyPublicKey,
     required this.onForwardAgentChanged,
     required this.onExternalAuthOfferKeyChanged,
     super.key,
@@ -122,6 +130,9 @@ class HostAuthenticationSection extends StatelessWidget {
   final bool forwardAgent;
   final bool externalAuthOfferKey;
   final SshKeyInspection? keyInspection;
+  final List<HardwareKeyEntry> hardwareKeys;
+  final Map<String, SshKeyInspection> hardwareKeyInspections;
+  final String? hardwareKeysError;
   final FormFieldValidator<String> requiredValidator;
   final FormFieldValidator<String> keyMaterialValidator;
   final ValueChanged<SshAuthMethod> onAuthMethodChanged;
@@ -131,6 +142,10 @@ class HostAuthenticationSection extends StatelessWidget {
   final VoidCallback onImportKeyFile;
   final VoidCallback onGenerateKey;
   final VoidCallback onViewPublicKey;
+  final VoidCallback onAddHardwareKey;
+  final ValueChanged<HardwareKeyEntry> onRenameHardwareKey;
+  final ValueChanged<HardwareKeyEntry> onRemoveHardwareKey;
+  final ValueChanged<HardwareKeyEntry> onViewHardwareKeyPublicKey;
   final ValueChanged<bool> onForwardAgentChanged;
   final ValueChanged<bool> onExternalAuthOfferKeyChanged;
 
@@ -182,29 +197,35 @@ class HostAuthenticationSection extends StatelessWidget {
                 ? requiredValidator
                 : null,
           ),
-        if (authMethod == SshAuthMethod.privateKey ||
-            authMethod == SshAuthMethod.hardwareKey) ...[
+        if (authMethod == SshAuthMethod.hardwareKey) ...[
+          AuthExplainer(method: authMethod),
+          const SizedBox(height: 16),
+          HardwareKeyList(
+            entries: hardwareKeys,
+            inspections: hardwareKeyInspections,
+            errorText: hardwareKeysError,
+            onAdd: onAddHardwareKey,
+            onRename: onRenameHardwareKey,
+            onRemove: onRemoveHardwareKey,
+            onViewPublicKey: onViewHardwareKeyPublicKey,
+          ),
+        ],
+        if (authMethod == SshAuthMethod.privateKey) ...[
           AuthExplainer(method: authMethod),
           const SizedBox(height: 16),
           KeySourceActions(
             onImportFile: onImportKeyFile,
             onPaste: onPasteKey,
-            onGenerate: authMethod == SshAuthMethod.hardwareKey
-                ? null
-                : onGenerateKey,
+            onGenerate: onGenerateKey,
           ),
           const SizedBox(height: 14),
           TextFormField(
             controller: privateKeyController,
-            decoration: InputDecoration(
-              labelText: authMethod == SshAuthMethod.hardwareKey
-                  ? 'OpenSSH hardware key stub'
-                  : 'Private key',
-              helperText: authMethod == SshAuthMethod.hardwareKey
-                  ? 'Import or paste the id_ed25519_sk or id_ecdsa_sk file.'
-                  : 'Import, paste, or generate a key.',
+            decoration: const InputDecoration(
+              labelText: 'Private key',
+              helperText: 'Import, paste, or generate a key.',
               alignLabelWithHint: true,
-              prefixIcon: const Padding(
+              prefixIcon: Padding(
                 padding: EdgeInsets.only(top: 12),
                 child: Icon(Icons.vpn_key_outlined),
               ),
@@ -212,11 +233,7 @@ class HostAuthenticationSection extends StatelessWidget {
             minLines: 5,
             maxLines: 9,
             style: const TextStyle(fontFamily: 'monospace', fontSize: 12.5),
-            validator:
-                (authMethod == SshAuthMethod.privateKey ||
-                    authMethod == SshAuthMethod.hardwareKey)
-                ? keyMaterialValidator
-                : null,
+            validator: keyMaterialValidator,
           ),
           if (keyInspection != null) ...[
             const SizedBox(height: 12),
@@ -229,12 +246,8 @@ class HostAuthenticationSection extends StatelessWidget {
           TextFormField(
             controller: passphraseController,
             decoration: InputDecoration(
-              labelText: authMethod == SshAuthMethod.hardwareKey
-                  ? 'Stub passphrase'
-                  : 'Key passphrase',
-              helperText: authMethod == SshAuthMethod.hardwareKey
-                  ? 'Only needed if the *_sk file is encrypted.'
-                  : 'Leave empty for an unencrypted key.',
+              labelText: 'Key passphrase',
+              helperText: 'Leave empty for an unencrypted key.',
               prefixIcon: const Icon(Icons.shield_outlined),
               suffixIcon: IconButton(
                 tooltip: showPassphrase ? 'Hide' : 'Show',
@@ -248,6 +261,9 @@ class HostAuthenticationSection extends StatelessWidget {
             ),
             obscureText: !showPassphrase,
           ),
+        ],
+        if (authMethod == SshAuthMethod.privateKey ||
+            authMethod == SshAuthMethod.hardwareKey) ...[
           const SizedBox(height: 10),
           Material(
             color: Colors.transparent,
