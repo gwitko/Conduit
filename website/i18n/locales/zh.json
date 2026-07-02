@@ -1,0 +1,171 @@
+{
+  "meta": {
+    "title": "Conduit: Mobile SSH, Mosh & SFTP terminal for iOS and Android",
+    "description": "A fast, open-source mobile terminal for SSH, Mosh, and SFTP. Run coding agents, edit in nvim, use hardware security keys, and even boot a local Arch Linux shell on your phone."
+  },
+  "nav": {
+    "features": "Features",
+    "security": "Security",
+    "openSource": "Open source",
+    "github": "GitHub",
+    "getConduit": "Get Conduit"
+  },
+  "stores": {
+    "captions": {
+      "appStore": "Download on the",
+      "fdroid": "Get it on",
+      "obtainium": "Track releases with"
+    }
+  },
+  "hero": {
+    "title": "The terminal your servers deserve, on the phone in your hand.",
+    "body": "Conduit is a mobile-first workspace for SSH, Mosh, and SFTP. Hardware security keys, tmux, and a real Linux shell, engineered so working from your phone never feels like a compromise.",
+    "trust": [
+      "Open source",
+      "No telemetry",
+      "F-Droid & App Store",
+      "Reproducible builds"
+    ]
+  },
+  "features": {
+    "intro": "Everything a working engineer reaches for over SSH, reworked for a touch screen without dumbing anything down.",
+    "items": {
+      "ssh-mosh": {
+        "eyebrow": "SSH & Mosh",
+        "title": "Sessions that survive the subway",
+        "body": "Full SSH with agent forwarding, plus Mosh for connections that ride out dead zones, IP changes, and sleep. Close the app, hop networks, come back, and your shell is right where you left it.",
+        "points": [
+          "SSH with key, password, and agent forwarding",
+          "Mosh roaming over flaky mobile links",
+          "Predictive local echo when latency spikes"
+        ],
+        "alt": "Conduit Mosh connection settings"
+      },
+      "ai-agents": {
+        "eyebrow": "Workflow",
+        "title": "Run coding agents from the train",
+        "body": "Start Claude Code or Codex on the machine where your repo actually lives, then steer it from your phone. It runs in a real shell over SSH or Mosh, so a subway dead zone never kills the run.",
+        "points": [
+          "Full-fidelity TUIs for Claude Code and Codex",
+          "Long runs keep going through network drops",
+          "Approve, redirect, and read diffs on the go"
+        ],
+        "alt": "Conduit running a coding agent over SSH"
+      },
+      "fleet": {
+        "eyebrow": "Your machines",
+        "title": "Every box you own, one tap away",
+        "body": "Save machines with their keys, tags, and per-host settings, then filter, search, and sort them however you think. Sessions open in tabs, so production, your homelab, and that one VPS are all a swipe apart.",
+        "points": [
+          "Saved profiles with tags and search",
+          "Sort by last used, name, or date added",
+          "Tabbed sessions across every host"
+        ],
+        "alt": "Conduit saved machines list with tags and search"
+      },
+      "nvim": {
+        "eyebrow": "Workflow",
+        "title": "Edit like you never left your desk",
+        "body": "Open nvim over SSH and get your real setup: plugins, LSP, treesitter, all of it. True color and a bundled Nerd Font mean icons and syntax land exactly the way they do on your laptop.",
+        "points": [
+          "True-color rendering with ligatures",
+          "Nerd Font glyphs built in",
+          "On-screen Esc, Ctrl, Tab, and arrow keys"
+        ],
+        "alt": "Editing a file in Neovim inside Conduit"
+      },
+      "sftp": {
+        "eyebrow": "SFTP",
+        "title": "Move files without leaving the app",
+        "body": "A built-in SFTP browser sits next to your session. Navigate remote trees, upload, download, rename, and delete. No separate app, no context switch.",
+        "points": [
+          "Browse remote filesystems visually",
+          "Upload and download in a tap",
+          "Rename and delete in place"
+        ],
+        "alt": "Conduit SFTP file browser navigating a remote server"
+      },
+      "btop": {
+        "eyebrow": "Workflow",
+        "title": "Check on a server from the couch",
+        "body": "Fire up btop, htop, or your own dashboards and watch load, memory, and processes update live. Heavy, redraw-happy TUIs stay smooth instead of tearing themselves apart.",
+        "points": [
+          "Smooth full-screen TUI redraws",
+          "Live logs, monitors, and dashboards",
+          "Kill a runaway process from anywhere"
+        ],
+        "alt": "Conduit showing the btop system monitor"
+      },
+      "themes": {
+        "eyebrow": "Appearance",
+        "title": "Sixteen colorschemes, zero config",
+        "body": "Catppuccin, Tokyo Night, Gruvbox, Nord, Dracula and more, each tuned end to end so the terminal, UI chrome, and syntax all agree. Pick one and the whole app follows.",
+        "points": [
+          "16 hand-tuned palettes",
+          "Consistent across terminal and UI",
+          "Light and dark for every theme"
+        ],
+        "alt": "Conduit theme picker showing multiple colorschemes"
+      },
+      "local-shell": {
+        "eyebrow": "On-device",
+        "title": "A whole Linux box, no server required",
+        "body": "On Android, Conduit can boot a local Arch Linux userland through proot: pacman, compilers, and your favorite CLI tools running unprivileged on the phone itself. No root, and nothing to connect to.",
+        "points": [
+          "Full Arch Linux with pacman",
+          "Unprivileged, no root needed",
+          "Works completely offline"
+        ],
+        "alt": "Conduit running a local Linux shell on device"
+      }
+    }
+  },
+  "security": {
+    "eyebrow": "Security",
+    "title": "Log in with the YubiKey in your pocket",
+    "body": "Conduit speaks FIDO2 over NFC and USB. Tap your hardware key to authenticate. Private keys never leave the device, and nothing phishable ever touches your phone. Enroll several keys on one machine and connect with whichever one you have on you.",
+    "alt": "Conduit enrolling a hardware security key for a saved machine",
+    "cards": {
+      "keys": {
+        "title": "Multiple keys per host",
+        "body": "Backup keys, work keys, travel keys. Enroll them all, no duplicate entries."
+      },
+      "enclave": {
+        "title": "Nothing leaves the phone",
+        "body": "Credentials live in the secure enclave. No cloud, no sync, no account."
+      }
+    }
+  },
+  "openSource": {
+    "eyebrow": "Open source",
+    "title": "Auditable, reproducible, yours",
+    "body": "Conduit is fully open source and published on F-Droid with reproducible builds. No trackers, no analytics, no accounts. The code you can read is the app you run.",
+    "stats": {
+      "source": "Open source, from crypto to keyboard",
+      "trackers": "Trackers, ads, or telemetry endpoints",
+      "install": "Ways to install: App Store, F-Droid, Obtainium"
+    },
+    "readSource": "Read the source on GitHub",
+    "star": "Star on GitHub",
+    "support": "Support on Ko-fi"
+  },
+  "cta": {
+    "title": "Put a real terminal in your pocket",
+    "body": "Free, open source, and ready on the App Store, F-Droid, and Obtainium."
+  },
+  "footer": {
+    "tagline": "A mobile terminal workspace for SSH, Mosh, SFTP, and local shells. Built for people who run real infrastructure from their phone.",
+    "columns": {
+      "product": "Product",
+      "project": "Project",
+      "install": "Install"
+    },
+    "links": {
+      "source": "Source code",
+      "issues": "Issues",
+      "changelog": "Changelog",
+      "support": "Support on Ko-fi"
+    },
+    "copyright": "© {year} Conduit. Open source, community built."
+  }
+}

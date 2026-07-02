@@ -1,0 +1,11 @@
+node_modules
+.nuxt
+.output
+.data
+dist
+.env
+*.log
+.DS_Store
+_nm_root_junk
+_junk_.nuxt
+_junk_yarn.lock
