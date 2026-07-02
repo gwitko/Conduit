@@ -55,6 +55,7 @@ Dart implementation of the protocol, and the terminal is
 - OpenSSH FIDO security-key auth for `ed25519-sk` and `ecdsa-sk` credentials,
   tested with YubiKey and designed for CTAP-compatible keys.
 - Android hardware-key auth over USB or NFC; iOS hardware-key auth over NFC.
+  Register multiple hardware keys per host and Conduit tries each until one matches.
 - Optional per-host SSH agent forwarding for private-key and hardware-key auth,
   so a remote host can use your key to reach further hosts; forwarded hardware
   keys still require a touch for every onward signature.

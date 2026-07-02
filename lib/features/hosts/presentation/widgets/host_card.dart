@@ -221,7 +221,10 @@ class HostCard extends StatelessWidget {
   String _authLabel(SavedHost host) => switch (host.authMethod) {
     SshAuthMethod.password => 'Password',
     SshAuthMethod.privateKey => 'Key',
-    SshAuthMethod.hardwareKey => 'Hardware key',
+    SshAuthMethod.hardwareKey =>
+      host.effectiveHardwareKeys.length > 1
+          ? 'Hardware keys (${host.effectiveHardwareKeys.length})'
+          : 'Hardware key',
     SshAuthMethod.external => 'External',
   };
 

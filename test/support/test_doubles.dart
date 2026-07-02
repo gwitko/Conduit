@@ -507,15 +507,24 @@ class RecordingFileExport implements FileExport {
 }
 
 class FakeCtapDevice extends CtapDevice {
-  FakeCtapDevice({required this.signature, required this.authData});
+  FakeCtapDevice({
+    required this.signature,
+    required this.authData,
+    this.respond,
+  });
 
   final List<int> signature;
   final List<int> authData;
+  final CtapResponse<List<int>>? Function(List<int> command)? respond;
   final List<List<int>> commands = [];
 
   @override
   Future<CtapResponse<List<int>>> transceive(List<int> command) async {
     commands.add(List.of(command));
+    final custom = respond?.call(command);
+    if (custom != null) {
+      return custom;
+    }
     return CtapResponse(
       CtapStatusCode.ctap1ErrSuccess.value,
       cbor.encode(
@@ -530,6 +539,19 @@ class FakeCtapDevice extends CtapDevice {
       ),
     );
   }
+}
+
+List<int> allowedCredentialIdOf(List<int> command) {
+  final request = cbor.decode(command.sublist(1)).toObject() as Map;
+  final allowList = request[GetAssertionRequest.allowListIdx] as List<Object?>;
+  final credential = allowList.single as Map<Object?, Object?>;
+  return (credential['id'] as List).cast<int>();
+}
+
+bool isSilentProbe(List<int> command) {
+  final request = cbor.decode(command.sublist(1)).toObject() as Map;
+  final options = request[GetAssertionRequest.optionsIdx] as Map?;
+  return options?['up'] == false;
 }
 
 String fakeSecurityKeyPem() {

@@ -7,6 +7,8 @@ Thanks to the people who have contributed fixes, testing, and improvements to Co
 
 - [lakofsth](https://github.com/lakofsth)
   - Added optional compose-mode staging input for full native IME support.
+  - Added compose history recall for recently sent lines.
+  - Preserved the unsent compose draft when the composer is closed.
 
 - [dorokuma](https://github.com/dorokuma)
   - Fixed Android on-screen keyboard behavior for TUI apps in `conduit_vt`.
