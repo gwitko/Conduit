@@ -62,6 +62,9 @@ void main() {
           LocalShellEnvironment(
             nativeLibraryDir: tempDir.path,
             filesDir: tempDir.path,
+            sharedStorageFeatureEnabled: true,
+            sharedStorageDir: '/storage/emulated/0',
+            sharedStorageAccessGranted: true,
             supportedAbis: const ['arm64-v8a'],
           ),
         );

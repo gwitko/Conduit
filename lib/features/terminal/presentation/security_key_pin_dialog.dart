@@ -47,6 +47,7 @@ class _SecurityKeyPinDialogState extends State<_SecurityKeyPinDialog> {
           helperText: retriesRemaining == null
               ? 'Enter the PIN for your hardware security key.'
               : '$retriesRemaining attempts remaining.',
+          helperMaxLines: 2,
         ),
         onSubmitted: (value) => Navigator.of(context).pop(value),
       ),

@@ -1,10 +1,13 @@
 import 'package:conduit/features/hosts/domain/saved_host.dart';
 import 'package:conduit/features/hosts/domain/ssh_key.dart';
 import 'package:conduit/features/hosts/presentation/widgets/auth_method_picker.dart';
+import 'package:conduit/features/hosts/presentation/widgets/hardware_key_list.dart';
 import 'package:conduit/features/hosts/presentation/widgets/host_form_chrome.dart';
 import 'package:conduit/features/hosts/presentation/widgets/key_source_actions.dart';
 import 'package:conduit/features/hosts/presentation/widgets/ssh_key_summary.dart';
 import 'package:conduit/features/hosts/presentation/widgets/tag_editor.dart';
+import 'package:conduit/features/snippets/domain/terminal_snippet.dart';
+import 'package:conduit/features/snippets/presentation/snippet_editor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -99,6 +102,9 @@ class HostAuthenticationSection extends StatelessWidget {
     required this.forwardAgent,
     required this.externalAuthOfferKey,
     required this.keyInspection,
+    required this.hardwareKeys,
+    required this.hardwareKeyInspections,
+    required this.hardwareKeysError,
     required this.requiredValidator,
     required this.keyMaterialValidator,
     required this.onAuthMethodChanged,
@@ -108,6 +114,10 @@ class HostAuthenticationSection extends StatelessWidget {
     required this.onImportKeyFile,
     required this.onGenerateKey,
     required this.onViewPublicKey,
+    required this.onAddHardwareKey,
+    required this.onRenameHardwareKey,
+    required this.onRemoveHardwareKey,
+    required this.onViewHardwareKeyPublicKey,
     required this.onForwardAgentChanged,
     required this.onExternalAuthOfferKeyChanged,
     super.key,
@@ -122,6 +132,9 @@ class HostAuthenticationSection extends StatelessWidget {
   final bool forwardAgent;
   final bool externalAuthOfferKey;
   final SshKeyInspection? keyInspection;
+  final List<HardwareKeyEntry> hardwareKeys;
+  final Map<String, SshKeyInspection> hardwareKeyInspections;
+  final String? hardwareKeysError;
   final FormFieldValidator<String> requiredValidator;
   final FormFieldValidator<String> keyMaterialValidator;
   final ValueChanged<SshAuthMethod> onAuthMethodChanged;
@@ -131,6 +144,10 @@ class HostAuthenticationSection extends StatelessWidget {
   final VoidCallback onImportKeyFile;
   final VoidCallback onGenerateKey;
   final VoidCallback onViewPublicKey;
+  final VoidCallback onAddHardwareKey;
+  final ValueChanged<HardwareKeyEntry> onRenameHardwareKey;
+  final ValueChanged<HardwareKeyEntry> onRemoveHardwareKey;
+  final ValueChanged<HardwareKeyEntry> onViewHardwareKeyPublicKey;
   final ValueChanged<bool> onForwardAgentChanged;
   final ValueChanged<bool> onExternalAuthOfferKeyChanged;
 
@@ -166,6 +183,7 @@ class HostAuthenticationSection extends StatelessWidget {
             decoration: InputDecoration(
               labelText: 'Password',
               helperText: 'Use this for password-only SSH login.',
+              helperMaxLines: 2,
               prefixIcon: const Icon(Icons.key_outlined),
               suffixIcon: IconButton(
                 tooltip: showPassword ? 'Hide' : 'Show',
@@ -182,29 +200,36 @@ class HostAuthenticationSection extends StatelessWidget {
                 ? requiredValidator
                 : null,
           ),
-        if (authMethod == SshAuthMethod.privateKey ||
-            authMethod == SshAuthMethod.hardwareKey) ...[
+        if (authMethod == SshAuthMethod.hardwareKey) ...[
+          AuthExplainer(method: authMethod),
+          const SizedBox(height: 16),
+          HardwareKeyList(
+            entries: hardwareKeys,
+            inspections: hardwareKeyInspections,
+            errorText: hardwareKeysError,
+            onAdd: onAddHardwareKey,
+            onRename: onRenameHardwareKey,
+            onRemove: onRemoveHardwareKey,
+            onViewPublicKey: onViewHardwareKeyPublicKey,
+          ),
+        ],
+        if (authMethod == SshAuthMethod.privateKey) ...[
           AuthExplainer(method: authMethod),
           const SizedBox(height: 16),
           KeySourceActions(
             onImportFile: onImportKeyFile,
             onPaste: onPasteKey,
-            onGenerate: authMethod == SshAuthMethod.hardwareKey
-                ? null
-                : onGenerateKey,
+            onGenerate: onGenerateKey,
           ),
           const SizedBox(height: 14),
           TextFormField(
             controller: privateKeyController,
-            decoration: InputDecoration(
-              labelText: authMethod == SshAuthMethod.hardwareKey
-                  ? 'OpenSSH hardware key stub'
-                  : 'Private key',
-              helperText: authMethod == SshAuthMethod.hardwareKey
-                  ? 'Import or paste the id_ed25519_sk or id_ecdsa_sk file.'
-                  : 'Import, paste, or generate a key.',
+            decoration: const InputDecoration(
+              labelText: 'Private key',
+              helperText: 'Import, paste, or generate a key.',
+              helperMaxLines: 2,
               alignLabelWithHint: true,
-              prefixIcon: const Padding(
+              prefixIcon: Padding(
                 padding: EdgeInsets.only(top: 12),
                 child: Icon(Icons.vpn_key_outlined),
               ),
@@ -212,11 +237,7 @@ class HostAuthenticationSection extends StatelessWidget {
             minLines: 5,
             maxLines: 9,
             style: const TextStyle(fontFamily: 'monospace', fontSize: 12.5),
-            validator:
-                (authMethod == SshAuthMethod.privateKey ||
-                    authMethod == SshAuthMethod.hardwareKey)
-                ? keyMaterialValidator
-                : null,
+            validator: keyMaterialValidator,
           ),
           if (keyInspection != null) ...[
             const SizedBox(height: 12),
@@ -229,12 +250,9 @@ class HostAuthenticationSection extends StatelessWidget {
           TextFormField(
             controller: passphraseController,
             decoration: InputDecoration(
-              labelText: authMethod == SshAuthMethod.hardwareKey
-                  ? 'Stub passphrase'
-                  : 'Key passphrase',
-              helperText: authMethod == SshAuthMethod.hardwareKey
-                  ? 'Only needed if the *_sk file is encrypted.'
-                  : 'Leave empty for an unencrypted key.',
+              labelText: 'Key passphrase',
+              helperText: 'Leave empty for an unencrypted key.',
+              helperMaxLines: 2,
               prefixIcon: const Icon(Icons.shield_outlined),
               suffixIcon: IconButton(
                 tooltip: showPassphrase ? 'Hide' : 'Show',
@@ -248,6 +266,9 @@ class HostAuthenticationSection extends StatelessWidget {
             ),
             obscureText: !showPassphrase,
           ),
+        ],
+        if (authMethod == SshAuthMethod.privateKey ||
+            authMethod == SshAuthMethod.hardwareKey) ...[
           const SizedBox(height: 10),
           Material(
             color: Colors.transparent,
@@ -275,19 +296,25 @@ class HostAdvancedSection extends StatelessWidget {
     required this.tagFocusNode,
     required this.timeoutController,
     required this.moshLocaleController,
+    required this.moshPortsController,
     required this.tmuxSessionNameController,
     required this.tmuxStartDirectoryController,
     required this.useMosh,
     required this.predictiveEchoEnabled,
     required this.startTmuxOnConnect,
     required this.tmuxPrefixKey,
+    required this.snippets,
+    required this.connectSnippetId,
     required this.timeoutValidator,
+    required this.moshPortsValidator,
     required this.onAddTag,
     required this.onRemoveTag,
     required this.onUseMoshChanged,
     required this.onPredictiveEchoChanged,
     required this.onStartTmuxOnConnectChanged,
     required this.onTmuxPrefixKeyChanged,
+    required this.onSnippetsChanged,
+    required this.onConnectSnippetChanged,
     super.key,
   });
 
@@ -296,19 +323,25 @@ class HostAdvancedSection extends StatelessWidget {
   final FocusNode tagFocusNode;
   final TextEditingController timeoutController;
   final TextEditingController moshLocaleController;
+  final TextEditingController moshPortsController;
   final TextEditingController tmuxSessionNameController;
   final TextEditingController tmuxStartDirectoryController;
   final bool useMosh;
   final bool predictiveEchoEnabled;
   final bool startTmuxOnConnect;
   final TmuxPrefixKey tmuxPrefixKey;
+  final List<TerminalSnippet> snippets;
+  final String connectSnippetId;
   final FormFieldValidator<String> timeoutValidator;
+  final FormFieldValidator<String> moshPortsValidator;
   final ValueChanged<String> onAddTag;
   final ValueChanged<String> onRemoveTag;
   final ValueChanged<bool> onUseMoshChanged;
   final ValueChanged<bool> onPredictiveEchoChanged;
   final ValueChanged<bool> onStartTmuxOnConnectChanged;
   final ValueChanged<TmuxPrefixKey> onTmuxPrefixKeyChanged;
+  final ValueChanged<List<TerminalSnippet>> onSnippetsChanged;
+  final ValueChanged<String> onConnectSnippetChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -357,8 +390,28 @@ class HostAdvancedSection extends StatelessWidget {
             decoration: const InputDecoration(
               labelText: 'Mosh locale',
               helperText: 'Must be a UTF-8 locale installed on the host.',
+              helperMaxLines: 2,
               prefixIcon: Icon(Icons.language_outlined),
             ),
+            autocorrect: false,
+            enableSuggestions: false,
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: moshPortsController,
+            decoration: const InputDecoration(
+              labelText: 'Mosh UDP ports',
+              helperText:
+                  'Port or range like 60000:61000. Empty uses 60001:60999.',
+              helperMaxLines: 2,
+              errorMaxLines: 2,
+              prefixIcon: Icon(Icons.settings_ethernet_rounded),
+            ),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[0-9:]')),
+            ],
+            validator: moshPortsValidator,
             autocorrect: false,
             enableSuggestions: false,
             textInputAction: TextInputAction.next,
@@ -398,6 +451,7 @@ class HostAdvancedSection extends StatelessWidget {
               labelText: 'Tmux session name',
               hintText: defaultTmuxSessionName,
               helperText: 'Conduit attaches to this session, or creates it.',
+              helperMaxLines: 2,
               prefixIcon: Icon(Icons.view_stream_outlined),
             ),
             autocorrect: false,
@@ -427,6 +481,7 @@ class HostAdvancedSection extends StatelessWidget {
           decoration: const InputDecoration(
             labelText: 'Tmux prefix',
             helperText: 'Used by the Tmux and Tmux+ key-row buttons.',
+            helperMaxLines: 2,
             prefixIcon: Icon(Icons.keyboard_command_key_rounded),
           ),
           items: [
@@ -438,6 +493,17 @@ class HostAdvancedSection extends StatelessWidget {
               onTmuxPrefixKeyChanged(value);
             }
           },
+        ),
+        const SizedBox(height: 18),
+        SnippetListEditor(
+          title: 'Host snippets',
+          caption:
+              'Shown in the Snip key-row menu for this machine. Hidden '
+              'snippets are useful for passwords or other secrets.',
+          snippets: snippets,
+          onChanged: onSnippetsChanged,
+          connectSnippetId: connectSnippetId,
+          onConnectSnippetChanged: onConnectSnippetChanged,
         ),
       ],
     );

@@ -4,6 +4,7 @@ import 'package:conduit/core/theme/terminal_appearance.dart';
 import 'package:conduit/core/theme/theme_controller.dart';
 import 'package:conduit/core/theme/theme_preferences_repository.dart';
 import 'package:conduit/features/app_lock/presentation/app_lock_controller.dart';
+import 'package:conduit/features/backup/data/app_backup_service.dart';
 import 'package:conduit/features/hosts/domain/saved_host.dart';
 import 'package:conduit/features/hosts/presentation/hosts_controller.dart';
 import 'package:conduit/features/local_shell/domain/local_shell_state.dart';
@@ -67,11 +68,13 @@ void main() {
   testWidgets('unlocks into the saved machine list', (tester) async {
     final promptCoordinator = HostKeyPromptCoordinator();
     final verifier = NoopVerifier();
+    final themeController = ThemeController(InMemoryThemePreferences());
+    final hostsController = HostsController(EmptyHostsRepository());
     await tester.pumpWidget(
       ConduitApp(
         lockController: AppLockController(AlwaysAuthenticates()),
-        themeController: ThemeController(InMemoryThemePreferences()),
-        hostsController: HostsController(EmptyHostsRepository()),
+        themeController: themeController,
+        hostsController: hostsController,
         terminalRepository: NoNetworkTerminalRepository(),
         workspaceController: TerminalWorkspaceController(
           NoNetworkTerminalRepository(),
@@ -80,6 +83,11 @@ void main() {
         hostKeyVerifier: verifier,
         promptCoordinator: promptCoordinator,
         sftpRepository: NoNetworkSftpRepository(),
+        backupService: AppBackupService(
+          hostsController: hostsController,
+          themeController: themeController,
+          hostKeyVerifier: verifier,
+        ),
         fileExport: RecordingFileExport(),
       ),
     );
@@ -97,6 +105,7 @@ void main() {
   ) async {
     final promptCoordinator = HostKeyPromptCoordinator();
     final verifier = NoopVerifier();
+    final hostsController = HostsController(EmptyHostsRepository());
     final themeController = ThemeController(
       InMemoryThemePreferences(
         const ThemePreferences(
@@ -112,7 +121,7 @@ void main() {
       ConduitApp(
         lockController: AppLockController(AlwaysAuthenticates()),
         themeController: themeController,
-        hostsController: HostsController(EmptyHostsRepository()),
+        hostsController: hostsController,
         terminalRepository: NoNetworkTerminalRepository(),
         workspaceController: TerminalWorkspaceController(
           NoNetworkTerminalRepository(),
@@ -121,6 +130,11 @@ void main() {
         hostKeyVerifier: verifier,
         promptCoordinator: promptCoordinator,
         sftpRepository: NoNetworkSftpRepository(),
+        backupService: AppBackupService(
+          hostsController: hostsController,
+          themeController: themeController,
+          hostKeyVerifier: verifier,
+        ),
         fileExport: RecordingFileExport(),
       ),
     );

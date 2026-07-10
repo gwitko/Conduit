@@ -55,6 +55,7 @@ enum TerminalKeyboardAction {
   tmuxPrefix,
   tmuxScrollback,
   tmuxMenu,
+  snippets,
   compose,
 }
 
@@ -146,6 +147,7 @@ const defaultTerminalKeyboardActions = [
   TerminalKeyboardAction.tmuxPrefix,
   TerminalKeyboardAction.tmuxScrollback,
   TerminalKeyboardAction.tmuxMenu,
+  TerminalKeyboardAction.snippets,
   TerminalKeyboardAction.fullscreen,
 ];
 
@@ -174,6 +176,36 @@ const legacyDefaultTerminalKeyboardActions = [
   TerminalKeyboardAction.paste,
   TerminalKeyboardAction.functionKeys,
 ];
+
+const preTrackingTerminalKeyboardActionNames = <String>{
+  'escape',
+  'control',
+  'alt',
+  'tab',
+  'fullscreen',
+  'arrowUp',
+  'arrowDown',
+  'arrowLeft',
+  'arrowRight',
+  'home',
+  'end',
+  'pageUp',
+  'pageDown',
+  'controlC',
+  'controlD',
+  'controlZ',
+  'controlL',
+  'colon',
+  'slash',
+  'pipe',
+  'dash',
+  'paste',
+  'functionKeys',
+  'tmuxPrefix',
+  'tmuxScrollback',
+  'tmuxMenu',
+  'compose',
+};
 
 const tmuxTerminalKeyboardActions = [
   TerminalKeyboardAction.tmuxPrefix,
@@ -207,6 +239,7 @@ const defaultTerminalKeyboardItems = [
   TerminalKeyboardItem.builtIn(TerminalKeyboardAction.tmuxPrefix),
   TerminalKeyboardItem.builtIn(TerminalKeyboardAction.tmuxScrollback),
   TerminalKeyboardItem.builtIn(TerminalKeyboardAction.tmuxMenu),
+  TerminalKeyboardItem.builtIn(TerminalKeyboardAction.snippets),
   TerminalKeyboardItem.builtIn(TerminalKeyboardAction.fullscreen),
 ];
 
@@ -214,6 +247,59 @@ const tmuxTerminalKeyboardItems = [
   TerminalKeyboardItem.builtIn(TerminalKeyboardAction.tmuxPrefix),
   TerminalKeyboardItem.builtIn(TerminalKeyboardAction.tmuxScrollback),
   TerminalKeyboardItem.builtIn(TerminalKeyboardAction.tmuxMenu),
+];
+
+const terminalKeyboardRowHeightDefault = 50.0;
+const terminalKeyboardRowHeightMin = 40.0;
+const terminalKeyboardRowHeightMax = 80.0;
+
+double clampTerminalKeyboardRowHeight(double height) {
+  return height.clamp(
+    terminalKeyboardRowHeightMin,
+    terminalKeyboardRowHeightMax,
+  );
+}
+
+class TerminalKeyboardRow {
+  const TerminalKeyboardRow({
+    required this.items,
+    this.height = terminalKeyboardRowHeightDefault,
+  });
+
+  final List<TerminalKeyboardItem> items;
+  final double height;
+
+  TerminalKeyboardRow copyWith({
+    List<TerminalKeyboardItem>? items,
+    double? height,
+  }) {
+    return TerminalKeyboardRow(
+      items: items ?? this.items,
+      height: height ?? this.height,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (other is! TerminalKeyboardRow ||
+        other.height != height ||
+        other.items.length != items.length) {
+      return false;
+    }
+    for (var index = 0; index < items.length; index += 1) {
+      if (other.items[index] != items[index]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  @override
+  int get hashCode => Object.hash(height, Object.hashAll(items));
+}
+
+const defaultTerminalKeyboardRows = [
+  TerminalKeyboardRow(items: defaultTerminalKeyboardItems),
 ];
 
 const terminalKeyboardControlKeys = [
@@ -273,6 +359,7 @@ extension TerminalKeyboardActionDetails on TerminalKeyboardAction {
     TerminalKeyboardAction.tmuxPrefix => 'Tmux',
     TerminalKeyboardAction.tmuxScrollback => 'Scroll',
     TerminalKeyboardAction.tmuxMenu => 'Tmux+',
+    TerminalKeyboardAction.snippets => 'Snip',
     TerminalKeyboardAction.compose => 'Compose',
   };
 }

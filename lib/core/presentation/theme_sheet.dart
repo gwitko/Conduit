@@ -4,6 +4,9 @@ import 'package:conduit/core/theme/app_palette.dart';
 import 'package:conduit/core/theme/app_theme.dart';
 import 'package:conduit/core/theme/terminal_appearance.dart';
 import 'package:conduit/core/theme/theme_controller.dart';
+import 'package:conduit/features/backup/data/app_backup_service.dart';
+import 'package:conduit/features/backup/presentation/backup_sheet.dart';
+import 'package:conduit/features/snippets/presentation/snippet_editor.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -11,21 +14,23 @@ import 'package:flutter/services.dart';
 Future<void> showThemeSheet({
   required BuildContext context,
   required ThemeController controller,
+  AppBackupService? backupService,
 }) {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     builder: (context) => AnnotatedRegion<SystemUiOverlayStyle>(
       value: AppTheme.systemUiOverlayStyle(Theme.of(context).brightness),
-      child: _ThemeSheet(controller: controller),
+      child: _ThemeSheet(controller: controller, backupService: backupService),
     ),
   );
 }
 
 class _ThemeSheet extends StatelessWidget {
-  const _ThemeSheet({required this.controller});
+  const _ThemeSheet({required this.controller, required this.backupService});
 
   final ThemeController controller;
+  final AppBackupService? backupService;
 
   @override
   Widget build(BuildContext context) {
@@ -72,6 +77,12 @@ class _ThemeSheet extends StatelessWidget {
                     const ConduitSectionLabel('Home'),
                     const SizedBox(height: 10),
                     _HomeAppearanceControls(controller: controller),
+                  ],
+                  if (backupService != null) ...[
+                    const SizedBox(height: 22),
+                    const ConduitSectionLabel('Backup'),
+                    const SizedBox(height: 10),
+                    _BackupControls(backupService: backupService!),
                   ],
                   const SizedBox(height: 22),
                   const ConduitSectionLabel('Palette'),
@@ -133,6 +144,39 @@ class _HomeAppearanceControls extends StatelessWidget {
         ),
         value: controller.showLocalShell,
         onChanged: controller.setShowLocalShell,
+      ),
+    );
+  }
+}
+
+class _BackupControls extends StatelessWidget {
+  const _BackupControls({required this.backupService});
+
+  final AppBackupService backupService;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    return Material(
+      color: colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        side: BorderSide(color: colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: ListTile(
+        leading: const Icon(Icons.backup_rounded),
+        title: const Text('Backup and restore'),
+        subtitle: Text(
+          'Export settings and machines or import a saved backup.',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ),
+        trailing: const Icon(Icons.chevron_right_rounded),
+        onTap: () =>
+            showBackupSheet(context: context, backupService: backupService),
       ),
     );
   }
@@ -269,23 +313,37 @@ class _TerminalAppearanceControls extends StatelessWidget {
               const Icon(Icons.keyboard_command_key_rounded, size: 18),
               const SizedBox(width: 8),
               Expanded(
-                child: Text('Key row', style: theme.textTheme.labelLarge),
+                child: Text('Key rows', style: theme.textTheme.labelLarge),
               ),
               Text(
-                '${controller.terminalKeyboardItems.length}',
+                '${controller.terminalKeyboardRows.length}',
                 style: theme.textTheme.labelLarge?.copyWith(
                   color: colorScheme.primary,
                   fontWeight: FontWeight.w800,
                 ),
               ),
               const SizedBox(width: 10),
-              OutlinedButton.icon(
-                onPressed: () =>
-                    _showKeyboardActionsEditor(context, controller),
+              TextButton.icon(
+                onPressed: () => _showKeyboardRowsEditor(context, controller),
                 icon: const Icon(Icons.tune_rounded, size: 17),
                 label: const Text('Edit'),
               ),
             ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        Container(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: colorScheme.outlineVariant),
+          ),
+          child: SnippetListEditor(
+            title: 'Global snippets',
+            caption: 'Shown from the Snip key-row menu on every machine.',
+            snippets: controller.terminalSnippets,
+            onChanged: controller.setTerminalSnippets,
           ),
         ),
       ],
@@ -293,21 +351,269 @@ class _TerminalAppearanceControls extends StatelessWidget {
   }
 }
 
-Future<void> _showKeyboardActionsEditor(
+Future<void> _showKeyboardRowsEditor(
   BuildContext context,
   ThemeController controller,
 ) {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    builder: (context) => _KeyboardActionsEditor(controller: controller),
+    builder: (context) => _KeyboardRowsEditor(controller: controller),
   );
 }
 
-class _KeyboardActionsEditor extends StatefulWidget {
-  const _KeyboardActionsEditor({required this.controller});
+class _KeyboardRowsEditor extends StatefulWidget {
+  const _KeyboardRowsEditor({required this.controller});
 
   final ThemeController controller;
+
+  @override
+  State<_KeyboardRowsEditor> createState() => _KeyboardRowsEditorState();
+}
+
+class _KeyboardRowsEditorState extends State<_KeyboardRowsEditor> {
+  late List<TerminalKeyboardRow> _rows;
+  final List<int> _rowIds = [];
+  var _nextRowId = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _rows = List.of(widget.controller.terminalKeyboardRows);
+    for (var index = 0; index < _rows.length; index += 1) {
+      _rowIds.add(_nextRowId++);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    return SafeArea(
+      bottom: shouldApplyBottomSafeArea(context),
+      child: SizedBox(
+        height: MediaQuery.sizeOf(context).height * 0.82,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 14, 10, 8),
+              child: Row(
+                children: [
+                  Text(
+                    'Key Rows (${_rows.length})',
+                    style: theme.textTheme.titleLarge,
+                  ),
+                  const Spacer(),
+                  TextButton(onPressed: _reset, child: const Text('Reset')),
+                  IconButton(
+                    tooltip: 'Close',
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ReorderableListView.builder(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+                itemCount: _rows.length,
+                proxyDecorator: _reorderProxyDecorator,
+                onReorderItem: _reorder,
+                itemBuilder: _buildRow,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 6, 18, 18),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _addRow,
+                      icon: const Icon(Icons.add_rounded, size: 17),
+                      label: const Text('Add row'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.check_rounded),
+                      label: const Text('Done'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(height: 1, color: colorScheme.outlineVariant),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRow(BuildContext context, int index) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final row = _rows[index];
+    return Card(
+      key: ValueKey(_rowIds[index]),
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 8, 6, 4),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Row ${index + 1}',
+                        style: theme.textTheme.labelLarge,
+                      ),
+                      Text(
+                        row.items.length == 1
+                            ? '1 key'
+                            : '${row.items.length} keys',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Edit keys',
+                  onPressed: () => _editRowKeys(index),
+                  icon: const Icon(Icons.tune_rounded),
+                ),
+                IconButton(
+                  tooltip: 'Remove row',
+                  onPressed: _rows.length == 1 ? null : () => _removeRow(index),
+                  icon: const Icon(Icons.remove_circle_outline),
+                ),
+                ReorderableDragStartListener(
+                  index: index,
+                  child: const Padding(
+                    padding: EdgeInsets.all(8),
+                    child: Icon(Icons.drag_handle_rounded),
+                  ),
+                ),
+              ],
+            ),
+            Row(
+              children: [
+                Icon(
+                  Icons.height_rounded,
+                  size: 17,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                Expanded(
+                  child: Slider(
+                    value: row.height,
+                    min: terminalKeyboardRowHeightMin,
+                    max: terminalKeyboardRowHeightMax,
+                    divisions: 8,
+                    label: '${row.height.round()}',
+                    onChanged: (value) => setState(
+                      () => _rows[index] = row.copyWith(height: value),
+                    ),
+                    onChangeEnd: (_) => _persist(),
+                  ),
+                ),
+                SizedBox(
+                  width: 30,
+                  child: Text(
+                    '${row.height.round()}',
+                    style: theme.textTheme.labelMedium,
+                    textAlign: TextAlign.end,
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _editRowKeys(int index) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => _KeyboardActionsEditor(
+        title: 'Row ${index + 1} Keys',
+        initialItems: _rows[index].items,
+        onChanged: (items) {
+          setState(() => _rows[index] = _rows[index].copyWith(items: items));
+          _persist();
+        },
+      ),
+    );
+    if (!mounted) {
+      return;
+    }
+    if (_rows.length > 1 && _rows[index].items.isEmpty) {
+      setState(() {
+        _rows.removeAt(index);
+        _rowIds.removeAt(index);
+      });
+      _persist();
+    }
+  }
+
+  Future<void> _addRow() {
+    setState(() {
+      _rows.add(const TerminalKeyboardRow(items: []));
+      _rowIds.add(_nextRowId++);
+    });
+    return _editRowKeys(_rows.length - 1);
+  }
+
+  void _removeRow(int index) {
+    setState(() {
+      _rows.removeAt(index);
+      _rowIds.removeAt(index);
+    });
+    _persist();
+  }
+
+  void _reorder(int oldIndex, int newIndex) {
+    setState(() {
+      _rows.insert(newIndex, _rows.removeAt(oldIndex));
+      _rowIds.insert(newIndex, _rowIds.removeAt(oldIndex));
+    });
+    _persist();
+  }
+
+  void _reset() {
+    setState(() {
+      _rows = List.of(defaultTerminalKeyboardRows);
+      _rowIds
+        ..clear()
+        ..addAll([for (final _ in _rows) _nextRowId++]);
+    });
+    _persist();
+  }
+
+  void _persist() {
+    widget.controller.setTerminalKeyboardRows(List.of(_rows));
+  }
+}
+
+class _KeyboardActionsEditor extends StatefulWidget {
+  const _KeyboardActionsEditor({
+    required this.title,
+    required this.initialItems,
+    required this.onChanged,
+  });
+
+  final String title;
+  final List<TerminalKeyboardItem> initialItems;
+  final ValueChanged<List<TerminalKeyboardItem>> onChanged;
 
   @override
   State<_KeyboardActionsEditor> createState() => _KeyboardActionsEditorState();
@@ -320,9 +626,7 @@ class _KeyboardActionsEditorState extends State<_KeyboardActionsEditor> {
   @override
   void initState() {
     super.initState();
-    _selected = List<TerminalKeyboardItem>.of(
-      widget.controller.terminalKeyboardItems,
-    );
+    _selected = List<TerminalKeyboardItem>.of(widget.initialItems);
   }
 
   @override
@@ -355,11 +659,10 @@ class _KeyboardActionsEditorState extends State<_KeyboardActionsEditor> {
               child: Row(
                 children: [
                   Text(
-                    'Key Row (${_selected.length})',
+                    '${widget.title} (${_selected.length})',
                     style: theme.textTheme.titleLarge,
                   ),
                   const Spacer(),
-                  TextButton(onPressed: _reset, child: const Text('Reset')),
                   TextButton(onPressed: _addTmux, child: const Text('Tmux')),
                   IconButton(
                     tooltip: 'Close',
@@ -374,7 +677,7 @@ class _KeyboardActionsEditorState extends State<_KeyboardActionsEditor> {
                 scrollController: _listController,
                 padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
                 itemCount: _selected.length,
-                proxyDecorator: _proxyDecorator,
+                proxyDecorator: _reorderProxyDecorator,
                 onReorderItem: _reorder,
                 itemBuilder: _buildItem,
               ),
@@ -444,43 +747,19 @@ class _KeyboardActionsEditorState extends State<_KeyboardActionsEditor> {
     );
   }
 
-  Widget _proxyDecorator(Widget child, int index, Animation<double> animation) {
-    return AnimatedBuilder(
-      animation: animation,
-      builder: (context, child) {
-        final elevation = Curves.easeOut.transform(animation.value);
-        return Transform.scale(
-          scale: 1 + (0.015 * elevation),
-          child: Material(
-            color: Colors.transparent,
-            elevation: 8 * elevation,
-            shadowColor: Colors.black.withValues(alpha: 0.22),
-            borderRadius: BorderRadius.circular(12),
-            child: child,
-          ),
-        );
-      },
-      child: child,
-    );
-  }
-
-  Future<void> _setSelected(List<TerminalKeyboardItem> next) async {
+  void _setSelected(List<TerminalKeyboardItem> next) {
     setState(() {
       _selected = next;
     });
-    await widget.controller.setTerminalKeyboardItems(next);
+    widget.onChanged(next);
   }
 
-  Future<void> _reset() {
-    return _setSelected(List.of(defaultTerminalKeyboardItems));
-  }
-
-  Future<void> _addTmux() {
+  void _addTmux() {
     final selectedActions = _selected
         .map((item) => item.action)
         .whereType<TerminalKeyboardAction>()
         .toSet();
-    return _setSelected([
+    _setSelected([
       ..._selected,
       ...tmuxTerminalKeyboardItems.where(
         (item) => !selectedActions.contains(item.action),
@@ -488,8 +767,8 @@ class _KeyboardActionsEditorState extends State<_KeyboardActionsEditor> {
     ]);
   }
 
-  Future<void> _addBuiltIn(TerminalKeyboardAction action) {
-    return _setSelected([..._selected, TerminalKeyboardItem.builtIn(action)]);
+  void _addBuiltIn(TerminalKeyboardAction action) {
+    _setSelected([..._selected, TerminalKeyboardItem.builtIn(action)]);
   }
 
   Future<void> _addCustom() async {
@@ -497,7 +776,7 @@ class _KeyboardActionsEditorState extends State<_KeyboardActionsEditor> {
     if (item == null || !mounted) {
       return;
     }
-    await _setSelected([item, ..._selected]);
+    _setSelected([item, ..._selected]);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_listController.hasClients) {
         _listController.jumpTo(0);
@@ -505,19 +784,40 @@ class _KeyboardActionsEditorState extends State<_KeyboardActionsEditor> {
     });
   }
 
-  Future<void> _remove(int index) {
-    return _setSelected([
-      ..._selected.take(index),
-      ..._selected.skip(index + 1),
-    ]);
+  void _remove(int index) {
+    _setSelected([..._selected.take(index), ..._selected.skip(index + 1)]);
   }
 
-  Future<void> _reorder(int oldIndex, int newIndex) {
+  void _reorder(int oldIndex, int newIndex) {
     final next = List<TerminalKeyboardItem>.of(_selected);
     final item = next.removeAt(oldIndex);
     next.insert(newIndex, item);
-    return _setSelected(next);
+    _setSelected(next);
   }
+}
+
+Widget _reorderProxyDecorator(
+  Widget child,
+  int index,
+  Animation<double> animation,
+) {
+  return AnimatedBuilder(
+    animation: animation,
+    builder: (context, child) {
+      final elevation = Curves.easeOut.transform(animation.value);
+      return Transform.scale(
+        scale: 1 + (0.015 * elevation),
+        child: Material(
+          color: Colors.transparent,
+          elevation: 8 * elevation,
+          shadowColor: Colors.black.withValues(alpha: 0.22),
+          borderRadius: BorderRadius.circular(12),
+          child: child,
+        ),
+      );
+    },
+    child: child,
+  );
 }
 
 Future<TerminalKeyboardItem?> _showCustomKeyboardItemDialog(
@@ -707,6 +1007,7 @@ IconData _keyboardActionIcon(TerminalKeyboardAction action) {
     TerminalKeyboardAction.tmuxPrefix => Icons.keyboard_command_key_rounded,
     TerminalKeyboardAction.tmuxScrollback => Icons.swap_vert_rounded,
     TerminalKeyboardAction.tmuxMenu => Icons.view_quilt_rounded,
+    TerminalKeyboardAction.snippets => Icons.snippet_folder_rounded,
     TerminalKeyboardAction.compose => Icons.edit_note_rounded,
   };
 }

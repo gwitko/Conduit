@@ -5,6 +5,7 @@ import 'package:conduit/core/presentation/system_navigation_insets.dart';
 import 'package:conduit/core/presentation/theme_sheet.dart';
 import 'package:conduit/core/theme/theme_controller.dart';
 import 'package:conduit/features/app_lock/presentation/app_lock_controller.dart';
+import 'package:conduit/features/backup/data/app_backup_service.dart';
 import 'package:conduit/features/hosts/domain/saved_host.dart';
 import 'package:conduit/features/hosts/domain/saved_hosts_repository.dart';
 import 'package:conduit/features/hosts/presentation/host_form_page.dart';
@@ -44,6 +45,7 @@ class HostsPage extends StatefulWidget {
     required this.hostKeyVerifier,
     required this.promptCoordinator,
     required this.sftpRepository,
+    required this.backupService,
     required this.fileExport,
     super.key,
   });
@@ -57,6 +59,7 @@ class HostsPage extends StatefulWidget {
   final HostKeyVerifier hostKeyVerifier;
   final HostKeyPromptCoordinator promptCoordinator;
   final SftpRepository sftpRepository;
+  final AppBackupService backupService;
   final FileExport fileExport;
 
   @override
@@ -154,6 +157,7 @@ class _HostsPageState extends State<HostsPage> {
                         onAppearance: () => showThemeSheet(
                           context: context,
                           controller: widget.themeController,
+                          backupService: widget.backupService,
                         ),
                         onTrustedKeys: _openTrustedKeys,
                         onLock: _lock,
@@ -446,6 +450,19 @@ class _HostsPageState extends State<HostsPage> {
   }
 
   Future<void> _openLocalSession() async {
+    if (widget.localShellController.sharedStorageFeatureEnabled &&
+        !widget.localShellController.sharedStorageAccessGranted) {
+      await widget.localShellController.requestSharedStorageAccess();
+      if (!widget.localShellController.sharedStorageAccessGranted) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Grant file access, then open the shell again.'),
+          ),
+        );
+        return;
+      }
+    }
     widget.workspaceController.open(widget.localShellController.localHost());
     if (!mounted) return;
     await _openTerminalWorkspace();

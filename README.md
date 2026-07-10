@@ -5,6 +5,7 @@
 ![Flutter](https://img.shields.io/badge/Flutter-3.44.1-02569B?logo=flutter)
 ![Platforms](https://img.shields.io/badge/platforms-Android%20%7C%20iOS-2ea44f)
 [![App Store](https://img.shields.io/badge/App%20Store-Conduit-0D96F6?logo=appstore&logoColor=white)](https://apps.apple.com/app/id6780054869)
+[![Google Play](https://img.shields.io/badge/Google%20Play-Conduit-3DDC84?logo=googleplay&logoColor=white)](https://play.google.com/store/apps/details?id=com.gwitko.conduit&pcampaignid=web_share)
 [![F-Droid](https://img.shields.io/f-droid/v/com.gwitko.conduit?label=F-Droid&logo=fdroid)](https://f-droid.org/packages/com.gwitko.conduit/)
 [![Obtainium](https://img.shields.io/badge/Obtainium-GitHub%20releases-6f42c1)](https://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/gwitko/Conduit)
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-Support%20Conduit-ff5f5f?logo=kofi&logoColor=white)](https://ko-fi.com/gwitko)
@@ -29,12 +30,15 @@ and scrollback controls from the key row.
 
 On Android arm64, Conduit can also run an optional local Arch Linux shell
 through `proot`. It downloads an Arch Linux ARM image on first use and opens it
-like any other terminal tab.
+like any other terminal tab. The Full Android build can also mount shared phone
+storage inside the shell at `/mnt/android`.
 
 There's an SFTP browser for moving files around, host-key trust you manage
 yourself, an optional device-auth app lock, and a stack of built-in terminal
 themes (Catppuccin, Tokyo Night, Gruvbox, Nord, etc.). E-ink device support is
-coming!
+coming! You can also export and import local backups of app settings, saved
+machines, and trusted host keys, either without secrets or encrypted with a
+backup password.
 
 Mosh runs on [dart_mosh](https://github.com/gwitko/dart_mosh), a clean-room
 Dart implementation of the protocol, and the terminal is
@@ -55,16 +59,25 @@ Dart implementation of the protocol, and the terminal is
 - OpenSSH FIDO security-key auth for `ed25519-sk` and `ecdsa-sk` credentials,
   tested with YubiKey and designed for CTAP-compatible keys.
 - Android hardware-key auth over USB or NFC; iOS hardware-key auth over NFC.
+  Register multiple hardware keys per host and Conduit tries each until one matches.
 - Optional per-host SSH agent forwarding for private-key and hardware-key auth,
   so a remote host can use your key to reach further hosts; forwarded hardware
   keys still require a touch for every onward signature.
 - Trusted host key management with explicit fingerprint review.
+- Import and export backups for app settings, saved machines, ordering, and
+  trusted host keys, with options to omit secrets or encrypt credentials with a
+  password.
 - Customizable on-screen key row with modifiers, arrows, function keys, key
   repeat, latching modifiers, and your own text snippets and control-key combos.
+- Saved global and per-machine snippets from the key row, with hidden snippets
+  for passwords or secrets and optional per-machine run-on-connect snippets.
 - Optional device-auth app lock for protecting saved machines and credentials.
 - Built-in terminal themes, font sizing, palette choices, and appearance controls.
 - On-device **local Arch Linux shell** (Android, arm64) with `pacman`, running
   unprivileged via `proot` - no root, no server. Uses Termux-packaged tooling.
+- Full Android build: mount shared phone storage in the local shell at
+  `/mnt/android`; the Google Play build omits the restricted all-files
+  permission.
 - Local-first storage: no account, no cloud sync, no subscription.
 
 ## Acknowledgements

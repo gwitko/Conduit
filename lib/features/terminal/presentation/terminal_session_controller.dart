@@ -64,6 +64,9 @@ class TerminalSessionController extends ChangeNotifier {
   int? _lastIosEnterOutputMs;
 
   static const _iosDuplicateEnterWindow = Duration(milliseconds: 80);
+  static const _gracefulMoshCloseTimeout = Duration(milliseconds: 1500);
+  static const _tmuxDetachExitDelay = Duration(milliseconds: 150);
+  static const _connectSnippetAfterTmuxDelay = Duration(milliseconds: 250);
 
   TerminalConnectionStatus get status => _status;
   String get title => host.name;
@@ -198,6 +201,7 @@ class TerminalSessionController extends ChangeNotifier {
       _status = TerminalConnectionStatus.connected;
       notifyListeners();
       _startTmuxIfConfigured(session);
+      _runConnectSnippetIfConfigured(session);
     } on AppFailure catch (failure) {
       if (_disposed || generation != _connectionGeneration) {
         return;
@@ -239,6 +243,7 @@ class TerminalSessionController extends ChangeNotifier {
     final session = _session;
     _session = null;
     try {
+      await _closeRemoteMoshSession(session);
       await session?.close();
     } finally {
       keyboard.clearModifiers();
@@ -279,6 +284,73 @@ class TerminalSessionController extends ChangeNotifier {
     unawaited(
       session.send(utf8.encode(command)).catchError(_handleStreamError),
     );
+  }
+
+  void _runConnectSnippetIfConfigured(SshTerminalSession session) {
+    final snippetId = host.connectSnippetId;
+    if (snippetId.isEmpty) {
+      return;
+    }
+    final snippet = host.snippets
+        .where((candidate) => candidate.id == snippetId)
+        .firstOrNull;
+    if (snippet == null) {
+      return;
+    }
+    final text = snippet.submit ? '${snippet.text}\r' : snippet.text;
+    if (text.isEmpty) {
+      return;
+    }
+    final delay = host.startTmuxOnConnect
+        ? _connectSnippetAfterTmuxDelay
+        : Duration.zero;
+    unawaited(_sendConnectSnippet(session, text, delay));
+  }
+
+  Future<void> _sendConnectSnippet(
+    SshTerminalSession session,
+    String text,
+    Duration delay,
+  ) async {
+    try {
+      await Future<void>.delayed(delay);
+      if (_session != session ||
+          _status != TerminalConnectionStatus.connected ||
+          _disposed ||
+          _disconnecting) {
+        return;
+      }
+      await session.send(utf8.encode(text));
+    } catch (error, stackTrace) {
+      _handleStreamError(error, stackTrace);
+    }
+  }
+
+  Future<void> _closeRemoteMoshSession(SshTerminalSession? session) async {
+    if (session == null || !host.useMosh) {
+      return;
+    }
+    try {
+      if (host.startTmuxOnConnect) {
+        await session.send(_tmuxDetachBytes());
+        await Future<void>.delayed(_tmuxDetachExitDelay);
+        await session.send(utf8.encode('exit\r'));
+      } else {
+        await session.send(const [0x04]);
+      }
+      await session.done.timeout(_gracefulMoshCloseTimeout);
+    } catch (_) {
+      // Fall back to the transport close below if the remote side ignores the
+      // graceful exit sequence or the session is already gone.
+    }
+  }
+
+  List<int> _tmuxDetachBytes() {
+    final prefix = switch (host.tmuxPrefixKey) {
+      TmuxPrefixKey.controlA => 0x01,
+      TmuxPrefixKey.controlB => 0x02,
+    };
+    return [prefix, 0x64];
   }
 
   @visibleForTesting
@@ -432,7 +504,9 @@ class TerminalSessionController extends ChangeNotifier {
   }
 
   void forceResize() {
-    if (_session == null || _status != TerminalConnectionStatus.connected) return;
+    if (_session == null || _status != TerminalConnectionStatus.connected) {
+      return;
+    }
     _pendingColumns = terminal.viewWidth;
     _pendingRows = terminal.viewHeight;
     _resizeTimer?.cancel();

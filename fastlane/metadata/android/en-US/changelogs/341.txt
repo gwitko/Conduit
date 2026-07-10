@@ -1,0 +1,2 @@
+Hardware keys: register more than one security key per host, and Conduit tries each until one matches.
+Compose mode: recall recently sent lines from a new history button, and your unsent draft is kept when you close the composer.

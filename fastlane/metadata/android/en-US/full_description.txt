@@ -13,7 +13,7 @@ Features:
 * SFTP file browsing and export
 * Import SSH private keys from a file, or generate an Ed25519 key on device
 * Optional passphrase encryption for generated keys, with public-key copy and export
-* OpenSSH FIDO hardware-key authentication, tested with YubiKey
+* OpenSSH FIDO hardware-key authentication, tested with YubiKey, with multiple hardware keys per host tried in turn
 * External authentication that lets the SSH server authenticate you without saved credentials
 * USB and NFC support for CTAP-compatible security keys
 * Saved machine profiles with tags, search, and sorting by last connected, name, or date added

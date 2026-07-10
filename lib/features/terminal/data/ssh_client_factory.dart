@@ -5,6 +5,7 @@ import 'package:conduit/core/app_failure.dart';
 import 'package:conduit/features/hosts/domain/saved_host.dart';
 import 'package:conduit/features/terminal/data/fido_hardware_key_ctap_device.dart';
 import 'package:conduit/features/terminal/data/openssh_security_key_signer.dart';
+import 'package:conduit/features/terminal/data/tcp_ssh_socket.dart';
 import 'package:conduit/features/terminal/domain/host_key_verifier.dart';
 import 'package:conduit/features/terminal/domain/security_key_interaction.dart';
 import 'package:dartssh2/dartssh2.dart';
@@ -26,6 +27,7 @@ class SshClientFactory {
              closeDevice: FidoHardwareKeyCtapDevice.close,
              onStatus: SecurityKeyInteraction.instance.announce,
              onPinRequest: SecurityKeyInteraction.instance.requestPin,
+             onKeySelect: SecurityKeyInteraction.instance.requestKeySelection,
            ),
        _keyPairParser = keyPairParser ?? SSHKeyPair.fromPem;
 
@@ -37,7 +39,7 @@ class SshClientFactory {
   Future<SSHClient> connect(SavedHost host) async {
     SSHSocket? socket;
     try {
-      socket = await SSHSocket.connect(
+      socket = await TcpSshSocket.connect(
         host.host.trim(),
         host.port,
         timeout: Duration(seconds: host.connectionTimeoutSeconds),
@@ -70,8 +72,10 @@ class SshClientFactory {
         host.externalAuthOfferKey) {
       return [_externalAuthIdentity ??= _generateExternalAuthIdentity()];
     }
-    if (host.authMethod != SshAuthMethod.privateKey &&
-        host.authMethod != SshAuthMethod.hardwareKey) {
+    if (host.authMethod == SshAuthMethod.hardwareKey) {
+      return _hardwareKeyIdentitiesFor(host);
+    }
+    if (host.authMethod != SshAuthMethod.privateKey) {
       return null;
     }
     try {
@@ -79,23 +83,10 @@ class SshClientFactory {
         host.privateKey,
         host.passphrase.isEmpty ? null : host.passphrase,
       );
-      if (host.authMethod == SshAuthMethod.privateKey &&
-          keyPairs.any((keyPair) => keyPair is OpenSSHSecurityKeyPair)) {
+      if (keyPairs.any((keyPair) => keyPair is OpenSSHSecurityKeyPair)) {
         throw const AppFailure(
           'This is a hardware-key stub. Choose Hardware key instead.',
         );
-      }
-      if (host.authMethod == SshAuthMethod.hardwareKey) {
-        final securityKeyPairs = keyPairs
-            .whereType<OpenSSHSecurityKeyPair>()
-            .toList(growable: false);
-        if (securityKeyPairs.isEmpty) {
-          throw const AppFailure(
-            'Hardware key auth requires an OpenSSH security-key stub '
-            '(id_ed25519_sk or id_ecdsa_sk), not a normal private key.',
-          );
-        }
-        return _securityKeySigner.attach(securityKeyPairs);
       }
       return _securityKeySigner.attach(keyPairs);
     } catch (error) {
@@ -104,6 +95,44 @@ class SshClientFactory {
       }
       throw AppFailure('Private key could not be loaded.', error);
     }
+  }
+
+  List<SSHKeyPair> _hardwareKeyIdentitiesFor(SavedHost host) {
+    final entries = host.effectiveHardwareKeys;
+    if (entries.isEmpty) {
+      throw const AppFailure('Add at least one hardware key to this host.');
+    }
+    final keyPairs = <SSHKeyPair>[];
+    final labels = <String>[];
+    for (var i = 0; i < entries.length; i++) {
+      final entry = entries[i];
+      final label = entry.label.trim().isEmpty
+          ? 'hardware key ${i + 1}'
+          : entry.label.trim();
+      final List<SSHKeyPair> parsed;
+      try {
+        parsed = _keyPairParser(
+          entry.privateKey,
+          entry.passphrase.isEmpty ? null : entry.passphrase,
+        );
+      } catch (error) {
+        throw AppFailure('Hardware key "$label" could not be loaded.', error);
+      }
+      final securityKeyPairs = parsed
+          .whereType<OpenSSHSecurityKeyPair>()
+          .toList(growable: false);
+      if (securityKeyPairs.isEmpty) {
+        throw AppFailure(
+          'Hardware key "$label" requires an OpenSSH security-key stub '
+          '(id_ed25519_sk or id_ecdsa_sk), not a normal private key.',
+        );
+      }
+      for (final keyPair in securityKeyPairs) {
+        keyPairs.add(keyPair);
+        labels.add(label);
+      }
+    }
+    return _securityKeySigner.attach(keyPairs, labels: labels);
   }
 
   @visibleForTesting

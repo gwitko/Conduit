@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://gwitko.conduit.dev/sitemap.xml
+Sitemap: https://conduit.gwitko.dev/sitemap.xml

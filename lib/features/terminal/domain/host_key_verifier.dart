@@ -48,5 +48,7 @@ abstract interface class HostKeyVerifier {
 
   Future<List<HostKeyRecord>> loadTrustedKeys();
 
+  Future<void> saveTrustedKeys(List<HostKeyRecord> records);
+
   Future<void> removeTrustedKey(String host, int port);
 }

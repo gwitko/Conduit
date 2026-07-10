@@ -1,0 +1,2 @@
+Hardware keys: when a host has more than one security key, Conduit now asks which one you want to use before prompting for it, instead of trying each in turn.
+Hardware keys: clearer messages when the NFC prompt is cancelled or times out, or when the wrong key is presented.

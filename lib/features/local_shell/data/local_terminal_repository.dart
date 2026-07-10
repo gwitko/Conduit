@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:conduit/core/app_failure.dart';
 import 'package:conduit/features/hosts/domain/saved_host.dart';
 import 'package:conduit/features/local_shell/data/flutter_pty_process.dart';
@@ -50,11 +52,13 @@ class LocalTerminalRepository implements SshTerminalRepository {
   }) async {
     try {
       final paths = await resolvePaths();
+      final bindMounts = await _prepareBindMounts(paths);
       final command = ProotCommandBuilder(
         prootBinary: paths.prootBinary,
         loaderPath: paths.loaderPath,
         libraryPath: paths.nativeLibraryDir,
         tmpDir: paths.tmpDir,
+        bindMounts: bindMounts,
       ).login(rootfsDir: paths.rootfsDir);
 
       final process = _processFactory(
@@ -70,5 +74,13 @@ class LocalTerminalRepository implements SshTerminalRepository {
     } catch (error) {
       throw AppFailure('Could not start the local Arch Linux shell.', '$error');
     }
+  }
+
+  Future<Map<String, String>> _prepareBindMounts(LocalShellPaths paths) async {
+    if (!paths.canMountSharedStorage) {
+      return const {};
+    }
+    await Directory(paths.androidSharedMountHostPath).create(recursive: true);
+    return {paths.sharedStorageDir: LocalShellPaths.androidSharedMountPoint};
   }
 }

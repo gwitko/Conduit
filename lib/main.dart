@@ -7,6 +7,7 @@ import 'package:conduit/core/theme/theme_preferences_repository.dart';
 import 'package:conduit/features/app_lock/data/local_app_authenticator.dart';
 import 'package:conduit/features/app_lock/presentation/app_lock_controller.dart';
 import 'package:conduit/features/app_lock/presentation/lock_page.dart';
+import 'package:conduit/features/backup/data/app_backup_service.dart';
 import 'package:conduit/features/hosts/data/secure_saved_hosts_repository.dart';
 import 'package:conduit/features/hosts/presentation/hosts_controller.dart';
 import 'package:conduit/features/hosts/presentation/hosts_page.dart';
@@ -63,6 +64,11 @@ void main() {
     ConnectivityPlusNetwork(),
   );
   final sftpRepository = DartSshSftpRepository(hostKeyVerifier);
+  final backupService = AppBackupService(
+    hostsController: hostsController,
+    themeController: themeController,
+    hostKeyVerifier: hostKeyVerifier,
+  );
   const fileExport = FilePickerFileExport();
 
   unawaited(themeController.load());
@@ -78,6 +84,7 @@ void main() {
       hostKeyVerifier: hostKeyVerifier,
       promptCoordinator: promptCoordinator,
       sftpRepository: sftpRepository,
+      backupService: backupService,
       fileExport: fileExport,
     ),
   );
@@ -94,6 +101,7 @@ class ConduitApp extends StatefulWidget {
     required this.hostKeyVerifier,
     required this.promptCoordinator,
     required this.sftpRepository,
+    required this.backupService,
     required this.fileExport,
     super.key,
   });
@@ -107,6 +115,7 @@ class ConduitApp extends StatefulWidget {
   final HostKeyVerifier hostKeyVerifier;
   final HostKeyPromptCoordinator promptCoordinator;
   final SftpRepository sftpRepository;
+  final AppBackupService backupService;
   final FileExport fileExport;
 
   @override
@@ -240,6 +249,7 @@ class _ConduitAppState extends State<ConduitApp> with WidgetsBindingObserver {
                 hostKeyVerifier: widget.hostKeyVerifier,
                 promptCoordinator: widget.promptCoordinator,
                 sftpRepository: widget.sftpRepository,
+                backupService: widget.backupService,
                 fileExport: widget.fileExport,
               );
             },

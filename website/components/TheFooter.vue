@@ -77,7 +77,7 @@ const projectLinks = [
         <span>{{ t('footer.copyright', { year }) }}</span>
         <div class="flex items-center gap-4">
           <LanguageSwitcher />
-          <span class="font-mono">gwitko.conduit.dev</span>
+          <span class="font-mono">conduit.gwitko.dev</span>
         </div>
       </div>
     </div>

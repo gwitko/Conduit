@@ -101,8 +101,8 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: "25ba3a96d156e5464a48ff4238486a7ddfff2cfd"
-      resolved-ref: "25ba3a96d156e5464a48ff4238486a7ddfff2cfd"
+      ref: "57222273f969892c6b45b0fcfdbe65a0f54743a9"
+      resolved-ref: "57222273f969892c6b45b0fcfdbe65a0f54743a9"
       url: "https://github.com/gwitko/conduit_vt.git"
     source: git
     version: "0.1.1"
@@ -174,8 +174,8 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: abfb6677b65d523c29a9dc7f69588029fad03a57
-      resolved-ref: abfb6677b65d523c29a9dc7f69588029fad03a57
+      ref: c39f316a853e6d6a21db698503450a39d9e96d68
+      resolved-ref: c39f316a853e6d6a21db698503450a39d9e96d68
       url: "https://github.com/gwitko/dartssh2_conduit.git"
     source: git
     version: "2.18.0"

@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:conduit/core/app_failure.dart';
 import 'package:conduit/features/hosts/domain/saved_host.dart';
 import 'package:conduit/features/terminal/data/ssh_client_factory.dart';
+import 'package:conduit/features/terminal/data/tcp_ssh_socket.dart';
 import 'package:conduit/features/terminal/domain/host_key_verifier.dart';
 import 'package:conduit/features/terminal/domain/predictive_terminal_session.dart';
 import 'package:conduit/features/terminal/domain/roaming_terminal_session.dart';
@@ -29,12 +30,15 @@ class MoshTerminalRepository implements SshTerminalRepository {
     try {
       client = await _clientFactory.connect(host);
       final server = await _bootstrap(client, host);
+      final socket = client.socket;
+      final address = socket is TcpSshSocket ? socket.remoteAddress : null;
       client.close();
       client = null;
 
       final session = await MoshSession.connect(
         server: server,
         cipher: MoshPacketCipher.aesOcb(server.key),
+        address: address,
         columns: columns,
         rows: rows,
       );
@@ -49,7 +53,14 @@ class MoshTerminalRepository implements SshTerminalRepository {
   }
 
   Future<MoshServerConfig> _bootstrap(SSHClient client, SavedHost host) async {
-    final bootstrap = MoshSshBootstrap(locale: host.moshLocale);
+    final ports = MoshPortRange.tryParse(host.moshPorts);
+    final bootstrap = ports == null
+        ? MoshSshBootstrap(locale: host.moshLocale)
+        : MoshSshBootstrap(
+            locale: host.moshLocale,
+            serverPort: ports.first,
+            serverPortEnd: ports.last,
+          );
     final session = await client.execute(bootstrap.command());
     final output = StringBuffer();
 

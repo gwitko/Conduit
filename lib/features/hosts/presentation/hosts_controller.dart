@@ -19,6 +19,7 @@ class HostsController extends ChangeNotifier {
   List<SavedHost> get sortedHosts =>
       _sortedHostsCache ??= _computeSortedHosts();
   HostListSortMode get sortMode => _sortMode;
+  List<String> get manualOrder => List.unmodifiable(_manualOrder);
 
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
@@ -105,6 +106,47 @@ class HostsController extends ChangeNotifier {
     }
 
     await _save(updatedHosts);
+  }
+
+  Future<void> mergeImported({
+    required List<SavedHost> hosts,
+    required HostListSortMode sortMode,
+    required List<String> manualOrder,
+  }) async {
+    final mergedById = {for (final host in _hosts) host.id: host};
+    for (final host in hosts) {
+      if (host.id.isNotEmpty) {
+        mergedById[host.id] = host;
+      }
+    }
+
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final mergedHosts = mergedById.values.toList(growable: false);
+      final importedIds = hosts.map((host) => host.id).toSet();
+      final currentManualOrder = _manualOrder.where(mergedById.containsKey);
+      final mergedManualOrder = <String>[
+        ...manualOrder.where(mergedById.containsKey),
+        ...currentManualOrder.where((id) => !importedIds.contains(id)),
+        ...mergedById.keys.where(
+          (id) => !manualOrder.contains(id) && !_manualOrder.contains(id),
+        ),
+      ];
+      await _repository.saveHosts(mergedHosts);
+      await _repository.saveSortMode(sortMode);
+      await _repository.saveManualOrder(mergedManualOrder);
+      _sortMode = sortMode;
+      _manualOrder = mergedManualOrder;
+      _setHosts(mergedHosts);
+    } on AppFailure catch (failure) {
+      _errorMessage = failure.toString();
+    } catch (error) {
+      _errorMessage = error.toString();
+    } finally {
+      notifyListeners();
+    }
   }
 
   Future<void> remove(SavedHost host) async {

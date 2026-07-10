@@ -12,6 +12,7 @@ import 'package:conduit/features/sftp/presentation/widgets/entry_tile.dart';
 import 'package:conduit/features/sftp/presentation/widgets/sftp_header.dart';
 import 'package:conduit/features/sftp/presentation/widgets/transfer_bar.dart';
 import 'package:conduit/features/terminal/domain/security_key_interaction.dart';
+import 'package:conduit/features/terminal/presentation/security_key_picker_dialog.dart';
 import 'package:conduit/features/terminal/presentation/security_key_pin_dialog.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -43,6 +44,9 @@ class _SftpBrowserPageState extends State<SftpBrowserPage> {
   void initState() {
     super.initState();
     SecurityKeyInteraction.instance.registerPinPrompt(_promptSecurityKeyPin);
+    SecurityKeyInteraction.instance.registerSelectionPrompt(
+      _promptSecurityKeySelection,
+    );
     _controller = SftpBrowserController(
       host: widget.host,
       repository: widget.repository,
@@ -54,6 +58,9 @@ class _SftpBrowserPageState extends State<SftpBrowserPage> {
   @override
   void dispose() {
     SecurityKeyInteraction.instance.unregisterPinPrompt(_promptSecurityKeyPin);
+    SecurityKeyInteraction.instance.unregisterSelectionPrompt(
+      _promptSecurityKeySelection,
+    );
     _searchController.dispose();
     _controller.dispose();
     super.dispose();
@@ -64,6 +71,15 @@ class _SftpBrowserPageState extends State<SftpBrowserPage> {
       return Future<String?>.value();
     }
     return showSecurityKeyPinDialog(context, request);
+  }
+
+  Future<int?> _promptSecurityKeySelection(
+    SecurityKeySelectionRequest request,
+  ) {
+    if (!mounted) {
+      return Future<int?>.value();
+    }
+    return showSecurityKeyPickerDialog(context, request);
   }
 
   @override

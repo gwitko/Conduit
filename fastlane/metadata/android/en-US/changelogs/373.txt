@@ -1,0 +1,3 @@
+Backup and restore: export app settings, saved machines, ordering, and trusted host keys, either without secrets or encrypted with a backup password.
+Mosh: configure the UDP port or port range used for Mosh sessions, with a fix for custom UDP port handling.
+Forms: long host, hardware-key, and PIN fields now stay within sensible line limits.

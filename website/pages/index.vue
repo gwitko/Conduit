@@ -41,23 +41,21 @@ useHead(() => ({
 }))
 
 const features = [
-  { id: 'ssh-mosh' },
-  { id: 'ai-agents' },
-  { id: 'fleet' },
-  { id: 'tmux' },
-  { id: 'nvim' },
-  { id: 'key-row' },
-  { id: 'sftp' },
-  { id: 'themes' },
-  { id: 'local-shell' },
+  { id: 'ssh-mosh', image: '/images/ssh-mosh.png' },
+  { id: 'ai-agents', image: '/images/ai-agents.png' },
+  { id: 'fleet', image: '/images/fleet.png' },
+  { id: 'tmux', image: '/images/tmux.png' },
+  { id: 'nvim', image: '/images/nvim.png' },
+  { id: 'key-row', image: '/images/key-row.png' },
+  { id: 'sftp', image: '/images/sftp.png' },
+  { id: 'themes', image: '/images/themes.png' },
+  { id: 'local-shell', image: '/images/local-shell.png' },
 ]
-
-const securityCards = ['keys', 'enclave', 'appLock', 'hostKeys']
 
 const stats = [
   { value: '100%', key: 'openSource.stats.source' },
   { value: '0', key: 'openSource.stats.trackers' },
-  { value: '3', key: 'openSource.stats.install' },
+  { value: '4', key: 'openSource.stats.install' },
 ]
 
 const trust = computed(() => tm('hero.trust') as unknown as string[])
@@ -96,6 +94,7 @@ const trust = computed(() => tm('hero.trust') as unknown as string[])
 
         <div class="flex justify-center lg:justify-end">
           <PhoneFrame
+            src="/images/hero.png"
             :alt="t('features.items.ai-agents.alt')"
             loading="eager"
           />
@@ -142,19 +141,14 @@ const trust = computed(() => tm('hero.trust') as unknown as string[])
           class="flex justify-center"
           :class="index % 2 === 0 ? 'lg:order-1 lg:justify-start' : 'lg:justify-end'"
         >
-          <PhoneFrame :alt="t(`features.items.${feature.id}.alt`)" />
+          <PhoneFrame :src="feature.image" :alt="t(`features.items.${feature.id}.alt`)" />
         </div>
       </div>
     </section>
 
     <section id="security" class="scroll-mt-20">
-      <div class="container-page grid items-center gap-10 py-16 lg:grid-cols-2 lg:gap-12 lg:py-24">
-        <div class="order-2 flex justify-center lg:order-1 lg:justify-start">
-          <PhoneFrame
-            :alt="t('security.alt')"
-          />
-        </div>
-        <div class="order-1 lg:order-2">
+      <div class="container-page grid items-center gap-10 border-t border-hairline py-16 lg:grid-cols-2 lg:gap-12 lg:py-24">
+        <div>
           <p class="kicker">{{ t('security.eyebrow') }}</p>
           <h2 class="mt-4 text-3xl font-semibold text-ink sm:text-4xl">
             {{ t('security.title') }}
@@ -162,14 +156,25 @@ const trust = computed(() => tm('hero.trust') as unknown as string[])
           <p class="mt-5 max-w-xl text-lg leading-relaxed text-ink-muted">
             {{ t('security.body') }}
           </p>
-          <div class="mt-8 grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2">
-            <div v-for="card in securityCards" :key="card" class="bg-panel p-6">
-              <p class="text-sm font-semibold text-ink">{{ t(`security.cards.${card}.title`) }}</p>
-              <p class="mt-2 text-sm leading-relaxed text-ink-muted">
-                {{ t(`security.cards.${card}.body`) }}
-              </p>
-            </div>
-          </div>
+          <ul class="mt-7 space-y-3">
+            <li
+              v-for="(point, i) in tm('security.points')"
+              :key="i"
+              class="flex items-start gap-3 text-ink"
+            >
+              <svg viewBox="0 0 20 20" class="mt-1 h-4 w-4 shrink-0 text-mauve" fill="currentColor" aria-hidden="true">
+                <path fill-rule="evenodd" d="M16.7 5.3a1 1 0 0 1 0 1.4l-7.5 7.5a1 1 0 0 1-1.4 0L3.3 9.7a1 1 0 1 1 1.4-1.4l3.3 3.3 6.8-6.8a1 1 0 0 1 1.4 0z" clip-rule="evenodd" />
+              </svg>
+              <span class="text-[0.98rem] text-ink-muted">{{ rt(point) }}</span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="flex justify-center lg:justify-end">
+          <PhoneFrame
+            src="/images/security.png"
+            :alt="t('security.alt')"
+          />
         </div>
       </div>
     </section>

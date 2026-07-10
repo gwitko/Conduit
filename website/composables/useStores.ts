@@ -2,8 +2,9 @@ export interface StoreLink {
   name: string
   caption: string
   href: string
-  icon: 'apple' | 'fdroid' | 'obtainium'
+  icon: 'apple' | 'googleplay' | 'fdroid' | 'obtainium'
   accent: string
+  badge: string
 }
 
 export function useStores(): ComputedRef<StoreLink[]> {
@@ -16,6 +17,15 @@ export function useStores(): ComputedRef<StoreLink[]> {
       href: 'https://apps.apple.com/app/id6780054869',
       icon: 'apple',
       accent: 'text-ink',
+      badge: '/badges/app-store.svg',
+    },
+    {
+      name: 'Google Play',
+      caption: t('stores.captions.googlePlay'),
+      href: 'https://play.google.com/store/apps/details?id=com.gwitko.conduit',
+      icon: 'googleplay',
+      accent: 'text-mint',
+      badge: '/badges/google-play.png',
     },
     {
       name: 'F-Droid',
@@ -23,6 +33,7 @@ export function useStores(): ComputedRef<StoreLink[]> {
       href: 'https://f-droid.org/packages/com.gwitko.conduit/',
       icon: 'fdroid',
       accent: 'text-mint',
+      badge: '/badges/f-droid.png',
     },
     {
       name: 'Obtainium',
@@ -30,6 +41,7 @@ export function useStores(): ComputedRef<StoreLink[]> {
       href: 'https://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/gwitko/Conduit',
       icon: 'obtainium',
       accent: 'text-mauve',
+      badge: '/badges/obtainium.png',
     },
   ])
 }

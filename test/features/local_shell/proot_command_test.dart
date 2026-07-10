@@ -42,6 +42,23 @@ void main() {
         containsAllInOrder(['/bin/bash', '-lc', 'echo hi']),
       );
     });
+
+    test('binds shared Android storage into the guest', () {
+      const builder = ProotCommandBuilder(
+        prootBinary: '/lib/libproot.so',
+        loaderPath: '/lib/libproot_loader.so',
+        libraryPath: '/lib',
+        tmpDir: '/data/tmp',
+        bindMounts: {'/storage/emulated/0': '/mnt/android'},
+      );
+
+      final command = builder.login(rootfsDir: '/data/rootfs');
+
+      expect(
+        command.arguments,
+        containsAllInOrder(['-b', '/storage/emulated/0:/mnt/android']),
+      );
+    });
   });
 
   group('ProotCommandBuilder.extractTar', () {

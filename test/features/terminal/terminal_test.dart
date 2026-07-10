@@ -5,9 +5,11 @@ import 'package:conduit/core/app_failure.dart';
 import 'package:conduit/core/theme/app_palette.dart';
 import 'package:conduit/core/theme/terminal_appearance.dart';
 import 'package:conduit/features/hosts/domain/saved_host.dart';
+import 'package:conduit/features/snippets/domain/terminal_snippet.dart';
 import 'package:conduit/features/terminal/data/openssh_security_key_signer.dart';
 import 'package:conduit/features/terminal/data/secure_host_key_verifier.dart';
 import 'package:conduit/features/terminal/data/ssh_client_factory.dart';
+import 'package:conduit/features/terminal/data/ssh_error_formatter.dart';
 import 'package:conduit/features/terminal/domain/host_key_prompt.dart';
 import 'package:conduit/features/terminal/domain/host_key_verifier.dart';
 import 'package:conduit/features/terminal/domain/security_key_interaction.dart';
@@ -22,6 +24,7 @@ import 'package:dartssh2/dartssh2.dart';
 import 'package:fido2/fido2_client.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/test_doubles.dart';
@@ -72,6 +75,69 @@ void main() {
 
       expect(controller.status, TerminalConnectionStatus.disconnected);
       expect(session.closeCount, 1);
+
+      controller.dispose();
+    });
+
+    test('sends Ctrl-D before closing a mosh tab', () async {
+      final session = TrackableTerminalSession(completeAfterSends: 1);
+      final controller = TerminalSessionController(
+        host: buildHost('mosh').copyWith(useMosh: true),
+        repository: ImmediateTerminalRepository(session),
+      );
+
+      await controller.connect();
+      await controller.disconnect();
+
+      expect(session.sent, [
+        [0x04],
+      ]);
+      expect(session.closeCount, 1);
+
+      controller.dispose();
+    });
+
+    test('detaches tmux and exits before closing a mosh tab', () async {
+      final session = TrackableTerminalSession(completeAfterSends: 2);
+      final controller = TerminalSessionController(
+        host: buildHost('mosh-tmux').copyWith(
+          useMosh: true,
+          startTmuxOnConnect: true,
+          tmuxPrefixKey: TmuxPrefixKey.controlA,
+        ),
+        repository: ImmediateTerminalRepository(session),
+      );
+
+      await controller.connect();
+      session.sent.clear();
+      await controller.disconnect();
+
+      expect(session.sent.map(String.fromCharCodes), ['\x01d', 'exit\r']);
+      expect(session.closeCount, 1);
+
+      controller.dispose();
+    });
+
+    test('runs the selected host snippet after connect', () async {
+      final session = TrackableTerminalSession();
+      final controller = TerminalSessionController(
+        host: buildHost('connect-snippet').copyWith(
+          snippets: const [
+            TerminalSnippet(
+              id: 'snippet:hello',
+              label: 'Hello',
+              text: 'echo hello',
+            ),
+          ],
+          connectSnippetId: 'snippet:hello',
+        ),
+        repository: ImmediateTerminalRepository(session),
+      );
+
+      await controller.connect();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(session.sent.map(String.fromCharCodes), ['echo hello\r']);
 
       controller.dispose();
     });
@@ -265,9 +331,16 @@ void main() {
               focusNode: focusNode,
               palette: AppPalette.catppuccin,
               brightness: Brightness.dark,
-              items: const [
-                TerminalKeyboardItem.builtIn(TerminalKeyboardAction.arrowDown),
+              rows: const [
+                TerminalKeyboardRow(
+                  items: [
+                    TerminalKeyboardItem.builtIn(
+                      TerminalKeyboardAction.arrowDown,
+                    ),
+                  ],
+                ),
               ],
+              globalSnippets: const [],
               fullscreen: false,
               onToggleFullscreen: () {},
               onEnterTmuxScrollMode: () {},
@@ -320,15 +393,34 @@ void main() {
               focusNode: focusNode,
               palette: AppPalette.catppuccin,
               brightness: Brightness.dark,
-              items: const [
-                TerminalKeyboardItem.builtIn(TerminalKeyboardAction.control),
-                TerminalKeyboardItem.builtIn(TerminalKeyboardAction.controlC),
-                TerminalKeyboardItem.builtIn(TerminalKeyboardAction.controlD),
-                TerminalKeyboardItem.builtIn(TerminalKeyboardAction.tmuxPrefix),
-                TerminalKeyboardItem.builtIn(TerminalKeyboardAction.tmuxMenu),
-                TerminalKeyboardItem.builtIn(TerminalKeyboardAction.pageDown),
-                TerminalKeyboardItem.builtIn(TerminalKeyboardAction.arrowRight),
+              rows: const [
+                TerminalKeyboardRow(
+                  items: [
+                    TerminalKeyboardItem.builtIn(
+                      TerminalKeyboardAction.control,
+                    ),
+                    TerminalKeyboardItem.builtIn(
+                      TerminalKeyboardAction.controlC,
+                    ),
+                    TerminalKeyboardItem.builtIn(
+                      TerminalKeyboardAction.controlD,
+                    ),
+                    TerminalKeyboardItem.builtIn(
+                      TerminalKeyboardAction.tmuxPrefix,
+                    ),
+                    TerminalKeyboardItem.builtIn(
+                      TerminalKeyboardAction.tmuxMenu,
+                    ),
+                    TerminalKeyboardItem.builtIn(
+                      TerminalKeyboardAction.pageDown,
+                    ),
+                    TerminalKeyboardItem.builtIn(
+                      TerminalKeyboardAction.arrowRight,
+                    ),
+                  ],
+                ),
               ],
+              globalSnippets: const [],
               fullscreen: false,
               onToggleFullscreen: () {},
               onEnterTmuxScrollMode: () {},
@@ -377,10 +469,19 @@ void main() {
               focusNode: focusNode,
               palette: AppPalette.catppuccin,
               brightness: Brightness.dark,
-              items: const [
-                TerminalKeyboardItem.builtIn(TerminalKeyboardAction.control),
-                TerminalKeyboardItem.builtIn(TerminalKeyboardAction.compose),
+              rows: const [
+                TerminalKeyboardRow(
+                  items: [
+                    TerminalKeyboardItem.builtIn(
+                      TerminalKeyboardAction.control,
+                    ),
+                    TerminalKeyboardItem.builtIn(
+                      TerminalKeyboardAction.compose,
+                    ),
+                  ],
+                ),
               ],
+              globalSnippets: const [],
               fullscreen: false,
               onToggleFullscreen: () {},
               onToggleCompose: () {},
@@ -423,21 +524,26 @@ void main() {
               focusNode: focusNode,
               palette: AppPalette.catppuccin,
               brightness: Brightness.dark,
-              items: const [
-                TerminalKeyboardItem(
-                  id: 'custom:text',
-                  kind: TerminalKeyboardItemKind.customText,
-                  label: 'gs',
-                  text: 'git status',
-                  submit: true,
-                ),
-                TerminalKeyboardItem(
-                  id: 'custom:ctrl',
-                  kind: TerminalKeyboardItemKind.customControl,
-                  label: 'C-a',
-                  controlKey: 'A',
+              rows: const [
+                TerminalKeyboardRow(
+                  items: [
+                    TerminalKeyboardItem(
+                      id: 'custom:text',
+                      kind: TerminalKeyboardItemKind.customText,
+                      label: 'gs',
+                      text: 'git status',
+                      submit: true,
+                    ),
+                    TerminalKeyboardItem(
+                      id: 'custom:ctrl',
+                      kind: TerminalKeyboardItemKind.customControl,
+                      label: 'C-a',
+                      controlKey: 'A',
+                    ),
+                  ],
                 ),
               ],
+              globalSnippets: const [],
               fullscreen: false,
               onToggleFullscreen: () {},
               onEnterTmuxScrollMode: () {},
@@ -456,6 +562,81 @@ void main() {
       expect(controller.sentControlKeys, [TerminalKey.keyA]);
     });
 
+    testWidgets('snippets key sends host, global, and password entries', (
+      tester,
+    ) async {
+      final controller = _RecordingTerminalSessionController(
+        host: buildHost('snippets').copyWith(
+          password: 'secret-password',
+          snippets: const [
+            TerminalSnippet(
+              id: 'host-snippet',
+              label: 'Host deploy',
+              text: 'deploy host',
+            ),
+          ],
+        ),
+      );
+      final focusNode = FocusNode();
+      addTearDown(focusNode.dispose);
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TerminalKeyboardBar(
+              controller: controller,
+              focusNode: focusNode,
+              palette: AppPalette.catppuccin,
+              brightness: Brightness.dark,
+              rows: const [
+                TerminalKeyboardRow(
+                  items: [
+                    TerminalKeyboardItem.builtIn(
+                      TerminalKeyboardAction.snippets,
+                    ),
+                  ],
+                ),
+              ],
+              globalSnippets: const [
+                TerminalSnippet(
+                  id: 'global-snippet',
+                  label: 'Global ls',
+                  text: 'ls -la',
+                  submit: false,
+                ),
+              ],
+              fullscreen: false,
+              onToggleFullscreen: () {},
+              onEnterTmuxScrollMode: () {},
+              onExitTmuxScrollMode: () {},
+              tmuxPrefixKey: TmuxPrefixKey.controlB,
+              tmuxScrollMode: false,
+            ),
+          ),
+        ),
+      );
+
+      await _openSnippetsMenu(tester);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Host deploy'));
+      expect(controller.sentText, ['deploy host\r']);
+
+      await _openSnippetsMenu(tester);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Global ls'));
+      expect(controller.sentText, ['deploy host\r', 'ls -la']);
+
+      await _openSnippetsMenu(tester);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Password'));
+      expect(controller.sentText, [
+        'deploy host\r',
+        'ls -la',
+        'secret-password',
+      ]);
+    });
+
     testWidgets('tmux scroll key enters scrollback mode', (tester) async {
       final controller = _RecordingTerminalSessionController();
       final focusNode = FocusNode();
@@ -471,11 +652,16 @@ void main() {
             focusNode: focusNode,
             palette: AppPalette.catppuccin,
             brightness: Brightness.dark,
-            items: const [
-              TerminalKeyboardItem.builtIn(
-                TerminalKeyboardAction.tmuxScrollback,
+            rows: const [
+              TerminalKeyboardRow(
+                items: [
+                  TerminalKeyboardItem.builtIn(
+                    TerminalKeyboardAction.tmuxScrollback,
+                  ),
+                ],
               ),
             ],
+            globalSnippets: const [],
             fullscreen: false,
             onToggleFullscreen: () {},
             onEnterTmuxScrollMode: () => enteredScrollMode = true,
@@ -682,12 +868,17 @@ void main() {
       expect(skSignature.flags, 0x01);
       expect(skSignature.counter, 9);
 
+      expect(device.commands, hasLength(2));
+      expect(isSilentProbe(device.commands.first), isTrue);
+      expect(allowedCredentialIdOf(device.commands.first), [0xAA, 0xBB]);
+
       final request =
-          cbor.decode(device.commands.single.sublist(1)).toObject() as Map;
+          cbor.decode(device.commands.last.sublist(1)).toObject() as Map;
       final allowList =
           request[GetAssertionRequest.allowListIdx] as List<Object?>;
       final allowedCredential = allowList.single as Map<Object?, Object?>;
-      expect(device.commands.single.first, Ctap2Commands.getAssertion.value);
+      expect(device.commands.last.first, Ctap2Commands.getAssertion.value);
+      expect(isSilentProbe(device.commands.last), isFalse);
       expect(request[GetAssertionRequest.rpIdIdx], 'ssh:');
       expect(
         request[GetAssertionRequest.clientDataHashIdx],
@@ -720,6 +911,522 @@ void main() {
       expect(skSignature.signature, rawSignature);
       expect(skSignature.flags, 0x05);
       expect(skSignature.counter, 10);
+    });
+
+    test('skips to the sibling stub held by the presented key', () async {
+      final authData = [
+        ...List<int>.filled(32, 0),
+        0x01,
+        0x00,
+        0x00,
+        0x00,
+        0x09,
+      ];
+      final device = FakeCtapDevice(
+        signature: List<int>.generate(64, (index) => index),
+        authData: authData,
+        respond: (command) => allowedCredentialIdOf(command).first == 0xAA
+            ? CtapResponse(CtapStatusCode.ctap2ErrNoCredentials.value, const [])
+            : null,
+      );
+      var opens = 0;
+      final messages = <String>[];
+      final signer = OpenSshSecurityKeySigner(
+        openDevice: () async {
+          opens++;
+          return device;
+        },
+        onStatus: messages.add,
+      );
+      final missingKey = OpenSSHSecurityKeyEd25519KeyPair(
+        publicKey: Uint8List.fromList(List<int>.filled(32, 3)),
+        application: 'ssh:',
+        flags: 0x01,
+        keyHandle: Uint8List.fromList([0xAA]),
+        reserved: '',
+      );
+      final presentKey = OpenSSHSecurityKeyEd25519KeyPair(
+        publicKey: Uint8List.fromList(List<int>.filled(32, 4)),
+        application: 'ssh:',
+        flags: 0x01,
+        keyHandle: Uint8List.fromList([0xBB]),
+        reserved: '',
+      );
+      final attached = signer.attach(
+        [missingKey, presentKey],
+        labels: ['work', 'backup'],
+      );
+
+      Object? error;
+      try {
+        await attached.first.signAsync(Uint8List.fromList([1, 2, 3]));
+      } catch (caught) {
+        error = caught;
+      }
+
+      expect(error, isA<SSHSecurityKeyNotPresentError>());
+      expect(
+        (error as SSHSecurityKeyNotPresentError).preferredPublicKey,
+        presentKey.toPublicKey().encode(),
+      );
+      expect(opens, 1);
+      expect(
+        messages,
+        contains('This security key holds "backup". Switching to it...'),
+      );
+
+      final signature = await attached.last.signAsync(
+        Uint8List.fromList([1, 2, 3]),
+      );
+      expect(signature, isA<SSHSecurityKeyEd25519Signature>());
+      expect(opens, 2);
+
+      await expectLater(
+        Future.sync(
+          () => attached.first.signAsync(Uint8List.fromList([1, 2, 3])),
+        ),
+        throwsA(isA<SSHSecurityKeyNotPresentError>()),
+      );
+      expect(opens, 2);
+    });
+
+    test('signs normally when the key rejects silent probes', () async {
+      final device = FakeCtapDevice(
+        signature: List<int>.generate(64, (index) => index),
+        authData: [...List<int>.filled(32, 0), 0x01, 0x00, 0x00, 0x00, 0x09],
+        respond: (command) => isSilentProbe(command)
+            ? CtapResponse(
+                CtapStatusCode.ctap2ErrUnsupportedOption.value,
+                const [],
+              )
+            : null,
+      );
+      final signer = OpenSshSecurityKeySigner(openDevice: () async => device);
+      final keyPair = signer.attach([
+        OpenSSHSecurityKeyEd25519KeyPair(
+          publicKey: Uint8List.fromList(List<int>.filled(32, 3)),
+          application: 'ssh:',
+          flags: 0x01,
+          keyHandle: Uint8List.fromList([0xAA]),
+          reserved: '',
+        ),
+      ]).single;
+
+      final signature = await keyPair.signAsync(Uint8List.fromList([7, 8]));
+
+      expect(signature, isA<SSHSecurityKeyEd25519Signature>());
+      expect(device.commands, hasLength(2));
+      expect(isSilentProbe(device.commands.first), isTrue);
+      expect(isSilentProbe(device.commands.last), isFalse);
+    });
+
+    test('reports a mismatch when the real assertion is refused', () async {
+      final device = FakeCtapDevice(
+        signature: const [],
+        authData: const [],
+        respond: (command) => isSilentProbe(command)
+            ? CtapResponse(
+                CtapStatusCode.ctap2ErrUnsupportedOption.value,
+                const [],
+              )
+            : CtapResponse(
+                CtapStatusCode.ctap2ErrNoCredentials.value,
+                const [],
+              ),
+      );
+      final signer = OpenSshSecurityKeySigner(openDevice: () async => device);
+      final keyPair = signer
+          .attach(
+            [
+              OpenSSHSecurityKeyEd25519KeyPair(
+                publicKey: Uint8List.fromList(List<int>.filled(32, 3)),
+                application: 'ssh:',
+                flags: 0x01,
+                keyHandle: Uint8List.fromList([0xAA]),
+                reserved: '',
+              ),
+            ],
+            labels: ['solo'],
+          )
+          .single;
+
+      await expectLater(
+        Future.sync(() => keyPair.signAsync(Uint8List.fromList([1]))),
+        throwsA(isA<SSHSecurityKeyNotPresentError>()),
+      );
+    });
+
+    test('switches to the presented key before asking for a PIN', () async {
+      final device = FakeCtapDevice(
+        signature: List<int>.generate(64, (index) => index),
+        authData: [...List<int>.filled(32, 0), 0x05, 0x00, 0x00, 0x00, 0x09],
+        respond: (command) =>
+            isGetAssertion(command) &&
+                allowedCredentialIdOf(command).first == 0xAA
+            ? CtapResponse(CtapStatusCode.ctap2ErrNoCredentials.value, const [])
+            : null,
+      );
+      var pinPrompts = 0;
+      final messages = <String>[];
+      final signer = OpenSshSecurityKeySigner(
+        openDevice: () async => device,
+        onStatus: messages.add,
+        onPinRequest: ({int? retriesRemaining}) async {
+          pinPrompts++;
+          return '123456';
+        },
+      );
+      final missingKey = OpenSSHSecurityKeyEd25519KeyPair(
+        publicKey: Uint8List.fromList(List<int>.filled(32, 3)),
+        application: 'ssh:',
+        flags: 0x05,
+        keyHandle: Uint8List.fromList([0xAA]),
+        reserved: '',
+      );
+      final presentKey = OpenSSHSecurityKeyEd25519KeyPair(
+        publicKey: Uint8List.fromList(List<int>.filled(32, 4)),
+        application: 'ssh:',
+        flags: 0x05,
+        keyHandle: Uint8List.fromList([0xBB]),
+        reserved: '',
+      );
+      final attached = signer.attach(
+        [missingKey, presentKey],
+        labels: ['work', 'backup'],
+      );
+
+      Object? error;
+      try {
+        await attached.first.signAsync(Uint8List.fromList([1, 2, 3]));
+      } catch (caught) {
+        error = caught;
+      }
+
+      expect(error, isA<SSHSecurityKeyNotPresentError>());
+      expect(
+        (error as SSHSecurityKeyNotPresentError).preferredPublicKey,
+        presentKey.toPublicKey().encode(),
+      );
+      expect(pinPrompts, 0);
+      expect(
+        messages,
+        contains('This security key holds "backup". Switching to it...'),
+      );
+
+      final signature = await attached.last.signAsync(
+        Uint8List.fromList([1, 2, 3]),
+      );
+      expect(signature, isA<SSHSecurityKeyEd25519Signature>());
+      expect(pinPrompts, 1);
+      final finalAssertion = device.commands
+          .where(
+            (command) => isGetAssertion(command) && !isSilentProbe(command),
+          )
+          .last;
+      expect(assertionPinAuthOf(finalAssertion), isNotNull);
+    });
+
+    test(
+      'reuses the PIN when switching between verify-required keys',
+      () async {
+        final device = FakeCtapDevice(
+          signature: List<int>.generate(64, (index) => index),
+          authData: [...List<int>.filled(32, 0), 0x05, 0x00, 0x00, 0x00, 0x09],
+          respond: (command) {
+            if (!isGetAssertion(command)) {
+              return null;
+            }
+            if (isSilentProbe(command) && assertionPinAuthOf(command) == null) {
+              return CtapResponse(
+                CtapStatusCode.ctap2ErrNoCredentials.value,
+                const [],
+              );
+            }
+            if (allowedCredentialIdOf(command).first == 0xAA) {
+              return CtapResponse(
+                CtapStatusCode.ctap2ErrNoCredentials.value,
+                const [],
+              );
+            }
+            return null;
+          },
+        );
+        var pinPrompts = 0;
+        final signer = OpenSshSecurityKeySigner(
+          openDevice: () async => device,
+          onPinRequest: ({int? retriesRemaining}) async {
+            pinPrompts++;
+            return '123456';
+          },
+        );
+        final missingKey = OpenSSHSecurityKeyEd25519KeyPair(
+          publicKey: Uint8List.fromList(List<int>.filled(32, 3)),
+          application: 'ssh:',
+          flags: 0x05,
+          keyHandle: Uint8List.fromList([0xAA]),
+          reserved: '',
+        );
+        final presentKey = OpenSSHSecurityKeyEd25519KeyPair(
+          publicKey: Uint8List.fromList(List<int>.filled(32, 4)),
+          application: 'ssh:',
+          flags: 0x05,
+          keyHandle: Uint8List.fromList([0xBB]),
+          reserved: '',
+        );
+        final attached = signer.attach(
+          [missingKey, presentKey],
+          labels: ['work', 'backup'],
+        );
+
+        Object? error;
+        try {
+          await attached.first.signAsync(Uint8List.fromList([1, 2, 3]));
+        } catch (caught) {
+          error = caught;
+        }
+
+        expect(error, isA<SSHSecurityKeyNotPresentError>());
+        expect(
+          (error as SSHSecurityKeyNotPresentError).preferredPublicKey,
+          presentKey.toPublicKey().encode(),
+        );
+        expect(pinPrompts, 1);
+
+        final signature = await attached.last.signAsync(
+          Uint8List.fromList([1, 2, 3]),
+        );
+        expect(signature, isA<SSHSecurityKeyEd25519Signature>());
+        expect(pinPrompts, 1);
+        expect(device.pinTokenGrants, 2);
+      },
+    );
+
+    test('re-prompts when the cached PIN is rejected', () async {
+      final device = FakeCtapDevice(
+        signature: List<int>.generate(64, (index) => index),
+        authData: [...List<int>.filled(32, 0), 0x05, 0x00, 0x00, 0x00, 0x09],
+      );
+      final promptedRetries = <int?>[];
+      final signer = OpenSshSecurityKeySigner(
+        openDevice: () async => device,
+        onPinRequest: ({int? retriesRemaining}) async {
+          promptedRetries.add(retriesRemaining);
+          return '123456';
+        },
+      );
+      final keyPair = signer.attach([
+        OpenSSHSecurityKeyEd25519KeyPair(
+          publicKey: Uint8List.fromList(List<int>.filled(32, 3)),
+          application: 'ssh:',
+          flags: 0x05,
+          keyHandle: Uint8List.fromList([0xAA]),
+          reserved: '',
+        ),
+      ]).single;
+
+      await keyPair.signAsync(Uint8List.fromList([1, 2, 3]));
+      expect(promptedRetries, hasLength(1));
+
+      device.rejectPinChecks = 1;
+      final signature = await keyPair.signAsync(Uint8List.fromList([4, 5]));
+      expect(signature, isA<SSHSecurityKeyEd25519Signature>());
+      expect(promptedRetries, hasLength(2));
+      expect(promptedRetries.last, 8);
+    });
+
+    test('key selection prompts fall back to null without a handler', () async {
+      expect(
+        await SecurityKeyInteraction.instance.requestKeySelection(['a', 'b']),
+        isNull,
+      );
+
+      Future<int?> handler(SecurityKeySelectionRequest request) async {
+        expect(request.labels, ['a', 'b']);
+        return 1;
+      }
+
+      SecurityKeyInteraction.instance.registerSelectionPrompt(handler);
+      addTearDown(
+        () =>
+            SecurityKeyInteraction.instance.unregisterSelectionPrompt(handler),
+      );
+
+      final selection = await SecurityKeyInteraction.instance
+          .requestKeySelection(['a', 'b']);
+      expect(selection?.index, 1);
+    });
+
+    test('asks which key to use and signs only with the selection', () async {
+      final device = FakeCtapDevice(
+        signature: List<int>.generate(64, (index) => index),
+        authData: [...List<int>.filled(32, 0), 0x01, 0x00, 0x00, 0x00, 0x09],
+      );
+      var opens = 0;
+      var selectorCalls = 0;
+      final signer = OpenSshSecurityKeySigner(
+        openDevice: () async {
+          opens++;
+          return device;
+        },
+        onKeySelect: (labels) async {
+          selectorCalls++;
+          expect(labels, ['work', 'backup']);
+          return const SecurityKeySelection(1);
+        },
+      );
+      final workKey = OpenSSHSecurityKeyEd25519KeyPair(
+        publicKey: Uint8List.fromList(List<int>.filled(32, 3)),
+        application: 'ssh:',
+        flags: 0x01,
+        keyHandle: Uint8List.fromList([0xAA]),
+        reserved: '',
+      );
+      final backupKey = OpenSSHSecurityKeyEd25519KeyPair(
+        publicKey: Uint8List.fromList(List<int>.filled(32, 4)),
+        application: 'ssh:',
+        flags: 0x01,
+        keyHandle: Uint8List.fromList([0xBB]),
+        reserved: '',
+      );
+      final attached = signer.attach(
+        [workKey, backupKey],
+        labels: ['work', 'backup'],
+      );
+
+      Object? error;
+      try {
+        await attached.first.signAsync(Uint8List.fromList([1, 2, 3]));
+      } catch (caught) {
+        error = caught;
+      }
+
+      expect(error, isA<SSHSecurityKeyNotPresentError>());
+      expect(
+        (error as SSHSecurityKeyNotPresentError).preferredPublicKey,
+        backupKey.toPublicKey().encode(),
+      );
+      expect(opens, 0);
+      expect(selectorCalls, 1);
+
+      final signature = await attached.last.signAsync(
+        Uint8List.fromList([1, 2, 3]),
+      );
+      expect(signature, isA<SSHSecurityKeyEd25519Signature>());
+      expect(opens, 1);
+      expect(selectorCalls, 1);
+      for (final command in device.commands.where(isGetAssertion)) {
+        expect(allowedCredentialIdOf(command), [0xBB]);
+      }
+    });
+
+    test('cancelling the key picker stops authentication', () async {
+      var opens = 0;
+      final messages = <String>[];
+      final signer = OpenSshSecurityKeySigner(
+        openDevice: () async {
+          opens++;
+          throw StateError('device should not be opened');
+        },
+        onStatus: messages.add,
+        onKeySelect: (labels) async => const SecurityKeySelection(null),
+      );
+      final attached = signer.attach(
+        [
+          OpenSSHSecurityKeyEd25519KeyPair(
+            publicKey: Uint8List.fromList(List<int>.filled(32, 3)),
+            application: 'ssh:',
+            flags: 0x01,
+            keyHandle: Uint8List.fromList([0xAA]),
+            reserved: '',
+          ),
+          OpenSSHSecurityKeyEd25519KeyPair(
+            publicKey: Uint8List.fromList(List<int>.filled(32, 4)),
+            application: 'ssh:',
+            flags: 0x01,
+            keyHandle: Uint8List.fromList([0xBB]),
+            reserved: '',
+          ),
+        ],
+        labels: ['work', 'backup'],
+      );
+
+      await expectLater(
+        Future.sync(() => attached.first.signAsync(Uint8List.fromList([1]))),
+        throwsA(isA<StateError>()),
+      );
+      expect(opens, 0);
+      expect(messages, contains('Security key selection was cancelled.'));
+    });
+
+    test('retries when the presented key is not the selected one', () async {
+      final device = FakeCtapDevice(
+        signature: const [],
+        authData: const [],
+        respond: (command) => isGetAssertion(command)
+            ? CtapResponse(CtapStatusCode.ctap2ErrNoCredentials.value, const [])
+            : null,
+      );
+      var opens = 0;
+      final messages = <String>[];
+      final signer = OpenSshSecurityKeySigner(
+        openDevice: () async {
+          opens++;
+          return device;
+        },
+        onStatus: messages.add,
+        onKeySelect: (labels) async => const SecurityKeySelection(1),
+      );
+      final attached = signer.attach(
+        [
+          OpenSSHSecurityKeyEd25519KeyPair(
+            publicKey: Uint8List.fromList(List<int>.filled(32, 3)),
+            application: 'ssh:',
+            flags: 0x01,
+            keyHandle: Uint8List.fromList([0xAA]),
+            reserved: '',
+          ),
+          OpenSSHSecurityKeyEd25519KeyPair(
+            publicKey: Uint8List.fromList(List<int>.filled(32, 4)),
+            application: 'ssh:',
+            flags: 0x01,
+            keyHandle: Uint8List.fromList([0xBB]),
+            reserved: '',
+          ),
+        ],
+        labels: ['work', 'backup'],
+      );
+
+      await expectLater(
+        Future.sync(() => attached.last.signAsync(Uint8List.fromList([1]))),
+        throwsA(isA<SSHSecurityKeyNotPresentError>()),
+      );
+      expect(opens, 3);
+      expect(
+        messages,
+        contains(
+          'That security key does not hold "backup". Present "backup" '
+          'instead.',
+        ),
+      );
+      expect(
+        messages,
+        contains('The presented security key does not hold "backup".'),
+      );
+    });
+
+    test('describes cancellation and timeout NFC codes', () {
+      expect(
+        describeSshConnectionError(
+          PlatformException(code: '409', message: 'SessionCanceled'),
+        ),
+        'Security key authentication was cancelled.',
+      );
+      expect(
+        describeSshConnectionError(
+          PlatformException(code: '408', message: 'SessionTimeOut'),
+        ),
+        'The NFC prompt timed out before a security key was read.',
+      );
     });
   });
 
@@ -837,6 +1544,82 @@ void main() {
 
       expect(identities, hasLength(1));
       expect(identities!.single, isA<OpenSSHSecurityKeyPair>());
+    });
+
+    test('builds one identity per hardware key entry', () {
+      final parsedPassphrases = <String, String?>{};
+      final factory = SshClientFactory(
+        NoopVerifier(),
+        keyPairParser: (pem, passphrase) {
+          parsedPassphrases[pem] = passphrase;
+          final marker = pem.codeUnitAt(pem.length - 1);
+          return [
+            OpenSSHSecurityKeyEd25519KeyPair(
+              publicKey: Uint8List.fromList(List<int>.filled(32, marker)),
+              application: 'ssh:',
+              flags: 0x01,
+              keyHandle: Uint8List.fromList([marker]),
+              reserved: '',
+            ),
+          ];
+        },
+      );
+
+      final identities = factory.identitiesForTesting(
+        const SavedHost(
+          id: 'id',
+          name: 'Host',
+          host: 'example.com',
+          port: 22,
+          username: 'root',
+          authMethod: SshAuthMethod.hardwareKey,
+          hardwareKeys: [
+            HardwareKeyEntry(id: 'a', privateKey: 'stub-a', label: 'work'),
+            HardwareKeyEntry(id: 'b', privateKey: 'stub-b', passphrase: 'pw'),
+          ],
+        ),
+      );
+
+      expect(identities, hasLength(2));
+      expect(identities, everyElement(isA<OpenSSHSecurityKeyPair>()));
+      expect(parsedPassphrases['stub-a'], isNull);
+      expect(parsedPassphrases['stub-b'], 'pw');
+    });
+
+    test('names the offending entry when a stub is invalid', () {
+      final factory = SshClientFactory(
+        NoopVerifier(),
+        keyPairParser: (_, _) => [
+          OpenSSHEd25519KeyPair(
+            Uint8List.fromList(List<int>.filled(32, 1)),
+            Uint8List.fromList(List<int>.filled(64, 2)),
+            'normal key',
+          ),
+        ],
+      );
+
+      expect(
+        () => factory.identitiesForTesting(
+          const SavedHost(
+            id: 'id',
+            name: 'Host',
+            host: 'example.com',
+            port: 22,
+            username: 'root',
+            authMethod: SshAuthMethod.hardwareKey,
+            hardwareKeys: [
+              HardwareKeyEntry(id: 'a', privateKey: 'stub', label: 'backup'),
+            ],
+          ),
+        ),
+        throwsA(
+          isA<AppFailure>().having(
+            (failure) => failure.message,
+            'message',
+            contains('backup'),
+          ),
+        ),
+      );
     });
   });
 
@@ -1206,9 +1989,9 @@ void main() {
 }
 
 class _RecordingTerminalSessionController extends TerminalSessionController {
-  _RecordingTerminalSessionController()
+  _RecordingTerminalSessionController({SavedHost? host})
     : super(
-        host: buildHost('repeat'),
+        host: host ?? buildHost('repeat'),
         repository: NoNetworkTerminalRepository(),
       );
 
@@ -1243,4 +2026,17 @@ class _RecordingInputHandler extends TerminalInputHandler {
     events.add(event);
     return 'ok';
   }
+}
+
+Finder _snippetsMenuButton() {
+  return find.byWidgetPredicate(
+    (widget) => widget is PopupMenuButton && widget.tooltip == 'Snippets',
+  );
+}
+
+Future<void> _openSnippetsMenu(WidgetTester tester) async {
+  final dynamic state = tester.state(_snippetsMenuButton());
+  // ignore: avoid_dynamic_calls
+  state.showButtonMenu();
+  await tester.pumpAndSettle();
 }

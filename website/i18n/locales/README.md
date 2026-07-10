@@ -14,7 +14,7 @@ translating the site means editing these files only.
 - Translate values only. Keys (the left-hand side) must stay exactly as-is.
 - Leave these untranslated where they appear: `Conduit`, `SSH`, `Mosh`, `SFTP`,
   `tmux`, `nvim`, `btop`, `Claude Code`, `Codex`, `YubiKey`, `FIDO2`, `Arch
-  Linux`, `pacman`, `App Store`, `F-Droid`, `Obtainium`, `Ko-fi`, `GitHub`, and
+  Linux`, `pacman`, `App Store`, `Google Play`, `F-Droid`, `Obtainium`, `Ko-fi`, `GitHub`, and
   the theme names (`Catppuccin`, `Tokyo Night`, etc.).
 - `footer.copyright` contains a `{year}` placeholder. Keep it exactly, in the
   right spot for the sentence.

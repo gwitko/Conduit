@@ -16,6 +16,7 @@ class ProotCommandBuilder {
     required this.loaderPath,
     required this.libraryPath,
     required this.tmpDir,
+    this.bindMounts = const {},
   });
 
   final String prootBinary;
@@ -23,6 +24,7 @@ class ProotCommandBuilder {
 
   final String libraryPath;
   final String tmpDir;
+  final Map<String, String> bindMounts;
 
   static const _path =
       '/usr/local/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin';
@@ -33,7 +35,7 @@ class ProotCommandBuilder {
     'LD_LIBRARY_PATH': libraryPath,
   };
 
-  List<String> _guestBindings() => const [
+  List<String> _guestBindings() => [
     '-b',
     '/dev',
     '-b',
@@ -52,6 +54,10 @@ class ProotCommandBuilder {
     '/proc/self/fd/1:/dev/stdout',
     '-b',
     '/proc/self/fd/2:/dev/stderr',
+    for (final entry in bindMounts.entries) ...[
+      '-b',
+      '${entry.key}:${entry.value}',
+    ],
   ];
 
   ProotCommand login({

@@ -6,11 +6,17 @@ class LocalShellEnvironment {
   const LocalShellEnvironment({
     required this.nativeLibraryDir,
     required this.filesDir,
+    required this.sharedStorageFeatureEnabled,
+    required this.sharedStorageDir,
+    required this.sharedStorageAccessGranted,
     required this.supportedAbis,
   });
 
   final String nativeLibraryDir;
   final String filesDir;
+  final bool sharedStorageFeatureEnabled;
+  final String sharedStorageDir;
+  final bool sharedStorageAccessGranted;
   final List<String> supportedAbis;
 
   bool get isArm64 => supportedAbis.contains('arm64-v8a');
@@ -39,7 +45,18 @@ class LocalShellPlatform {
     return LocalShellEnvironment(
       nativeLibraryDir: (result['nativeLibraryDir'] as String?) ?? '',
       filesDir: (result['filesDir'] as String?) ?? '',
+      sharedStorageFeatureEnabled:
+          result['sharedStorageFeatureEnabled'] as bool? ?? false,
+      sharedStorageDir: (result['sharedStorageDir'] as String?) ?? '',
+      sharedStorageAccessGranted:
+          result['sharedStorageAccessGranted'] as bool? ?? false,
       supportedAbis: abis,
     );
+  }
+
+  Future<bool> requestSharedStorageAccess() async {
+    if (!Platform.isAndroid) return false;
+    return await _channel.invokeMethod<bool>('requestSharedStorageAccess') ??
+        false;
   }
 }

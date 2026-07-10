@@ -12,6 +12,10 @@ String describeSshConnectionError(Object error) {
   if (unwrapped is PlatformException) {
     return _describePlatformException(unwrapped);
   }
+  if (unwrapped is SSHSecurityKeyNotPresentError) {
+    return 'The presented security key does not hold any usable key for '
+        'this host.';
+  }
   if (unwrapped is SSHAuthFailError) {
     return 'SSH server rejected the configured credentials.';
   }
@@ -56,8 +60,8 @@ String describeCtapStatus(CtapStatusCode status) {
     CtapStatusCode.ctap2ErrPinBlocked =>
       'Security key PIN is blocked. Reset the key FIDO app to use it again.',
     CtapStatusCode.ctap2ErrPinAuthBlocked =>
-      'Security key PIN authentication is temporarily blocked. Remove and '
-          'reinsert the key, then try again.',
+      'The security key temporarily locked itself. Move it away from the '
+          'phone (or unplug it) for a few seconds, then present it again.',
     CtapStatusCode.ctap2ErrPinNotSet =>
       'This security key needs a FIDO2 PIN before it can be used.',
     CtapStatusCode.ctap2ErrPuatRequired =>
@@ -85,6 +89,8 @@ String describeCtapStatus(CtapStatusCode status) {
 String _describePlatformException(PlatformException error) {
   return switch (error.code) {
     'permission_denied' => 'USB security key permission was denied.',
+    '409' => 'Security key authentication was cancelled.',
+    '408' => 'The NFC prompt timed out before a security key was read.',
     '500' || '503' || '406' =>
       'NFC security key read was interrupted. Hold the key still and try again.',
     _ =>

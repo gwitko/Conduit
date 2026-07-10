@@ -230,7 +230,11 @@ class FakeTerminalSession implements SshTerminalSession {
 }
 
 class TrackableTerminalSession implements SshTerminalSession {
+  TrackableTerminalSession({this.completeAfterSends});
+
+  final int? completeAfterSends;
   final Completer<void> _done = Completer<void>();
+  final List<List<int>> sent = <List<int>>[];
   int closeCount = 0;
 
   @override
@@ -254,7 +258,14 @@ class TrackableTerminalSession implements SshTerminalSession {
   void resize(int columns, int rows, int pixelWidth, int pixelHeight) {}
 
   @override
-  Future<void> send(List<int> data) async {}
+  Future<void> send(List<int> data) async {
+    sent.add(List<int>.of(data));
+    if (completeAfterSends != null &&
+        sent.length >= completeAfterSends! &&
+        !_done.isCompleted) {
+      _done.complete();
+    }
+  }
 }
 
 class ImmediateTerminalRepository implements SshTerminalRepository {
@@ -401,6 +412,9 @@ class NoopVerifier implements HostKeyVerifier {
   Future<List<HostKeyRecord>> loadTrustedKeys() async => const [];
 
   @override
+  Future<void> saveTrustedKeys(List<HostKeyRecord> records) async {}
+
+  @override
   Future<void> removeTrustedKey(String host, int port) async {}
 
   @override
@@ -507,15 +521,46 @@ class RecordingFileExport implements FileExport {
 }
 
 class FakeCtapDevice extends CtapDevice {
-  FakeCtapDevice({required this.signature, required this.authData});
+  FakeCtapDevice({
+    required this.signature,
+    required this.authData,
+    this.respond,
+    this.pinRetries = 8,
+  });
 
   final List<int> signature;
   final List<int> authData;
+  final CtapResponse<List<int>>? Function(List<int> command)? respond;
+  final int pinRetries;
+  int rejectPinChecks = 0;
+  int pinTokenGrants = 0;
   final List<List<int>> commands = [];
+
+  static final List<int> _p256GeneratorX = _hexBytes(
+    '6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296',
+  );
+  static final List<int> _p256GeneratorY = _hexBytes(
+    '4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5',
+  );
+
+  static List<int> _hexBytes(String hex) => [
+    for (var i = 0; i < hex.length; i += 2)
+      int.parse(hex.substring(i, i + 2), radix: 16),
+  ];
 
   @override
   Future<CtapResponse<List<int>>> transceive(List<int> command) async {
     commands.add(List.of(command));
+    final custom = respond?.call(command);
+    if (custom != null) {
+      return custom;
+    }
+    if (command.first == Ctap2Commands.getInfo.value) {
+      return _getInfoResponse();
+    }
+    if (command.first == Ctap2Commands.clientPIN.value) {
+      return _clientPinResponse(command);
+    }
     return CtapResponse(
       CtapStatusCode.ctap1ErrSuccess.value,
       cbor.encode(
@@ -530,6 +575,90 @@ class FakeCtapDevice extends CtapDevice {
       ),
     );
   }
+
+  CtapResponse<List<int>> _getInfoResponse() {
+    return CtapResponse(
+      CtapStatusCode.ctap1ErrSuccess.value,
+      cbor.encode(
+        CborValue({
+          AuthenticatorInfo.versionsIdx: ['FIDO_2_0'],
+          AuthenticatorInfo.aaguidIdx: CborBytes(List<int>.filled(16, 0)),
+          AuthenticatorInfo.optionsIdx: {'clientPin': true},
+          AuthenticatorInfo.pinUvAuthProtocolsIdx: [1],
+        }),
+      ),
+    );
+  }
+
+  CtapResponse<List<int>> _clientPinResponse(List<int> command) {
+    final request = cbor.decode(command.sublist(1)).toObject() as Map;
+    final subCommand = request[ClientPinRequest.subCommandIdx] as int;
+    if (subCommand == ClientPinSubCommand.getPinRetries.value) {
+      return CtapResponse(
+        CtapStatusCode.ctap1ErrSuccess.value,
+        cbor.encode(CborValue({ClientPinResponse.pinRetriesIdx: pinRetries})),
+      );
+    }
+    if (subCommand == ClientPinSubCommand.getKeyAgreement.value) {
+      return CtapResponse(
+        CtapStatusCode.ctap1ErrSuccess.value,
+        cbor.encode(
+          CborValue({
+            ClientPinResponse.keyAgreementIdx: {
+              1: 2,
+              3: -25,
+              -1: 1,
+              -2: CborBytes(_p256GeneratorX),
+              -3: CborBytes(_p256GeneratorY),
+            },
+          }),
+        ),
+      );
+    }
+    if (subCommand == ClientPinSubCommand.getPinToken.value ||
+        subCommand ==
+            ClientPinSubCommand
+                .getPinUvAuthTokenUsingPinWithPermissions
+                .value) {
+      if (rejectPinChecks > 0) {
+        rejectPinChecks--;
+        return CtapResponse(CtapStatusCode.ctap2ErrPinInvalid.value, const []);
+      }
+      pinTokenGrants++;
+      return CtapResponse(
+        CtapStatusCode.ctap1ErrSuccess.value,
+        cbor.encode(
+          CborValue({
+            ClientPinResponse.pinUvAuthTokenIdx: CborBytes(
+              List<int>.generate(32, (index) => index + 1),
+            ),
+          }),
+        ),
+      );
+    }
+    return CtapResponse(CtapStatusCode.ctap1ErrInvalidCommand.value, const []);
+  }
+}
+
+bool isGetAssertion(List<int> command) =>
+    command.first == Ctap2Commands.getAssertion.value;
+
+List<int>? assertionPinAuthOf(List<int> command) {
+  final request = cbor.decode(command.sublist(1)).toObject() as Map;
+  return (request[GetAssertionRequest.pinAuthIdx] as List?)?.cast<int>();
+}
+
+List<int> allowedCredentialIdOf(List<int> command) {
+  final request = cbor.decode(command.sublist(1)).toObject() as Map;
+  final allowList = request[GetAssertionRequest.allowListIdx] as List<Object?>;
+  final credential = allowList.single as Map<Object?, Object?>;
+  return (credential['id'] as List).cast<int>();
+}
+
+bool isSilentProbe(List<int> command) {
+  final request = cbor.decode(command.sublist(1)).toObject() as Map;
+  final options = request[GetAssertionRequest.optionsIdx] as Map?;
+  return options?['up'] == false;
 }
 
 String fakeSecurityKeyPem() {

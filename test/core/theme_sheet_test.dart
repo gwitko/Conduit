@@ -77,14 +77,21 @@ void main() {
 
     await tester.tap(find.text('Appearance'));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.widgetWithText(OutlinedButton, 'Edit'));
+    await tester.ensureVisible(find.widgetWithText(TextButton, 'Edit'));
     await tester.pumpAndSettle();
-    final initialCount = controller.terminalKeyboardItems.length;
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Edit'));
+    final initialCount = controller.terminalKeyboardRows.first.items.length;
+    await tester.tap(find.widgetWithText(TextButton, 'Edit'));
     await tester.pumpAndSettle();
-    expect(find.text('Key Row ($initialCount)'), findsOneWidget);
+    expect(find.text('Key Rows (1)'), findsOneWidget);
 
-    await tester.drag(find.byType(ReorderableListView), const Offset(0, -500));
+    await tester.tap(find.byTooltip('Edit keys'));
+    await tester.pumpAndSettle();
+    expect(find.text('Row 1 Keys ($initialCount)'), findsOneWidget);
+
+    await tester.drag(
+      find.byType(ReorderableListView).last,
+      const Offset(0, -500),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(ActionChip, 'Custom'));
     await tester.pumpAndSettle();
@@ -94,8 +101,11 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Add'));
     await tester.pumpAndSettle();
     expect(find.text('gs'), findsOneWidget);
-    expect(find.text('Key Row (${initialCount + 1})'), findsOneWidget);
-    expect(controller.terminalKeyboardItems.length, initialCount + 1);
+    expect(find.text('Row 1 Keys (${initialCount + 1})'), findsOneWidget);
+    expect(
+      controller.terminalKeyboardRows.first.items.length,
+      initialCount + 1,
+    );
     expect(tester.getTopLeft(find.text('gs')).dy, greaterThanOrEqualTo(0));
     expect(
       tester.getBottomRight(find.text('gs')).dy,
@@ -104,10 +114,10 @@ void main() {
       ),
     );
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Done'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Done').last);
     await tester.pumpAndSettle();
 
-    final custom = controller.terminalKeyboardItems.first;
+    final custom = controller.terminalKeyboardRows.first.items.first;
     expect(custom.kind, TerminalKeyboardItemKind.customText);
     expect(custom.label, 'gs');
     expect(custom.text, 'git status');

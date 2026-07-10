@@ -90,6 +90,17 @@ class SecureHostKeyVerifier implements HostKeyVerifier {
   }
 
   @override
+  Future<void> saveTrustedKeys(List<HostKeyRecord> records) {
+    final byKey = <String, HostKeyRecord>{};
+    for (final record in records) {
+      if (record.host.isNotEmpty && record.fingerprint.isNotEmpty) {
+        byKey[record.key] = record;
+      }
+    }
+    return _save(byKey.values.toList(growable: false));
+  }
+
+  @override
   Future<void> removeTrustedKey(String host, int port) async {
     final key = '$host:$port';
     final records = await loadTrustedKeys();

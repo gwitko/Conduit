@@ -1,6 +1,7 @@
 import 'package:conduit/core/theme/app_palette.dart';
 import 'package:conduit/core/theme/terminal_appearance.dart';
 import 'package:conduit/core/theme/theme_preferences_repository.dart';
+import 'package:conduit/features/snippets/domain/terminal_snippet.dart';
 import 'package:flutter/material.dart';
 
 class ThemeController extends ChangeNotifier {
@@ -12,16 +13,18 @@ class ThemeController extends ChangeNotifier {
   AppPalette _palette = AppPalette.synthwave;
   TerminalFontOption _terminalFont = TerminalFontOption.atkynsonNerdFont;
   double _terminalFontSize = terminalFontSizeDefault;
-  List<TerminalKeyboardItem> _terminalKeyboardItems =
-      defaultTerminalKeyboardItems;
+  List<TerminalKeyboardRow> _terminalKeyboardRows = defaultTerminalKeyboardRows;
+  List<TerminalSnippet> _terminalSnippets = const [];
   bool _showLocalShell = true;
 
   ThemeMode get themeMode => _themeMode;
   AppPalette get palette => _palette;
   TerminalFontOption get terminalFont => _terminalFont;
   double get terminalFontSize => _terminalFontSize;
-  List<TerminalKeyboardItem> get terminalKeyboardItems =>
-      List.unmodifiable(_terminalKeyboardItems);
+  List<TerminalKeyboardRow> get terminalKeyboardRows =>
+      List.unmodifiable(_terminalKeyboardRows);
+  List<TerminalSnippet> get terminalSnippets =>
+      List.unmodifiable(_terminalSnippets);
   bool get showLocalShell => _showLocalShell;
 
   Future<void> load() async {
@@ -30,7 +33,8 @@ class ThemeController extends ChangeNotifier {
     _palette = preferences.palette;
     _terminalFont = preferences.terminalFont;
     _terminalFontSize = preferences.terminalFontSize;
-    _terminalKeyboardItems = List.of(preferences.terminalKeyboardItems);
+    _terminalKeyboardRows = List.of(preferences.terminalKeyboardRows);
+    _terminalSnippets = List.of(preferences.terminalSnippets);
     _showLocalShell = preferences.showLocalShell;
     notifyListeners();
   }
@@ -72,32 +76,59 @@ class ThemeController extends ChangeNotifier {
     await _save();
   }
 
-  Future<void> setTerminalKeyboardItems(
-    List<TerminalKeyboardItem> items,
-  ) async {
-    final seen = <TerminalKeyboardAction>{};
-    final normalized = <TerminalKeyboardItem>[];
-    for (final item in items) {
-      final action = item.action;
-      if (item.kind == TerminalKeyboardItemKind.builtIn && action != null) {
-        if (seen.add(action)) {
-          normalized.add(item);
+  Future<void> setTerminalKeyboardRows(List<TerminalKeyboardRow> rows) async {
+    final normalized = <TerminalKeyboardRow>[];
+    for (final row in rows) {
+      final seen = <TerminalKeyboardAction>{};
+      final items = <TerminalKeyboardItem>[];
+      for (final item in row.items) {
+        final action = item.action;
+        if (item.kind == TerminalKeyboardItemKind.builtIn && action != null) {
+          if (seen.add(action)) {
+            items.add(item);
+          }
+        } else {
+          items.add(item);
         }
-      } else {
-        normalized.add(item);
       }
+      if (items.isEmpty) {
+        continue;
+      }
+      normalized.add(
+        TerminalKeyboardRow(
+          items: items,
+          height: clampTerminalKeyboardRowHeight(row.height),
+        ),
+      );
     }
-    final next = normalized.isEmpty ? defaultTerminalKeyboardItems : normalized;
-    if (_listEquals(_terminalKeyboardItems, next)) {
+    final next = normalized.isEmpty ? defaultTerminalKeyboardRows : normalized;
+    if (_listEquals(_terminalKeyboardRows, next)) {
       return;
     }
-    _terminalKeyboardItems = List.of(next);
+    _terminalKeyboardRows = List.of(next);
     notifyListeners();
     await _save();
   }
 
-  Future<void> resetTerminalKeyboardItems() {
-    return setTerminalKeyboardItems(defaultTerminalKeyboardItems);
+  Future<void> resetTerminalKeyboardRows() {
+    return setTerminalKeyboardRows(defaultTerminalKeyboardRows);
+  }
+
+  Future<void> setTerminalSnippets(List<TerminalSnippet> snippets) async {
+    final seen = <String>{};
+    final normalized = <TerminalSnippet>[];
+    for (final snippet in snippets) {
+      if (!snippet.isValid || !seen.add(snippet.id)) {
+        continue;
+      }
+      normalized.add(snippet);
+    }
+    if (_listEquals(_terminalSnippets, normalized)) {
+      return;
+    }
+    _terminalSnippets = List.of(normalized);
+    notifyListeners();
+    await _save();
   }
 
   Future<void> setShowLocalShell(bool show) async {
@@ -116,7 +147,8 @@ class ThemeController extends ChangeNotifier {
         palette: _palette,
         terminalFont: _terminalFont,
         terminalFontSize: _terminalFontSize,
-        terminalKeyboardItems: _terminalKeyboardItems,
+        terminalKeyboardRows: _terminalKeyboardRows,
+        terminalSnippets: _terminalSnippets,
         showLocalShell: _showLocalShell,
       ),
     );

@@ -1,0 +1,7 @@
+Android builds are now split into Play and Full variants so Google Play stays policy-safe while the Full build can offer broader local-shell storage access.
+Full build: the local Arch shell can mount real phone shared storage at /mnt/android after Android file access is granted.
+Backup and restore: export app settings, saved machines, ordering, and trusted host keys, either without secrets or encrypted with a backup password.
+Mosh: configure the UDP port or port range used for Mosh sessions, with a fix for custom UDP port handling.
+Mosh: closing a session tab now asks the remote shell to exit first, including tmux detach plus exit for tmux-enabled hosts.
+Forms: long host, hardware-key, and PIN fields now stay within sensible line limits.
+Snippets: save global and per-machine snippets, launch them from the key row, paste stored passwords, and optionally run a host snippet after connect.

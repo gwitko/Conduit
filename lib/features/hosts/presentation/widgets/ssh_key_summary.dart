@@ -73,16 +73,15 @@ class _KeyCard extends StatelessWidget {
                 color: colorScheme.primary,
               ),
               const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  details.algorithm.label,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+              Text(
+                details.algorithm.label,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-              if (details.comment.isNotEmpty)
-                Flexible(
+              if (details.comment.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                Expanded(
                   child: Text(
                     details.comment,
                     maxLines: 1,
@@ -93,6 +92,7 @@ class _KeyCard extends StatelessWidget {
                     ),
                   ),
                 ),
+              ],
             ],
           ),
           const SizedBox(height: 6),

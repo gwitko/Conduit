@@ -12,8 +12,8 @@ extension SshKeyAlgorithmDetails on SshKeyAlgorithm {
     SshKeyAlgorithm.ed25519 => 'Ed25519',
     SshKeyAlgorithm.rsa => 'RSA',
     SshKeyAlgorithm.ecdsa => 'ECDSA',
-    SshKeyAlgorithm.securityKeyEd25519 => 'Ed25519 security key',
-    SshKeyAlgorithm.securityKeyEcdsa => 'ECDSA security key',
+    SshKeyAlgorithm.securityKeyEd25519 => 'Ed25519 SK',
+    SshKeyAlgorithm.securityKeyEcdsa => 'ECDSA SK',
     SshKeyAlgorithm.unknown => 'SSH key',
   };
 

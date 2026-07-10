@@ -12,7 +12,7 @@ withDefaults(
 </script>
 
 <template>
-  <div class="relative w-full max-w-[300px]">
+  <div class="relative w-full max-w-[380px]">
     <div
       class="absolute -inset-6 -z-10 rounded-[3rem] bg-mauve/10 blur-3xl"
       aria-hidden="true"

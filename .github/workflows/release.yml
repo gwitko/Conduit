@@ -123,7 +123,7 @@ jobs:
           } > android/key.properties
 
       - name: Build Android APKs
-        run: flutter build apk --release --split-per-abi
+        run: flutter build apk --release --flavor full --split-per-abi
 
       - name: Build release metadata
         id: metadata

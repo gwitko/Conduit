@@ -37,7 +37,7 @@ class AuthMethodPicker extends StatelessWidget {
           groupValue: value,
           icon: Icons.usb_rounded,
           title: 'Hardware key',
-          subtitle: 'Use an OpenSSH *_sk stub with USB or NFC.',
+          subtitle: 'Use one or more security keys over USB or NFC.',
           onChanged: onChanged,
         ),
         _AuthMethodTile(
@@ -191,9 +191,9 @@ class AuthExplainer extends StatelessWidget {
           Expanded(
             child: Text(
               hardwareKey
-                  ? 'Use the OpenSSH *_sk private key stub from your computer. '
-                        'Conduit stores the stub, then asks your security key '
-                        'to sign over USB or NFC when you connect.'
+                  ? 'Add the OpenSSH *_sk key stub for each security key you '
+                        'own. When you connect, Conduit asks whichever key '
+                        'you present to sign over USB or NFC.'
                   : external
                   ? 'Use this when authentication is handled outside Conduit, '
                         'without storing a password or private key in the app.'

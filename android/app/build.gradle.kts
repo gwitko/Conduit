@@ -22,12 +22,29 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     defaultConfig {
         applicationId = "com.gwitko.conduit"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+    }
+
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("play") {
+            dimension = "distribution"
+            buildConfigField("boolean", "FULL_STORAGE_ACCESS", "false")
+        }
+        create("full") {
+            dimension = "distribution"
+            versionNameSuffix = "-full"
+            buildConfigField("boolean", "FULL_STORAGE_ACCESS", "true")
+        }
     }
 
     packaging {

@@ -6,6 +6,7 @@ import 'package:conduit/core/theme/app_palette.dart';
 import 'package:conduit/core/theme/terminal_appearance.dart';
 import 'package:conduit/core/theme/theme_controller.dart';
 import 'package:conduit/features/terminal/domain/security_key_interaction.dart';
+import 'package:conduit/features/terminal/presentation/security_key_picker_dialog.dart';
 import 'package:conduit/features/terminal/presentation/security_key_pin_dialog.dart';
 import 'package:conduit/features/terminal/presentation/terminal_keyboard_bar.dart';
 import 'package:conduit/features/terminal/presentation/terminal_session_controller.dart';
@@ -38,11 +39,20 @@ class _TerminalPageState extends State<TerminalPage> {
   bool _fullscreen = false;
   bool _tmuxScrollMode = false;
   bool _composeMode = false;
+  // Compose recall: recently SENT lines (deduped, oldest first, capped) so a
+  // line sent into a mode that discarded it can be recalled; plus the current
+  // UNSENT draft, preserved across close so closing compose can't lose it.
+  static const int _composeHistoryLimit = 20;
+  final List<String> _composeHistory = <String>[];
+  String _composeDraft = '';
 
   @override
   void initState() {
     super.initState();
     SecurityKeyInteraction.instance.registerPinPrompt(_promptSecurityKeyPin);
+    SecurityKeyInteraction.instance.registerSelectionPrompt(
+      _promptSecurityKeySelection,
+    );
     widget.workspace.addListener(_handleWorkspaceChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusedSession = widget.workspace.activeSession;
@@ -54,6 +64,9 @@ class _TerminalPageState extends State<TerminalPage> {
   void dispose() {
     _setSystemUiFullscreen(false);
     SecurityKeyInteraction.instance.unregisterPinPrompt(_promptSecurityKeyPin);
+    SecurityKeyInteraction.instance.unregisterSelectionPrompt(
+      _promptSecurityKeySelection,
+    );
     widget.workspace.removeListener(_handleWorkspaceChanged);
     _focusNode.dispose();
     super.dispose();
@@ -64,6 +77,15 @@ class _TerminalPageState extends State<TerminalPage> {
       return Future<String?>.value();
     }
     return showSecurityKeyPinDialog(context, request);
+  }
+
+  Future<int?> _promptSecurityKeySelection(
+    SecurityKeySelectionRequest request,
+  ) {
+    if (!mounted) {
+      return Future<int?>.value();
+    }
+    return showSecurityKeyPickerDialog(context, request);
   }
 
   void _handleWorkspaceChanged() {
@@ -190,12 +212,38 @@ class _TerminalPageState extends State<TerminalPage> {
                       _ComposeInputBar(
                         palette: palette,
                         brightness: brightness,
+                        history: _composeHistory,
+                        initialText: _composeDraft,
                         onSend: (line) {
+                          // Send the line, then deliver Enter as a SEPARATE write a
+                          // short moment later. Some remote TUIs (e.g. Claude Code
+                          // and other Ink/readline apps) classify a single terminal
+                          // read that contains a long line ending in CR as a *paste*
+                          // and insert the trailing CR as a literal newline instead
+                          // of submitting — so a wrapping compose line silently fails
+                          // to send. Delivering Enter in its own read makes it an
+                          // isolated keypress that submits regardless of line length.
                           activeSession.sendText(line);
-                          activeSession.sendKey(TerminalKey.enter);
+                          Future.delayed(const Duration(milliseconds: 120), () {
+                            activeSession.sendKey(TerminalKey.enter);
+                          });
+                          setState(() {
+                            // De-duplicate: drop any earlier identical entry so the
+                            // ring keeps distinct lines (re-sending a recalled line
+                            // can't churn duplicates that evict good older ones).
+                            _composeHistory.remove(line);
+                            _composeHistory.add(line);
+                            if (_composeHistory.length > _composeHistoryLimit) {
+                              _composeHistory.removeAt(0);
+                            }
+                            _composeDraft = '';
+                          });
                         },
-                        onClose: () {
-                          setState(() => _composeMode = false);
+                        onClose: (draft) {
+                          setState(() {
+                            _composeMode = false;
+                            _composeDraft = draft; // preserve the unsent draft
+                          });
                           _focusNode.requestFocus();
                         },
                       )
@@ -205,7 +253,8 @@ class _TerminalPageState extends State<TerminalPage> {
                         focusNode: _focusNode,
                         palette: palette,
                         brightness: brightness,
-                        items: widget.themeController.terminalKeyboardItems,
+                        rows: widget.themeController.terminalKeyboardRows,
+                        globalSnippets: widget.themeController.terminalSnippets,
                         fullscreen: _fullscreen,
                         onToggleFullscreen: _toggleFullscreen,
                         composeActive: _composeMode,
@@ -239,12 +288,24 @@ class _ComposeInputBar extends StatefulWidget {
     required this.brightness,
     required this.onSend,
     required this.onClose,
+    this.history = const <String>[],
+    this.initialText = '',
   });
 
   final AppPalette palette;
   final Brightness brightness;
   final ValueChanged<String> onSend;
-  final VoidCallback onClose;
+
+  /// Called on close with the current (unsent) field text so the caller can
+  /// preserve it — closing compose must not silently discard a draft.
+  final ValueChanged<String> onClose;
+
+  /// Recently sent lines, oldest first; shown most-recent-first in the recall
+  /// menu. Deduplicated by the caller.
+  final List<String> history;
+
+  /// Draft text to restore into the field when compose reopens.
+  final String initialText;
 
   @override
   State<_ComposeInputBar> createState() => _ComposeInputBarState();
@@ -257,6 +318,12 @@ class _ComposeInputBarState extends State<_ComposeInputBar> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialText.isNotEmpty) {
+      _controller.value = TextEditingValue(
+        text: widget.initialText,
+        selection: TextSelection.collapsed(offset: widget.initialText.length),
+      );
+    }
     WidgetsBinding.instance.addPostFrameCallback(
       (_) => _focusNode.requestFocus(),
     );
@@ -279,14 +346,44 @@ class _ComposeInputBarState extends State<_ComposeInputBar> {
     _focusNode.requestFocus();
   }
 
+  void _recall(String line) {
+    _controller.value = TextEditingValue(
+      text: line,
+      selection: TextSelection.collapsed(offset: line.length),
+    );
+    _focusNode.requestFocus();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Material(
       color: widget.palette.panelFor(widget.brightness),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(8, 6, 4, 6),
+        padding: const EdgeInsets.fromLTRB(2, 6, 4, 6),
         child: Row(
           children: [
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.history_rounded),
+              tooltip: 'Recall a sent line',
+              color: widget.palette.panelFor(widget.brightness),
+              enabled: widget.history.isNotEmpty,
+              onSelected: _recall,
+              // Opening the menu takes focus off the field (hiding the soft
+              // keyboard). _recall restores focus on select; do the same on
+              // cancel so the keyboard always returns after the menu closes.
+              onCanceled: _focusNode.requestFocus,
+              itemBuilder: (context) => [
+                for (final line in widget.history.reversed)
+                  PopupMenuItem<String>(
+                    value: line,
+                    child: Text(
+                      line,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+              ],
+            ),
             Expanded(
               child: TextField(
                 controller: _controller,
@@ -335,7 +432,7 @@ class _ComposeInputBarState extends State<_ComposeInputBar> {
             IconButton(
               icon: const Icon(Icons.close_rounded),
               tooltip: 'Close compose',
-              onPressed: widget.onClose,
+              onPressed: () => widget.onClose(_controller.text),
             ),
           ],
         ),

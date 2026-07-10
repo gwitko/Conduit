@@ -13,6 +13,7 @@
   "stores": {
     "captions": {
       "appStore": "Download on the",
+      "googlePlay": "Get it on",
       "fdroid": "Get it on",
       "obtainium": "Track releases with"
     }
@@ -23,7 +24,6 @@
     "trust": [
       "Open source",
       "No telemetry",
-      "F-Droid & App Store",
       "Reproducible builds"
     ]
   },
@@ -136,24 +136,12 @@
     "title": "Log in with the YubiKey in your pocket",
     "body": "Conduit speaks FIDO2 over NFC and USB. Tap your hardware key to authenticate. Private keys never leave the device, and nothing phishable ever touches your phone. Enroll several keys on one machine and connect with whichever one you have on you.",
     "alt": "Conduit enrolling a hardware security key for a saved machine",
-    "cards": {
-      "keys": {
-        "title": "Multiple keys per host",
-        "body": "Backup keys, work keys, travel keys. Enroll them all, no duplicate entries."
-      },
-      "enclave": {
-        "title": "Nothing leaves the phone",
-        "body": "Credentials live in the secure enclave. No cloud, no sync, no account."
-      },
-      "appLock": {
-        "title": "Lock the whole app",
-        "body": "An optional app lock puts device biometrics or your passcode in front of saved machines and keys."
-      },
-      "hostKeys": {
-        "title": "Host keys you approve",
-        "body": "New hosts show their fingerprint for explicit review. You manage the trusted list yourself."
-      }
-    }
+    "points": [
+      "Multiple keys per host: backup, work, and travel keys without duplicate entries",
+      "Credentials live in the secure enclave, with no cloud, sync, or account",
+      "Optional app lock with device biometrics or your passcode",
+      "Host key fingerprints shown for explicit review, on a trusted list you manage"
+    ]
   },
   "openSource": {
     "eyebrow": "Open source",
@@ -162,7 +150,7 @@
     "stats": {
       "source": "Open source, from crypto to keyboard",
       "trackers": "Trackers, ads, or telemetry endpoints",
-      "install": "Ways to install: App Store, F-Droid, Obtainium"
+      "install": "Ways to install: App Store, Google Play, F-Droid, Obtainium"
     },
     "readSource": "Read the source on GitHub",
     "star": "Star on GitHub",
@@ -170,7 +158,7 @@
   },
   "cta": {
     "title": "Put a real terminal in your pocket",
-    "body": "Free, open source, and ready on the App Store, F-Droid, and Obtainium."
+    "body": "Free, open source, and ready on the App Store, Google Play, F-Droid, and Obtainium."
   },
   "footer": {
     "tagline": "A mobile terminal workspace for SSH, Mosh, SFTP, and local shells. Built for people who run real infrastructure from their phone.",

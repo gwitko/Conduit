@@ -7,9 +7,12 @@ import 'package:conduit/core/theme/theme_controller.dart';
 import 'package:conduit/features/hosts/data/dartssh2_ssh_key_service.dart';
 import 'package:conduit/features/hosts/domain/saved_host.dart';
 import 'package:conduit/features/hosts/domain/ssh_key.dart';
+import 'package:conduit/features/hosts/presentation/add_hardware_key_sheet.dart';
 import 'package:conduit/features/hosts/presentation/public_key_sheet.dart';
+import 'package:conduit/features/hosts/presentation/widgets/hardware_key_list.dart';
 import 'package:conduit/features/hosts/presentation/widgets/host_form_chrome.dart';
 import 'package:conduit/features/hosts/presentation/widgets/host_form_sections.dart';
+import 'package:conduit/features/snippets/domain/terminal_snippet.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -43,6 +46,7 @@ class _HostFormPageState extends State<HostFormPage> {
   final _tagController = TextEditingController();
   final _timeoutController = TextEditingController(text: '12');
   final _moshLocaleController = TextEditingController(text: 'C.UTF-8');
+  final _moshPortsController = TextEditingController();
   final _tmuxSessionNameController = TextEditingController(
     text: defaultTmuxSessionName,
   );
@@ -58,6 +62,11 @@ class _HostFormPageState extends State<HostFormPage> {
   bool _startTmuxOnConnect = false;
   TmuxPrefixKey _tmuxPrefixKey = defaultTmuxPrefixKey;
   List<String> _tags = const [];
+  List<HardwareKeyEntry> _hardwareKeys = const [];
+  List<TerminalSnippet> _snippets = const [];
+  String _connectSnippetId = '';
+  final _hardwareKeyInspections = <String, SshKeyInspection>{};
+  String? _hardwareKeysError;
   SshKeyInspection? _keyInspection;
   Timer? _verifyTimer;
   int _verifyToken = 0;
@@ -85,10 +94,19 @@ class _HostFormPageState extends State<HostFormPage> {
       _privateKeyController.text = host.privateKey;
       _passphraseController.text = host.passphrase;
       _tags = List<String>.from(host.tags);
+      _hardwareKeys = List<HardwareKeyEntry>.from(
+        host.authMethod == SshAuthMethod.hardwareKey
+            ? host.effectiveHardwareKeys
+            : host.hardwareKeys,
+      );
+      for (final entry in _hardwareKeys) {
+        _inspectHardwareKey(entry);
+      }
       _timeoutController.text = host.connectionTimeoutSeconds.toString();
       _authMethod = host.authMethod;
       _useMosh = host.useMosh;
       _moshLocaleController.text = host.moshLocale;
+      _moshPortsController.text = host.moshPorts;
       _predictiveEchoEnabled = host.predictiveEchoEnabled;
       _externalAuthOfferKey = host.externalAuthOfferKey;
       _forwardAgent = host.forwardAgent;
@@ -96,6 +114,8 @@ class _HostFormPageState extends State<HostFormPage> {
       _tmuxPrefixKey = host.tmuxPrefixKey;
       _tmuxSessionNameController.text = host.tmuxSessionName;
       _tmuxStartDirectoryController.text = host.tmuxStartDirectory;
+      _snippets = List<TerminalSnippet>.from(host.snippets);
+      _connectSnippetId = host.connectSnippetId;
     }
     _keyInspection = _cheapPreview();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -104,10 +124,28 @@ class _HostFormPageState extends State<HostFormPage> {
   }
 
   SshKeyInspection? _cheapPreview() {
-    if (!_usesKeyAuth || _privateKeyController.text.trim().isEmpty) {
+    if (_authMethod != SshAuthMethod.privateKey ||
+        _privateKeyController.text.trim().isEmpty) {
       return null;
     }
     return widget.keyService.inspect(_privateKeyController.text);
+  }
+
+  void _inspectHardwareKey(HardwareKeyEntry entry) {
+    if (entry.passphrase.isEmpty) {
+      _hardwareKeyInspections[entry.id] = widget.keyService.inspect(
+        entry.privateKey,
+      );
+      return;
+    }
+    unawaited(
+      widget.keyService
+          .verify(entry.privateKey, passphrase: entry.passphrase)
+          .then((inspection) {
+            if (!mounted) return;
+            setState(() => _hardwareKeyInspections[entry.id] = inspection);
+          }),
+    );
   }
 
   void _recomputeKeyInspection() {
@@ -155,6 +193,7 @@ class _HostFormPageState extends State<HostFormPage> {
     _tagFocusNode.dispose();
     _timeoutController.dispose();
     _moshLocaleController.dispose();
+    _moshPortsController.dispose();
     _tmuxSessionNameController.dispose();
     _tmuxStartDirectoryController.dispose();
     super.dispose();
@@ -218,12 +257,12 @@ class _HostFormPageState extends State<HostFormPage> {
               forwardAgent: _forwardAgent,
               externalAuthOfferKey: _externalAuthOfferKey,
               keyInspection: _keyInspection,
+              hardwareKeys: _hardwareKeys,
+              hardwareKeyInspections: _hardwareKeyInspections,
+              hardwareKeysError: _hardwareKeysError,
               requiredValidator: _required,
               keyMaterialValidator: _validateKeyMaterial,
-              onAuthMethodChanged: (method) {
-                setState(() => _authMethod = method);
-                _recomputeKeyInspection();
-              },
+              onAuthMethodChanged: _changeAuthMethod,
               onTogglePasswordVisibility: () =>
                   setState(() => _showPassword = !_showPassword),
               onTogglePassphraseVisibility: () =>
@@ -232,6 +271,10 @@ class _HostFormPageState extends State<HostFormPage> {
               onImportKeyFile: _importKeyFile,
               onGenerateKey: _generateKey,
               onViewPublicKey: _viewPublicKey,
+              onAddHardwareKey: _addHardwareKey,
+              onRenameHardwareKey: _renameHardwareKey,
+              onRemoveHardwareKey: _removeHardwareKey,
+              onViewHardwareKeyPublicKey: _viewHardwareKeyPublicKey,
               onForwardAgentChanged: (value) =>
                   setState(() => _forwardAgent = value),
               onExternalAuthOfferKeyChanged: (value) =>
@@ -244,13 +287,17 @@ class _HostFormPageState extends State<HostFormPage> {
               tagFocusNode: _tagFocusNode,
               timeoutController: _timeoutController,
               moshLocaleController: _moshLocaleController,
+              moshPortsController: _moshPortsController,
               tmuxSessionNameController: _tmuxSessionNameController,
               tmuxStartDirectoryController: _tmuxStartDirectoryController,
               useMosh: _useMosh,
               predictiveEchoEnabled: _predictiveEchoEnabled,
               startTmuxOnConnect: _startTmuxOnConnect,
               tmuxPrefixKey: _tmuxPrefixKey,
+              snippets: _snippets,
+              connectSnippetId: _connectSnippetId,
               timeoutValidator: _validateTimeout,
+              moshPortsValidator: _validateMoshPorts,
               onAddTag: _addTag,
               onRemoveTag: _removeTag,
               onUseMoshChanged: (value) => setState(() {
@@ -265,6 +312,16 @@ class _HostFormPageState extends State<HostFormPage> {
                   setState(() => _startTmuxOnConnect = value),
               onTmuxPrefixKeyChanged: (value) =>
                   setState(() => _tmuxPrefixKey = value),
+              onSnippetsChanged: (snippets) => setState(() {
+                _snippets = snippets;
+                if (!_snippets.any(
+                  (snippet) => snippet.id == _connectSnippetId,
+                )) {
+                  _connectSnippetId = '';
+                }
+              }),
+              onConnectSnippetChanged: (snippetId) =>
+                  setState(() => _connectSnippetId = snippetId),
             ),
             const SizedBox(height: 22),
             SizedBox(
@@ -294,6 +351,148 @@ class _HostFormPageState extends State<HostFormPage> {
           ? body
           : ConduitBackdrop(palette: palette, child: body),
     );
+  }
+
+  void _changeAuthMethod(SshAuthMethod method) {
+    setState(() {
+      _authMethod = method;
+      _hardwareKeysError = null;
+    });
+    if (method == SshAuthMethod.hardwareKey) {
+      _adoptStubFromPrivateKeyField();
+    }
+    _recomputeKeyInspection();
+  }
+
+  void _adoptStubFromPrivateKeyField() {
+    final text = _privateKeyController.text.trim();
+    if (text.isEmpty || _hardwareKeys.isNotEmpty) return;
+    final inspection = widget.keyService.inspect(
+      text,
+      passphrase: _passphraseController.text,
+    );
+    final details = inspection.details;
+    if (inspection.status != SshKeyStatus.securityKeyStub || details == null) {
+      return;
+    }
+    final entry = HardwareKeyEntry(
+      id: const Uuid().v4(),
+      privateKey: text,
+      label: details.comment.trim(),
+      passphrase: _passphraseController.text,
+    );
+    setState(() {
+      _hardwareKeys = [entry];
+      _hardwareKeyInspections[entry.id] = inspection;
+      _privateKeyController.clear();
+      _passphraseController.clear();
+    });
+  }
+
+  Future<void> _addHardwareKey() async {
+    final fingerprints = <String>{
+      for (final inspection in _hardwareKeyInspections.values)
+        if (inspection.details != null) inspection.details!.fingerprintSha256,
+    };
+    final added = await showAddHardwareKeySheet(
+      context: context,
+      keyService: widget.keyService,
+      existingFingerprints: fingerprints,
+      existingStubs: {
+        for (final entry in _hardwareKeys) entry.privateKey.trim(),
+      },
+    );
+    if (added == null || !mounted) return;
+    setState(() {
+      _hardwareKeys = [..._hardwareKeys, added.entry];
+      _hardwareKeyInspections[added.entry.id] = added.inspection;
+      _hardwareKeysError = null;
+    });
+  }
+
+  Future<void> _renameHardwareKey(HardwareKeyEntry entry) async {
+    final index = _hardwareKeys.indexWhere((key) => key.id == entry.id);
+    if (index < 0) return;
+    final controller = TextEditingController(
+      text: displayLabelForHardwareKey(
+        entry,
+        index,
+        _hardwareKeyInspections[entry.id],
+      ),
+    );
+    final label = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Rename hardware key'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: 'Label'),
+          textInputAction: TextInputAction.done,
+          onSubmitted: (value) => Navigator.of(context).pop(value),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(controller.text),
+            child: const Text('Rename'),
+          ),
+        ],
+      ),
+    ).whenComplete(controller.dispose);
+    if (label == null || !mounted) return;
+    setState(() {
+      _hardwareKeys = [
+        for (final key in _hardwareKeys)
+          key.id == entry.id ? key.copyWith(label: label.trim()) : key,
+      ];
+    });
+  }
+
+  Future<void> _removeHardwareKey(HardwareKeyEntry entry) async {
+    final index = _hardwareKeys.indexWhere((key) => key.id == entry.id);
+    if (index < 0) return;
+    final label = displayLabelForHardwareKey(
+      entry,
+      index,
+      _hardwareKeyInspections[entry.id],
+    );
+    final remove = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Remove "$label"?'),
+        content: const Text(
+          'The stub is removed from this host. Your security key and the '
+          'server are not affected.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (remove != true || !mounted) return;
+    setState(() {
+      _hardwareKeys = _hardwareKeys
+          .where((key) => key.id != entry.id)
+          .toList(growable: false);
+      _hardwareKeyInspections.remove(entry.id);
+    });
+  }
+
+  void _viewHardwareKeyPublicKey(HardwareKeyEntry entry) {
+    final details = _hardwareKeyInspections[entry.id]?.details;
+    if (details == null) return;
+    showPublicKeySheet(context: context, details: details);
   }
 
   Future<void> _pasteKey() async {
@@ -424,6 +623,7 @@ class _HostFormPageState extends State<HostFormPage> {
               decoration: const InputDecoration(
                 labelText: 'Label',
                 helperText: 'Shown as the key comment.',
+                helperMaxLines: 2,
               ),
               textInputAction: TextInputAction.next,
             ),
@@ -470,6 +670,13 @@ class _HostFormPageState extends State<HostFormPage> {
   void _save() {
     if (!_formKey.currentState!.validate()) return;
 
+    if (_authMethod == SshAuthMethod.hardwareKey && _hardwareKeys.isEmpty) {
+      setState(() {
+        _hardwareKeysError = 'Add at least one hardware key.';
+      });
+      return;
+    }
+
     if (_tagController.text.trim().isNotEmpty) {
       _addTag(_tagController.text);
     }
@@ -485,8 +692,15 @@ class _HostFormPageState extends State<HostFormPage> {
       password: _authMethod == SshAuthMethod.password
           ? _passwordController.text
           : '',
-      privateKey: _usesKeyAuth ? _privateKeyController.text : '',
-      passphrase: _usesKeyAuth ? _passphraseController.text : '',
+      privateKey: _authMethod == SshAuthMethod.privateKey
+          ? _privateKeyController.text
+          : '',
+      passphrase: _authMethod == SshAuthMethod.privateKey
+          ? _passphraseController.text
+          : '',
+      hardwareKeys: _authMethod == SshAuthMethod.hardwareKey
+          ? List<HardwareKeyEntry>.unmodifiable(_hardwareKeys)
+          : const [],
       externalAuthOfferKey: _externalAuthOfferKey,
       forwardAgent: _usesKeyAuth && _forwardAgent,
       tags: _tags,
@@ -495,6 +709,7 @@ class _HostFormPageState extends State<HostFormPage> {
       moshLocale: _moshLocaleController.text.trim().isEmpty
           ? 'C.UTF-8'
           : _moshLocaleController.text.trim(),
+      moshPorts: _useMosh ? _moshPortsController.text.trim() : '',
       predictiveEchoEnabled: _predictiveEchoEnabled,
       startTmuxOnConnect: _startTmuxOnConnect,
       tmuxPrefixKey: _tmuxPrefixKey,
@@ -502,6 +717,11 @@ class _HostFormPageState extends State<HostFormPage> {
           ? defaultTmuxSessionName
           : _tmuxSessionNameController.text.trim(),
       tmuxStartDirectory: _tmuxStartDirectoryController.text.trim(),
+      snippets: List<TerminalSnippet>.unmodifiable(_snippets),
+      connectSnippetId:
+          _snippets.any((snippet) => snippet.id == _connectSnippetId)
+          ? _connectSnippetId
+          : '',
       lastConnectedAt: currentHost?.lastConnectedAt,
     );
 
@@ -526,18 +746,10 @@ class _HostFormPageState extends State<HostFormPage> {
       SshKeyStatus.needsPassphrase => 'Enter the key passphrase to unlock it.',
       SshKeyStatus.verifying => null,
       SshKeyStatus.wrongPassphrase => 'That passphrase did not match this key.',
-      SshKeyStatus.invalid =>
-        _authMethod == SshAuthMethod.hardwareKey
-            ? 'Use a valid OpenSSH *_sk key stub.'
-            : 'Use a valid PEM or OpenSSH private key.',
+      SshKeyStatus.invalid => 'Use a valid PEM or OpenSSH private key.',
       SshKeyStatus.securityKeyStub =>
-        _authMethod == SshAuthMethod.privateKey
-            ? 'This is a hardware-key stub. Choose Hardware key instead.'
-            : null,
-      SshKeyStatus.valid =>
-        _authMethod == SshAuthMethod.hardwareKey
-            ? 'Use id_ed25519_sk or id_ecdsa_sk, not a normal private key.'
-            : null,
+        'This is a hardware-key stub. Choose Hardware key instead.',
+      SshKeyStatus.valid => null,
     };
   }
 
@@ -550,6 +762,15 @@ class _HostFormPageState extends State<HostFormPage> {
   String? _validateTimeout(String? value) {
     final timeout = int.tryParse(value ?? '');
     if (timeout == null || timeout < 3 || timeout > 120) return '3-120';
+    return null;
+  }
+
+  String? _validateMoshPorts(String? value) {
+    final trimmed = value?.trim() ?? '';
+    if (trimmed.isEmpty) return null;
+    if (MoshPortRange.tryParse(trimmed) == null) {
+      return 'Use a port or low:high range within 1-65535.';
+    }
     return null;
   }
 }

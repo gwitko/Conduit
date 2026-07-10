@@ -73,6 +73,10 @@ class _LocalShellPageState extends State<LocalShellPage> {
       case LocalShellStage.ready:
         return _Ready(
           state: state,
+          sharedStorageFeatureEnabled:
+              widget.controller.sharedStorageFeatureEnabled,
+          sharedStorageAccessGranted:
+              widget.controller.sharedStorageAccessGranted,
           onOpen: () => unawaited(widget.onOpenSession()),
           onReinstall: () => _confirmReinstall(context),
           onReset: () => _confirmReset(context),
@@ -280,12 +284,16 @@ class _Failed extends StatelessWidget {
 class _Ready extends StatelessWidget {
   const _Ready({
     required this.state,
+    required this.sharedStorageFeatureEnabled,
+    required this.sharedStorageAccessGranted,
     required this.onOpen,
     required this.onReinstall,
     required this.onReset,
   });
 
   final LocalShellState state;
+  final bool sharedStorageFeatureEnabled;
+  final bool sharedStorageAccessGranted;
   final VoidCallback onOpen;
   final VoidCallback onReinstall;
   final VoidCallback onReset;
@@ -293,6 +301,14 @@ class _Ready extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final storageStatus = !sharedStorageFeatureEnabled
+        ? 'Full build only'
+        : sharedStorageAccessGranted
+        ? '/mnt/android'
+        : 'Permission needed';
+    final storageHint = sharedStorageFeatureEnabled
+        ? 'Grant file access to mount phone storage at /mnt/android.'
+        : 'Phone storage mounting is available in the full build.';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -313,9 +329,11 @@ class _Ready extends StatelessWidget {
           label: 'Disk usage',
           value: _formatBytes(state.diskUsageBytes),
         ),
+        _InfoRow(label: 'Android files', value: storageStatus),
         const SizedBox(height: 16),
         Text(
-          'Update packages from inside the shell with  pacman -Syu .',
+          'Update packages from inside the shell with  pacman -Syu . '
+          '$storageHint',
           style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),

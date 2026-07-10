@@ -40,6 +40,11 @@ class LocalShellController extends ChangeNotifier {
   LocalShellPaths? _paths;
   Future<void>? _probeFuture;
 
+  bool get sharedStorageAccessGranted =>
+      _paths?.sharedStorageAccessGranted ?? false;
+  bool get sharedStorageFeatureEnabled =>
+      _paths?.sharedStorageFeatureEnabled ?? false;
+
   SavedHost localHost() => SavedHost.localShell(id: localShellHostId);
 
   Future<LocalShellPaths> requirePaths() async {
@@ -99,6 +104,9 @@ class LocalShellController extends ChangeNotifier {
       final paths = LocalShellPaths(
         nativeLibraryDir: env.nativeLibraryDir,
         dataDir: env.filesDir,
+        sharedStorageFeatureEnabled: env.sharedStorageFeatureEnabled,
+        sharedStorageDir: env.sharedStorageDir,
+        sharedStorageAccessGranted: env.sharedStorageAccessGranted,
       );
       _paths = paths;
       final store = LocalShellStore(paths);
@@ -168,6 +176,11 @@ class LocalShellController extends ChangeNotifier {
     } catch (error) {
       _dispatch(InstallFailed(_mapError(error)));
     }
+  }
+
+  Future<void> requestSharedStorageAccess() async {
+    await platform.requestSharedStorageAccess();
+    await refresh();
   }
 
   Future<void> reinstall() async {

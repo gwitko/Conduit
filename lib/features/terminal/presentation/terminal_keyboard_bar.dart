@@ -4,6 +4,7 @@ import 'package:conduit/core/presentation/system_navigation_insets.dart';
 import 'package:conduit/core/theme/app_palette.dart';
 import 'package:conduit/core/theme/terminal_appearance.dart';
 import 'package:conduit/features/hosts/domain/saved_host.dart';
+import 'package:conduit/features/snippets/domain/terminal_snippet.dart';
 import 'package:conduit/features/terminal/presentation/terminal_session_controller.dart';
 import 'package:conduit_vt/conduit_vt.dart';
 import 'package:flutter/gestures.dart';
@@ -16,7 +17,8 @@ class TerminalKeyboardBar extends StatelessWidget {
     required this.focusNode,
     required this.palette,
     required this.brightness,
-    required this.items,
+    required this.rows,
+    required this.globalSnippets,
     required this.fullscreen,
     required this.onToggleFullscreen,
     this.composeActive = false,
@@ -32,7 +34,8 @@ class TerminalKeyboardBar extends StatelessWidget {
   final FocusNode focusNode;
   final AppPalette palette;
   final Brightness brightness;
-  final List<TerminalKeyboardItem> items;
+  final List<TerminalKeyboardRow> rows;
+  final List<TerminalSnippet> globalSnippets;
   final bool fullscreen;
   final VoidCallback onToggleFullscreen;
   final bool composeActive;
@@ -60,18 +63,29 @@ class TerminalKeyboardBar extends StatelessWidget {
             bottom: shouldApplyBottomSafeArea(context),
             left: false,
             right: false,
-            child: SizedBox(
-              height: 50,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: EdgeInsets.fromLTRB(
-                  safePadding.left + 8,
-                  7,
-                  safePadding.right + 8,
-                  7,
-                ),
-                children: [for (final item in items) _buildItem(item)],
-              ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final (index, row) in rows.indexed)
+                  SizedBox(
+                    height:
+                        row.height -
+                        (index == 0 ? 0 : 5) -
+                        (index == rows.length - 1 ? 0 : 5),
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      padding: EdgeInsets.fromLTRB(
+                        safePadding.left + 8,
+                        index == 0 ? 7 : 2,
+                        safePadding.right + 8,
+                        index == rows.length - 1 ? 7 : 2,
+                      ),
+                      children: [
+                        for (final item in row.items) _buildItem(item),
+                      ],
+                    ),
+                  ),
+              ],
             ),
           ),
         );
@@ -210,6 +224,14 @@ class TerminalKeyboardBar extends StatelessWidget {
             ),
         ],
       ),
+      TerminalKeyboardAction.snippets => _MenuKey<_SnippetMenuItem>(
+        label: action.label,
+        tooltip: 'Snippets',
+        palette: palette,
+        brightness: brightness,
+        onSelected: _triggerSnippetMenuItem,
+        items: _snippetMenuItems(),
+      ),
       _ => _Key(
         label: action.label,
         palette: palette,
@@ -262,8 +284,78 @@ class TerminalKeyboardBar extends StatelessWidget {
       case TerminalKeyboardAction.tmuxPrefix:
       case TerminalKeyboardAction.tmuxScrollback:
       case TerminalKeyboardAction.tmuxMenu:
+      case TerminalKeyboardAction.snippets:
       case TerminalKeyboardAction.compose:
         break;
+    }
+  }
+
+  List<PopupMenuEntry<_SnippetMenuItem>> _snippetMenuItems() {
+    final entries = <PopupMenuEntry<_SnippetMenuItem>>[];
+    void addSnippetGroup(String label, List<TerminalSnippet> snippets) {
+      final valid = snippets.where((snippet) => snippet.isValid).toList();
+      if (valid.isEmpty) {
+        return;
+      }
+      if (entries.isNotEmpty) {
+        entries.add(const PopupMenuDivider(height: 8));
+      }
+      entries.add(PopupMenuItem(enabled: false, child: Text(label)));
+      for (final snippet in valid) {
+        entries.add(
+          PopupMenuItem(
+            value: _SnippetMenuItem.snippet(snippet),
+            child: _SnippetMenuRow(snippet: snippet),
+          ),
+        );
+      }
+    }
+
+    addSnippetGroup('Host', controller.host.snippets);
+    addSnippetGroup('Global', globalSnippets);
+    if (controller.host.password.isNotEmpty) {
+      if (entries.isNotEmpty) {
+        entries.add(const PopupMenuDivider(height: 8));
+      }
+      entries.add(
+        PopupMenuItem(
+          value: _SnippetMenuItem.password(controller.host.password),
+          child: const _SnippetMenuRow(
+            snippet: TerminalSnippet(
+              id: 'host-password',
+              label: 'Password',
+              text: '',
+              hidden: true,
+              submit: false,
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (entries.isEmpty) {
+      entries.add(
+        const PopupMenuItem(enabled: false, child: Text('No snippets saved')),
+      );
+    }
+    return entries;
+  }
+
+  void _triggerSnippetMenuItem(_SnippetMenuItem item) {
+    switch (item) {
+      case _SnippetMenuSnippet(:final snippet):
+        _sendSnippet(snippet);
+      case _SnippetMenuPassword(:final password):
+        _sendText(password);
+    }
+  }
+
+  void _sendSnippet(TerminalSnippet snippet) {
+    final text = snippet.submit ? '${snippet.text}\r' : snippet.text;
+    if (text.isNotEmpty) {
+      _sendText(text);
+    } else {
+      _focusTerminal();
     }
   }
 
@@ -351,6 +443,63 @@ class TerminalKeyboardBar extends StatelessWidget {
     if (focusNode.canRequestFocus) {
       focusNode.requestFocus();
     }
+  }
+}
+
+sealed class _SnippetMenuItem {
+  const _SnippetMenuItem();
+
+  factory _SnippetMenuItem.snippet(TerminalSnippet snippet) =
+      _SnippetMenuSnippet;
+
+  factory _SnippetMenuItem.password(String password) = _SnippetMenuPassword;
+}
+
+class _SnippetMenuSnippet extends _SnippetMenuItem {
+  const _SnippetMenuSnippet(this.snippet);
+
+  final TerminalSnippet snippet;
+}
+
+class _SnippetMenuPassword extends _SnippetMenuItem {
+  const _SnippetMenuPassword(this.password);
+
+  final String password;
+}
+
+class _SnippetMenuRow extends StatelessWidget {
+  const _SnippetMenuRow({required this.snippet});
+
+  final TerminalSnippet snippet;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Icon(
+          snippet.hidden ? Icons.visibility_off_rounded : Icons.code_rounded,
+          size: 18,
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(snippet.label, maxLines: 1, overflow: TextOverflow.ellipsis),
+              if (!snippet.hidden && snippet.text.isNotEmpty)
+                Text(
+                  snippet.submit ? '${snippet.text} + Enter' : snippet.text,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall,
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }
 

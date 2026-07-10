@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:conduit/core/theme/app_palette.dart';
 import 'package:conduit/core/theme/terminal_appearance.dart';
+import 'package:conduit/features/snippets/domain/terminal_snippet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -11,7 +12,8 @@ class ThemePreferences {
     required this.palette,
     this.terminalFont = TerminalFontOption.atkynsonNerdFont,
     this.terminalFontSize = terminalFontSizeDefault,
-    this.terminalKeyboardItems = defaultTerminalKeyboardItems,
+    this.terminalKeyboardRows = defaultTerminalKeyboardRows,
+    this.terminalSnippets = const [],
     this.showLocalShell = true,
   });
 
@@ -19,7 +21,8 @@ class ThemePreferences {
   final AppPalette palette;
   final TerminalFontOption terminalFont;
   final double terminalFontSize;
-  final List<TerminalKeyboardItem> terminalKeyboardItems;
+  final List<TerminalKeyboardRow> terminalKeyboardRows;
+  final List<TerminalSnippet> terminalSnippets;
   final bool showLocalShell;
 }
 
@@ -32,6 +35,10 @@ class ThemePreferencesRepository {
   static const _terminalFontSizeKey = 'conduit.terminal_font_size.v1';
   static const _terminalKeyboardActionsKey =
       'conduit.terminal_keyboard_actions.v1';
+  static const _terminalKeyboardRowsKey = 'conduit.terminal_keyboard_rows.v1';
+  static const _terminalKeyboardSeenActionsKey =
+      'conduit.terminal_keyboard_seen_actions.v1';
+  static const _terminalSnippetsKey = 'conduit.terminal_snippets.v1';
   static const _showLocalShellKey = 'conduit.show_local_shell.v1';
 
   final FlutterSecureStorage _storage;
@@ -44,10 +51,21 @@ class ThemePreferencesRepository {
     final rawTerminalKeyboardActions = await _storage.read(
       key: _terminalKeyboardActionsKey,
     );
+    final rawTerminalKeyboardRows = await _storage.read(
+      key: _terminalKeyboardRowsKey,
+    );
+    final rawTerminalKeyboardSeenActions = await _storage.read(
+      key: _terminalKeyboardSeenActionsKey,
+    );
+    final rawTerminalSnippets = await _storage.read(key: _terminalSnippetsKey);
     final rawShowLocalShell = await _storage.read(key: _showLocalShellKey);
     final terminalFontSize = double.tryParse(rawTerminalFontSize ?? '');
-    final terminalKeyboardItems = _parseTerminalKeyboardItems(
-      rawTerminalKeyboardActions,
+    final terminalKeyboardRows = _appendUnseenBuiltIns(
+      _parseTerminalKeyboardRows(
+        rawTerminalKeyboardRows,
+        rawTerminalKeyboardActions,
+      ),
+      _parseSeenActionNames(rawTerminalKeyboardSeenActions),
     );
 
     return ThemePreferences(
@@ -66,7 +84,8 @@ class ThemePreferencesRepository {
       terminalFontSize: terminalFontSize == null
           ? terminalFontSizeDefault
           : clampTerminalFontSize(terminalFontSize),
-      terminalKeyboardItems: terminalKeyboardItems,
+      terminalKeyboardRows: terminalKeyboardRows,
+      terminalSnippets: _parseTerminalSnippets(rawTerminalSnippets),
       showLocalShell: rawShowLocalShell == null || rawShowLocalShell == 'true',
     );
   }
@@ -83,15 +102,113 @@ class ThemePreferencesRepository {
       value: preferences.terminalFontSize.toStringAsFixed(1),
     );
     await _storage.write(
-      key: _terminalKeyboardActionsKey,
+      key: _terminalKeyboardRowsKey,
+      value: jsonEncode([
+        for (final row in preferences.terminalKeyboardRows)
+          {
+            'height': row.height,
+            'items': row.items.map(_keyboardItemToJson).toList(),
+          },
+      ]),
+    );
+    await _storage.write(
+      key: _terminalKeyboardSeenActionsKey,
+      value: TerminalKeyboardAction.values
+          .map((action) => action.name)
+          .join(','),
+    );
+    await _storage.write(
+      key: _terminalSnippetsKey,
       value: jsonEncode(
-        preferences.terminalKeyboardItems.map(_keyboardItemToJson).toList(),
+        preferences.terminalSnippets
+            .map((snippet) => snippet.toJson())
+            .toList(),
       ),
     );
     await _storage.write(
       key: _showLocalShellKey,
       value: preferences.showLocalShell.toString(),
     );
+  }
+
+  List<TerminalSnippet> _parseTerminalSnippets(String? raw) {
+    if (raw == null || raw.trim().isEmpty) {
+      return const [];
+    }
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) {
+        return const [];
+      }
+      return decoded
+          .map(TerminalSnippet.fromJson)
+          .whereType<TerminalSnippet>()
+          .toList(growable: false);
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  List<TerminalKeyboardRow> _parseTerminalKeyboardRows(
+    String? rawRows,
+    String? rawLegacyItems,
+  ) {
+    if (rawRows == null || rawRows.trim().isEmpty) {
+      return [
+        TerminalKeyboardRow(items: _parseTerminalKeyboardItems(rawLegacyItems)),
+      ];
+    }
+    try {
+      final decoded = jsonDecode(rawRows);
+      if (decoded is! List) {
+        return defaultTerminalKeyboardRows;
+      }
+      final rows = <TerminalKeyboardRow>[];
+      for (final rawRow in decoded) {
+        if (rawRow is! Map) {
+          continue;
+        }
+        final rawItems = rawRow['items'];
+        if (rawItems is! List) {
+          continue;
+        }
+        final seenBuiltIns = <TerminalKeyboardAction>{};
+        final items = <TerminalKeyboardItem>[];
+        for (final rawItem in rawItems) {
+          if (rawItem is! Map) {
+            continue;
+          }
+          final item = _keyboardItemFromJson(
+            Map<String, Object?>.from(rawItem),
+          );
+          if (item == null) {
+            continue;
+          }
+          final action = item.action;
+          if (item.kind == TerminalKeyboardItemKind.builtIn &&
+              action != null &&
+              !seenBuiltIns.add(action)) {
+            continue;
+          }
+          items.add(item);
+        }
+        if (items.isEmpty) {
+          continue;
+        }
+        final rawHeight = rawRow['height'];
+        rows.add(
+          TerminalKeyboardRow(
+            items: items,
+            height: rawHeight is num
+                ? clampTerminalKeyboardRowHeight(rawHeight.toDouble())
+                : terminalKeyboardRowHeightDefault,
+          ),
+        );
+      }
+      return rows.isEmpty ? defaultTerminalKeyboardRows : rows;
+    } catch (_) {
+      return defaultTerminalKeyboardRows;
+    }
   }
 
   List<TerminalKeyboardItem> _parseTerminalKeyboardItems(String? raw) {
@@ -152,6 +269,44 @@ class ThemePreferencesRepository {
       return defaultTerminalKeyboardItems;
     }
     return [for (final action in actions) TerminalKeyboardItem.builtIn(action)];
+  }
+
+  Set<String> _parseSeenActionNames(String? raw) {
+    if (raw == null || raw.trim().isEmpty) {
+      return preTrackingTerminalKeyboardActionNames;
+    }
+    return raw.split(',').map((name) => name.trim()).toSet();
+  }
+
+  List<TerminalKeyboardRow> _appendUnseenBuiltIns(
+    List<TerminalKeyboardRow> rows,
+    Set<String> seenActionNames,
+  ) {
+    final present = <TerminalKeyboardAction>{
+      for (final row in rows)
+        for (final item in row.items)
+          if (item.action != null) item.action!,
+    };
+    final unseen = TerminalKeyboardAction.values
+        .where(
+          (action) =>
+              !seenActionNames.contains(action.name) &&
+              !present.contains(action),
+        )
+        .toList(growable: false);
+    if (unseen.isEmpty || rows.isEmpty) {
+      return rows;
+    }
+    final first = rows.first;
+    return [
+      first.copyWith(
+        items: [
+          ...first.items,
+          for (final action in unseen) TerminalKeyboardItem.builtIn(action),
+        ],
+      ),
+      ...rows.skip(1),
+    ];
   }
 
   Map<String, Object?> _keyboardItemToJson(TerminalKeyboardItem item) {
