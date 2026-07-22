@@ -3,9 +3,11 @@ import 'package:conduit/core/presentation/system_navigation_insets.dart';
 import 'package:conduit/core/theme/theme_controller.dart';
 import 'package:conduit/features/hosts/domain/saved_host.dart';
 import 'package:conduit/features/sftp/domain/file_export.dart';
+import 'package:conduit/features/sftp/domain/remote_file_kind.dart';
 import 'package:conduit/features/sftp/domain/sftp_bookmarks_repository.dart';
 import 'package:conduit/features/sftp/domain/sftp_entry.dart';
 import 'package:conduit/features/sftp/domain/sftp_repository.dart';
+import 'package:conduit/features/sftp/presentation/file_viewer/sftp_file_viewer_page.dart';
 import 'package:conduit/features/sftp/presentation/sftp_bookmarks_controller.dart';
 import 'package:conduit/features/sftp/presentation/sftp_browser_controller.dart';
 import 'package:conduit/features/sftp/presentation/widgets/actions_fab.dart';
@@ -223,11 +225,32 @@ class _SftpBrowserPageState extends State<SftpBrowserPage> {
       }
       return;
     }
-    await _showEntrySheet(entry);
+    await _openViewer(entry);
+  }
+
+  Future<void> _openViewer(SftpEntry entry) async {
+    final size = entry.size;
+    if (size != null && size > remoteFileViewerMaxBytes) {
+      await _showEntrySheet(entry);
+      return;
+    }
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => SftpFileViewerPage(
+          path: entry.path,
+          themeController: widget.themeController,
+          read: (onProgress) =>
+              _controller.readFile(entry.path, onProgress: onProgress),
+          write: (bytes) => _controller.writeFile(entry.path, bytes),
+        ),
+      ),
+    );
   }
 
   Future<void> _onEntryAction(EntryAction action, SftpEntry entry) async {
     switch (action) {
+      case EntryAction.open:
+        await _openViewer(entry);
       case EntryAction.download:
         await _download(entry);
       case EntryAction.rename:
@@ -249,6 +272,12 @@ class _SftpBrowserPageState extends State<SftpBrowserPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (!entry.isDirectory)
+              ListTile(
+                leading: const Icon(Icons.open_in_new_rounded),
+                title: const Text('Open'),
+                onTap: () => Navigator.of(context).pop(EntryAction.open),
+              ),
             ListTile(
               leading: const Icon(Icons.download_rounded),
               title: Text(entry.isDirectory ? 'Download as tar' : 'Download'),

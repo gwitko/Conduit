@@ -1,7 +1,7 @@
 import 'package:conduit/features/sftp/domain/sftp_entry.dart';
 import 'package:flutter/material.dart';
 
-enum EntryAction { download, rename, delete, copyPath }
+enum EntryAction { open, download, rename, delete, copyPath }
 
 class EntryTile extends StatelessWidget {
   const EntryTile({
@@ -131,6 +131,16 @@ class _EntryActionsButton extends StatelessWidget {
         ),
         onSelected: onAction,
         itemBuilder: (context) => [
+          if (!entry.isDirectory)
+            const PopupMenuItem(
+              value: EntryAction.open,
+              child: ListTile(
+                leading: Icon(Icons.open_in_new_rounded),
+                title: Text('Open'),
+                contentPadding: EdgeInsets.zero,
+                minLeadingWidth: 24,
+              ),
+            ),
           PopupMenuItem(
             value: EntryAction.download,
             child: ListTile(

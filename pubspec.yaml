@@ -37,6 +37,10 @@ dependencies:
   file_picker: ^11.0.2
   fido2: ^1.1.0
   flutter_nfc_kit: ^3.6.2
+  re_editor: ^0.10.0
+  re_highlight: ^0.0.3
+  pdfrx: ^2.4.7
+  webview_flutter: ^4.14.1
 
 dev_dependencies:
   flutter_test:

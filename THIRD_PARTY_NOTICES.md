@@ -70,3 +70,14 @@ rewrite of three `DT_NEEDED`/`SONAME` strings
 `liblzma.so.5` -> `liblzma.so`)
 so the libraries resolve under Android's `lib*.so`-only extraction. See the
 source-offer index for the exact transformation and verification command.
+
+## PDFium
+
+Conduit's PDF viewer uses the [`pdfrx`](https://github.com/espresso3389/pdfrx)
+Flutter package, whose build downloads and bundles a prebuilt
+[PDFium](https://pdfium.googlesource.com/pdfium/) binary (`libpdfium.so` /
+`Pdfium.framework`) from
+[bblanchon/pdfium-binaries](https://github.com/bblanchon/pdfium-binaries).
+PDFium is licensed under Apache-2.0 and BSD-3-Clause-style terms; its license
+text is included with the binary release and surfaced, together with all Dart
+package licenses, in the app's in-app license registry.

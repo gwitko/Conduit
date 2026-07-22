@@ -370,6 +370,27 @@ class SftpBrowserController extends ChangeNotifier {
     }
   }
 
+  /// Reads a file for the in-app viewer; progress is reported to the caller
+  /// instead of the browser's transfer bar.
+  Future<Uint8List> readFile(
+    String path, {
+    void Function(int bytesRead, int? total)? onProgress,
+  }) {
+    final session = _session;
+    if (session == null) {
+      throw const AppFailure('Not connected.');
+    }
+    return session.read(path, onProgress: onProgress);
+  }
+
+  Future<void> writeFile(String path, Uint8List bytes) async {
+    final session = _session;
+    if (session == null) {
+      throw const AppFailure('Not connected.');
+    }
+    await session.write(path, Stream.value(bytes), bytes.length);
+  }
+
   Future<void> _mutate(Future<void> Function() action) async {
     if (_session == null || _busy) {
       return;
