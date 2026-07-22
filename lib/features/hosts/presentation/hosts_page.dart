@@ -443,6 +443,7 @@ class _HostsPageState extends State<HostsPage> {
         builder: (_) => TerminalPage(
           workspace: widget.workspaceController,
           themeController: widget.themeController,
+          sftpRepository: widget.sftpRepository,
         ),
       ),
     );

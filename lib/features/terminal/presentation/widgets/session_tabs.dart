@@ -1,4 +1,5 @@
 import 'package:conduit/core/theme/app_palette.dart';
+import 'package:conduit/features/terminal/presentation/terminal_file_tabs_controller.dart';
 import 'package:conduit/features/terminal/presentation/terminal_session_controller.dart';
 import 'package:conduit/features/terminal/presentation/terminal_workspace_controller.dart';
 import 'package:flutter/material.dart';
@@ -10,17 +11,26 @@ class SessionTabs extends StatelessWidget {
     required this.palette,
     required this.brightness,
     required this.onChanged,
+    required this.fileTabs,
+    required this.activeFileTab,
+    required this.onFileTabSelected,
+    required this.onFileTabClosed,
     super.key,
   });
 
   final TerminalWorkspaceController workspace;
-  final TerminalSessionController activeSession;
+  final TerminalSessionController? activeSession;
   final AppPalette palette;
   final Brightness brightness;
   final VoidCallback onChanged;
+  final List<TerminalFileTab> fileTabs;
+  final TerminalFileTab? activeFileTab;
+  final ValueChanged<TerminalFileTab> onFileTabSelected;
+  final ValueChanged<TerminalFileTab> onFileTabClosed;
 
   @override
   Widget build(BuildContext context) {
+    final tabCount = workspace.sessions.length + fileTabs.length;
     return Container(
       height: 38,
       decoration: BoxDecoration(
@@ -32,11 +42,22 @@ class SessionTabs extends StatelessWidget {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        itemCount: workspace.sessions.length,
+        itemCount: tabCount,
         separatorBuilder: (context, index) => const SizedBox(width: 4),
         itemBuilder: (context, index) {
+          if (index >= workspace.sessions.length) {
+            final tab = fileTabs[index - workspace.sessions.length];
+            return _FileTab(
+              tab: tab,
+              selected: tab == activeFileTab,
+              palette: palette,
+              brightness: brightness,
+              onTap: () => onFileTabSelected(tab),
+              onClose: () => onFileTabClosed(tab),
+            );
+          }
           final session = workspace.sessions[index];
-          final selected = session == activeSession;
+          final selected = activeFileTab == null && session == activeSession;
           return _SessionTab(
             session: session,
             selected: selected,
@@ -50,12 +71,98 @@ class SessionTabs extends StatelessWidget {
               await workspace.close(session);
               onChanged();
               if (!context.mounted) return;
-              if (!workspace.hasSessions) {
+              if (!workspace.hasSessions && fileTabs.isEmpty) {
                 Navigator.of(context).pop();
               }
             },
           );
         },
+      ),
+    );
+  }
+}
+
+class _FileTab extends StatelessWidget {
+  const _FileTab({
+    required this.tab,
+    required this.selected,
+    required this.palette,
+    required this.brightness,
+    required this.onTap,
+    required this.onClose,
+  });
+
+  final TerminalFileTab tab;
+  final bool selected;
+  final AppPalette palette;
+  final Brightness brightness;
+  final VoidCallback onTap;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = palette.accent;
+    final background = selected
+        ? Color.alphaBlend(
+            accent.withValues(alpha: 0.14),
+            palette.panelFor(brightness),
+          )
+        : palette.panelFor(brightness);
+    final border = selected
+        ? accent.withValues(alpha: 0.55)
+        : palette.hairlineFor(brightness);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 140),
+          width: 170,
+          decoration: BoxDecoration(
+            color: background,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: border),
+          ),
+          padding: const EdgeInsets.only(left: 10),
+          child: Row(
+            children: [
+              Icon(
+                Icons.description_rounded,
+                size: 13,
+                color: selected
+                    ? accent
+                    : palette.mutedForegroundFor(brightness),
+              ),
+              const SizedBox(width: 7),
+              Expanded(
+                child: Text(
+                  tab.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: palette.foregroundFor(brightness),
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 26,
+                height: 26,
+                child: IconButton(
+                  tooltip: 'Close',
+                  iconSize: 14,
+                  padding: EdgeInsets.zero,
+                  color: palette.mutedForegroundFor(brightness),
+                  onPressed: onClose,
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -5,9 +5,12 @@ import 'package:conduit/core/presentation/system_navigation_insets.dart';
 import 'package:conduit/core/theme/app_palette.dart';
 import 'package:conduit/core/theme/terminal_appearance.dart';
 import 'package:conduit/core/theme/theme_controller.dart';
+import 'package:conduit/features/sftp/domain/sftp_repository.dart';
+import 'package:conduit/features/sftp/presentation/file_viewer/sftp_file_viewer.dart';
 import 'package:conduit/features/terminal/domain/security_key_interaction.dart';
 import 'package:conduit/features/terminal/presentation/security_key_picker_dialog.dart';
 import 'package:conduit/features/terminal/presentation/security_key_pin_dialog.dart';
+import 'package:conduit/features/terminal/presentation/terminal_file_tabs_controller.dart';
 import 'package:conduit/features/terminal/presentation/terminal_keyboard_bar.dart';
 import 'package:conduit/features/terminal/presentation/terminal_session_controller.dart';
 import 'package:conduit/features/terminal/presentation/terminal_workspace_controller.dart';
@@ -24,11 +27,13 @@ class TerminalPage extends StatefulWidget {
   const TerminalPage({
     required this.workspace,
     required this.themeController,
+    required this.sftpRepository,
     super.key,
   });
 
   final TerminalWorkspaceController workspace;
   final ThemeController themeController;
+  final SftpRepository sftpRepository;
 
   @override
   State<TerminalPage> createState() => _TerminalPageState();
@@ -36,6 +41,7 @@ class TerminalPage extends StatefulWidget {
 
 class _TerminalPageState extends State<TerminalPage> {
   final _focusNode = FocusNode();
+  late final TerminalFileTabsController _fileTabs;
   TerminalSessionController? _focusedSession;
   bool _fullscreen = false;
   bool _tmuxScrollMode = false;
@@ -50,6 +56,7 @@ class _TerminalPageState extends State<TerminalPage> {
   @override
   void initState() {
     super.initState();
+    _fileTabs = TerminalFileTabsController(widget.sftpRepository);
     unawaited(WakelockPlus.enable());
     SecurityKeyInteraction.instance.registerPinPrompt(_promptSecurityKeyPin);
     SecurityKeyInteraction.instance.registerSelectionPrompt(
@@ -72,6 +79,7 @@ class _TerminalPageState extends State<TerminalPage> {
     );
     widget.workspace.removeListener(_handleWorkspaceChanged);
     _focusNode.dispose();
+    _fileTabs.dispose();
     super.dispose();
   }
 
@@ -95,12 +103,60 @@ class _TerminalPageState extends State<TerminalPage> {
     final active = widget.workspace.activeSession;
     if (active == null || active == _focusedSession) return;
     _focusedSession = active;
+    _fileTabs.activate(null);
     if (_tmuxScrollMode) {
       setState(() => _tmuxScrollMode = false);
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _focusNode.requestFocus();
     });
+  }
+
+  void _showTerminal() {
+    _fileTabs.activate(null);
+    _focusNode.requestFocus();
+  }
+
+  void _handlePathTap(TerminalSessionController session, String path) {
+    if (session.host.isLocal) {
+      return;
+    }
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(path, maxLines: 1, overflow: TextOverflow.ellipsis),
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: 'Open',
+            onPressed: () => _fileTabs.open(session.host, path),
+          ),
+        ),
+      );
+  }
+
+  Future<void> _closeFileTab(TerminalFileTab tab) async {
+    if (tab.viewerKey.currentState?.isDirty ?? false) {
+      final discard = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Discard changes?'),
+          content: Text('Unsaved edits to ${tab.title} will be lost.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Keep editing'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Discard'),
+            ),
+          ],
+        ),
+      );
+      if (discard != true) return;
+    }
+    _fileTabs.close(tab);
   }
 
   void _toggleFullscreen() {
@@ -122,11 +178,13 @@ class _TerminalPageState extends State<TerminalPage> {
         final palette = widget.themeController.palette;
         return Scaffold(
           body: ListenableBuilder(
-            listenable: widget.workspace,
+            listenable: Listenable.merge([widget.workspace, _fileTabs]),
             builder: (context, _) {
               final activeSession = widget.workspace.activeSession;
+              final fileTabs = _fileTabs.tabs;
+              final activeFileTab = _fileTabs.active;
               final brightness = Theme.of(context).brightness;
-              if (activeSession == null) {
+              if (activeSession == null && fileTabs.isEmpty) {
                 return ConduitBackdrop(
                   palette: palette,
                   child: SafeArea(
@@ -149,71 +207,107 @@ class _TerminalPageState extends State<TerminalPage> {
                 child: Column(
                   children: [
                     if (!_fullscreen) ...[
-                      TerminalHeader(
-                        session: activeSession,
-                        palette: palette,
-                        brightness: brightness,
-                        onBack: () => Navigator.of(context).pop(),
-                        onReconnect: () async {
-                          await activeSession.disconnect();
-                          await activeSession.connect();
-                          _focusNode.requestFocus();
-                        },
-                      ),
+                      if (activeSession != null)
+                        TerminalHeader(
+                          session: activeSession,
+                          palette: palette,
+                          brightness: brightness,
+                          onBack: () => Navigator.of(context).pop(),
+                          onReconnect: () async {
+                            await activeSession.disconnect();
+                            await activeSession.connect();
+                            _focusNode.requestFocus();
+                          },
+                        ),
                       SessionTabs(
                         workspace: widget.workspace,
                         activeSession: activeSession,
                         palette: palette,
                         brightness: brightness,
-                        onChanged: _focusNode.requestFocus,
+                        onChanged: _showTerminal,
+                        fileTabs: fileTabs,
+                        activeFileTab: activeFileTab,
+                        onFileTabSelected: _fileTabs.activate,
+                        onFileTabClosed: _closeFileTab,
                       ),
                     ],
                     Expanded(
                       child: Container(
                         color: palette.terminalBackgroundFor(brightness),
-                        child: IndexedStack(
-                          index: widget.workspace.sessions.indexOf(
-                            activeSession,
-                          ),
-                          children: [
-                            for (final session in widget.workspace.sessions)
-                              TerminalSurface(
-                                key: ValueKey(session.host.id),
-                                session: session,
-                                palette: palette,
-                                brightness: brightness,
-                                fontFamily: widget
-                                    .themeController
-                                    .terminalFont
-                                    .fontFamily,
-                                fontSize:
-                                    widget.themeController.terminalFontSize,
-                                onFontSizeChanged: (fontSize) {
-                                  unawaited(
-                                    widget.themeController.setTerminalFontSize(
-                                      fontSize,
+                        child: activeFileTab == null && activeSession == null
+                            ? EmptyTerminalState(
+                                onBack: () => Navigator.of(context).pop(),
+                              )
+                            : IndexedStack(
+                                index: activeFileTab != null
+                                    ? widget.workspace.sessions.length +
+                                          fileTabs.indexOf(activeFileTab)
+                                    : widget.workspace.sessions.indexOf(
+                                        activeSession!,
+                                      ),
+                                children: [
+                                  for (final session
+                                      in widget.workspace.sessions)
+                                    TerminalSurface(
+                                      key: ValueKey(session.host.id),
+                                      session: session,
+                                      palette: palette,
+                                      brightness: brightness,
+                                      fontFamily: widget
+                                          .themeController
+                                          .terminalFont
+                                          .fontFamily,
+                                      fontSize: widget
+                                          .themeController
+                                          .terminalFontSize,
+                                      onFontSizeChanged: (fontSize) {
+                                        unawaited(
+                                          widget.themeController
+                                              .setTerminalFontSize(fontSize),
+                                        );
+                                      },
+                                      predictiveEchoEnabled:
+                                          session.host.predictiveEchoEnabled,
+                                      terminalMouseInput: widget
+                                          .themeController
+                                          .terminalMouseInput,
+                                      focusNode:
+                                          session == activeSession &&
+                                              activeFileTab == null
+                                          ? _focusNode
+                                          : null,
+                                      tmuxScrollMode:
+                                          session == activeSession &&
+                                          _tmuxScrollMode,
+                                      onExitTmuxScrollMode: () {
+                                        setState(() => _tmuxScrollMode = false);
+                                        _focusNode.requestFocus();
+                                      },
+                                      onPathTap: (path) =>
+                                          _handlePathTap(session, path),
                                     ),
-                                  );
-                                },
-                                predictiveEchoEnabled:
-                                    session.host.predictiveEchoEnabled,
-                                terminalMouseInput:
-                                    widget.themeController.terminalMouseInput,
-                                focusNode: session == activeSession
-                                    ? _focusNode
-                                    : null,
-                                tmuxScrollMode:
-                                    session == activeSession && _tmuxScrollMode,
-                                onExitTmuxScrollMode: () {
-                                  setState(() => _tmuxScrollMode = false);
-                                  _focusNode.requestFocus();
-                                },
+                                  for (final tab in fileTabs)
+                                    SftpFileViewer(
+                                      key: tab.viewerKey,
+                                      path: tab.path,
+                                      palette: palette,
+                                      brightness: brightness,
+                                      fontFamily: widget
+                                          .themeController
+                                          .terminalFont
+                                          .fontFamily,
+                                      read: (onProgress) =>
+                                          _fileTabs.read(tab, onProgress),
+                                      write: (bytes) =>
+                                          _fileTabs.write(tab, bytes),
+                                    ),
+                                ],
                               ),
-                          ],
-                        ),
                       ),
                     ),
-                    if (_composeMode)
+                    if (activeFileTab != null || activeSession == null)
+                      const SizedBox.shrink()
+                    else if (_composeMode)
                       _ComposeInputBar(
                         palette: palette,
                         brightness: brightness,
