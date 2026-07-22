@@ -224,6 +224,26 @@ class TerminalKeyboardBar extends StatelessWidget {
             ),
         ],
       ),
+      TerminalKeyboardAction.herdrMenu => _MenuKey<_HerdrAction>(
+        label: 'Herdr',
+        tooltip: 'Herdr actions',
+        palette: palette,
+        brightness: brightness,
+        onSelected: _triggerHerdrAction,
+        items: [
+          for (final action in _HerdrAction.values)
+            PopupMenuItem(
+              value: action,
+              child: Row(
+                children: [
+                  Icon(action.icon, size: 18),
+                  const SizedBox(width: 10),
+                  Text(action.label),
+                ],
+              ),
+            ),
+        ],
+      ),
       TerminalKeyboardAction.snippets => _MenuKey<_SnippetMenuItem>(
         label: action.label,
         tooltip: 'Snippets',
@@ -284,6 +304,7 @@ class TerminalKeyboardBar extends StatelessWidget {
       case TerminalKeyboardAction.tmuxPrefix:
       case TerminalKeyboardAction.tmuxScrollback:
       case TerminalKeyboardAction.tmuxMenu:
+      case TerminalKeyboardAction.herdrMenu:
       case TerminalKeyboardAction.snippets:
       case TerminalKeyboardAction.compose:
         break;
@@ -367,6 +388,16 @@ class TerminalKeyboardBar extends StatelessWidget {
     } else if (action.text != null) {
       controller.sendText(action.text!);
     }
+    if (action.entersScrollMode) {
+      onEnterTmuxScrollMode();
+    }
+    _focusTerminal();
+  }
+
+  void _triggerHerdrAction(_HerdrAction action) {
+    // Herdr's default prefix is ctrl+b regardless of the host's tmux prefix.
+    controller.sendControl(TerminalKey.keyB);
+    controller.sendText(action.text);
     if (action.entersScrollMode) {
       onEnterTmuxScrollMode();
     }
@@ -560,6 +591,46 @@ enum _TmuxAction {
   final IconData icon;
   final String? text;
   final TerminalKey? key;
+  final bool entersScrollMode;
+}
+
+/// Herdr's documented default bindings (prefix ctrl+b), from
+/// https://herdr.dev/docs/keyboard/ — uppercase text means shift+key.
+enum _HerdrAction {
+  newTab('New tab', Icons.add_box_rounded, 'c'),
+  previousTab('Previous tab', Icons.skip_previous_rounded, 'p'),
+  nextTab('Next tab', Icons.skip_next_rounded, 'n'),
+  renameTab('Rename tab', Icons.drive_file_rename_outline_rounded, 'T'),
+  closeTab('Close tab', Icons.disabled_by_default_rounded, 'X'),
+  splitRight('Split right', Icons.vertical_split_rounded, 'v'),
+  splitDown('Split down', Icons.splitscreen_rounded, '-'),
+  paneLeft('Pane left', Icons.keyboard_arrow_left_rounded, 'h'),
+  paneDown('Pane down', Icons.keyboard_arrow_down_rounded, 'j'),
+  paneUp('Pane up', Icons.keyboard_arrow_up_rounded, 'k'),
+  paneRight('Pane right', Icons.keyboard_arrow_right_rounded, 'l'),
+  zoomPane('Zoom pane', Icons.zoom_out_map_rounded, 'z'),
+  resizeMode('Resize mode', Icons.open_in_full_rounded, 'r'),
+  closePane('Close pane', Icons.close_fullscreen_rounded, 'x'),
+  copyMode('Scrollback', Icons.swap_vert_rounded, '[', entersScrollMode: true),
+  newWorkspace('New workspace', Icons.create_new_folder_rounded, 'N'),
+  workspacePicker('Workspaces', Icons.view_list_rounded, 'w'),
+  renameWorkspace('Rename workspace', Icons.edit_note_rounded, 'W'),
+  closeWorkspace('Close workspace', Icons.folder_delete_rounded, 'D'),
+  gotoPicker('Goto picker', Icons.explore_rounded, 'g'),
+  toggleSidebar('Toggle sidebar', Icons.view_sidebar_rounded, 'b'),
+  help('Help', Icons.help_outline_rounded, '?'),
+  detach('Detach', Icons.logout_rounded, 'q');
+
+  const _HerdrAction(
+    this.label,
+    this.icon,
+    this.text, {
+    this.entersScrollMode = false,
+  });
+
+  final String label;
+  final IconData icon;
+  final String text;
   final bool entersScrollMode;
 }
 

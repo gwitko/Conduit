@@ -30,6 +30,7 @@ void main() {
             TerminalKeyboardAction.escape,
             TerminalKeyboardAction.control,
             TerminalKeyboardAction.arrowDown,
+            TerminalKeyboardAction.herdrMenu,
             TerminalKeyboardAction.snippets,
           ],
         );
@@ -50,6 +51,7 @@ void main() {
         const TerminalKeyboardRow(
           items: [
             TerminalKeyboardItem.builtIn(TerminalKeyboardAction.escape),
+            TerminalKeyboardItem.builtIn(TerminalKeyboardAction.herdrMenu),
             TerminalKeyboardItem.builtIn(TerminalKeyboardAction.snippets),
           ],
         ),
