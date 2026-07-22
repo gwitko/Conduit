@@ -8,6 +8,7 @@ import 'package:conduit/features/app_lock/domain/app_authenticator.dart';
 import 'package:conduit/features/hosts/domain/saved_host.dart';
 import 'package:conduit/features/hosts/domain/saved_hosts_repository.dart';
 import 'package:conduit/features/sftp/domain/file_export.dart';
+import 'package:conduit/features/sftp/domain/sftp_bookmarks_repository.dart';
 import 'package:conduit/features/sftp/domain/sftp_entry.dart';
 import 'package:conduit/features/sftp/domain/sftp_repository.dart';
 import 'package:conduit/features/sftp/domain/sftp_session.dart';
@@ -424,6 +425,22 @@ class NoopVerifier implements HostKeyVerifier {
     required String type,
     required String fingerprint,
   }) async => false;
+}
+
+class InMemorySftpBookmarks implements SftpBookmarksRepository {
+  final Map<String, List<String>> stored = {};
+
+  @override
+  Future<List<String>> load(String hostId) async => stored[hostId] ?? const [];
+
+  @override
+  Future<void> save(String hostId, List<String> paths) async {
+    if (paths.isEmpty) {
+      stored.remove(hostId);
+    } else {
+      stored[hostId] = List.of(paths);
+    }
+  }
 }
 
 class NoNetworkSftpRepository implements SftpRepository {

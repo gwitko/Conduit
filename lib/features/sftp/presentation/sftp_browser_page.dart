@@ -3,8 +3,10 @@ import 'package:conduit/core/presentation/system_navigation_insets.dart';
 import 'package:conduit/core/theme/theme_controller.dart';
 import 'package:conduit/features/hosts/domain/saved_host.dart';
 import 'package:conduit/features/sftp/domain/file_export.dart';
+import 'package:conduit/features/sftp/domain/sftp_bookmarks_repository.dart';
 import 'package:conduit/features/sftp/domain/sftp_entry.dart';
 import 'package:conduit/features/sftp/domain/sftp_repository.dart';
+import 'package:conduit/features/sftp/presentation/sftp_bookmarks_controller.dart';
 import 'package:conduit/features/sftp/presentation/sftp_browser_controller.dart';
 import 'package:conduit/features/sftp/presentation/widgets/actions_fab.dart';
 import 'package:conduit/features/sftp/presentation/widgets/center_message.dart';
@@ -24,6 +26,7 @@ class SftpBrowserPage extends StatefulWidget {
     required this.repository,
     required this.fileExport,
     required this.themeController,
+    required this.bookmarksRepository,
     super.key,
   });
 
@@ -31,6 +34,7 @@ class SftpBrowserPage extends StatefulWidget {
   final SftpRepository repository;
   final FileExport fileExport;
   final ThemeController themeController;
+  final SftpBookmarksRepository bookmarksRepository;
 
   @override
   State<SftpBrowserPage> createState() => _SftpBrowserPageState();
@@ -38,6 +42,7 @@ class SftpBrowserPage extends StatefulWidget {
 
 class _SftpBrowserPageState extends State<SftpBrowserPage> {
   late final SftpBrowserController _controller;
+  late final SftpBookmarksController _bookmarks;
   final _searchController = TextEditingController();
 
   @override
@@ -52,7 +57,12 @@ class _SftpBrowserPageState extends State<SftpBrowserPage> {
       repository: widget.repository,
       fileExport: widget.fileExport,
     );
+    _bookmarks = SftpBookmarksController(
+      hostId: widget.host.id,
+      repository: widget.bookmarksRepository,
+    );
     _controller.connect();
+    _bookmarks.load();
   }
 
   @override
@@ -63,6 +73,7 @@ class _SftpBrowserPageState extends State<SftpBrowserPage> {
     );
     _searchController.dispose();
     _controller.dispose();
+    _bookmarks.dispose();
     super.dispose();
   }
 
@@ -86,7 +97,7 @@ class _SftpBrowserPageState extends State<SftpBrowserPage> {
   Widget build(BuildContext context) {
     final palette = widget.themeController.palette;
     return ListenableBuilder(
-      listenable: _controller,
+      listenable: Listenable.merge([_controller, _bookmarks]),
       builder: (context, _) {
         return Scaffold(
           body: ConduitBackdrop(
@@ -114,6 +125,13 @@ class _SftpBrowserPageState extends State<SftpBrowserPage> {
                     onRefresh: _controller.status == SftpBrowserStatus.ready
                         ? _controller.refresh
                         : null,
+                    bookmarks: _bookmarks.bookmarks,
+                    isBookmarked: _bookmarks.contains(_controller.path),
+                    onToggleBookmark:
+                        _controller.status == SftpBrowserStatus.ready
+                        ? () => _bookmarks.toggle(_controller.path)
+                        : null,
+                    onOpenBookmark: _navigateToPath,
                   ),
                   Expanded(child: _buildBody(context)),
                   if (_controller.transfer != null)

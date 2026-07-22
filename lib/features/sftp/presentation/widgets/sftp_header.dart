@@ -19,6 +19,10 @@ class SftpHeader extends StatelessWidget {
     required this.onClearSearch,
     required this.onSortChanged,
     required this.onRefresh,
+    required this.bookmarks,
+    required this.isBookmarked,
+    required this.onToggleBookmark,
+    required this.onOpenBookmark,
     super.key,
   });
 
@@ -38,6 +42,10 @@ class SftpHeader extends StatelessWidget {
   final VoidCallback onClearSearch;
   final ValueChanged<SftpSortMode> onSortChanged;
   final VoidCallback? onRefresh;
+  final List<String> bookmarks;
+  final bool isBookmarked;
+  final VoidCallback? onToggleBookmark;
+  final ValueChanged<String> onOpenBookmark;
 
   @override
   Widget build(BuildContext context) {
@@ -82,11 +90,66 @@ class SftpHeader extends StatelessWidget {
                   ],
                 ),
               ),
+              PopupMenuButton<String>(
+                tooltip: 'Bookmarked folders',
+                icon: const Icon(Icons.bookmarks_rounded, size: 20),
+                onSelected: onOpenBookmark,
+                itemBuilder: (context) => bookmarks.isEmpty
+                    ? const [
+                        PopupMenuItem(
+                          enabled: false,
+                          child: Text('No bookmarks yet'),
+                        ),
+                      ]
+                    : [
+                        for (final bookmark in bookmarks)
+                          PopupMenuItem(
+                            value: bookmark,
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.folder_special_rounded,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    bookmark,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+              ),
               busyIndicator,
             ],
           ),
           const SizedBox(height: 10),
-          _Breadcrumb(path: path, onSegmentTap: onSegmentTap),
+          Row(
+            children: [
+              Expanded(
+                child: _Breadcrumb(path: path, onSegmentTap: onSegmentTap),
+              ),
+              const SizedBox(width: 4),
+              IconButton(
+                tooltip: isBookmarked
+                    ? 'Remove bookmark'
+                    : 'Bookmark this folder',
+                visualDensity: VisualDensity.compact,
+                icon: Icon(
+                  isBookmarked ? Icons.star_rounded : Icons.star_border_rounded,
+                  size: 22,
+                  color: isBookmarked
+                      ? Theme.of(context).colorScheme.primary
+                      : null,
+                ),
+                onPressed: onToggleBookmark,
+              ),
+            ],
+          ),
           const SizedBox(height: 12),
           _FileToolbar(
             controller: searchController,
