@@ -1078,6 +1078,7 @@ IconData _keyboardActionIcon(TerminalKeyboardAction action) {
     TerminalKeyboardAction.tmuxMenu => Icons.view_quilt_rounded,
     TerminalKeyboardAction.snippets => Icons.snippet_folder_rounded,
     TerminalKeyboardAction.compose => Icons.edit_note_rounded,
+    TerminalKeyboardAction.upload => Icons.upload_file_rounded,
   };
 }
 

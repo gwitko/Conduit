@@ -23,6 +23,7 @@ class TerminalKeyboardBar extends StatelessWidget {
     required this.onToggleFullscreen,
     this.composeActive = false,
     this.onToggleCompose,
+    this.onUpload,
     required this.onEnterTmuxScrollMode,
     required this.onExitTmuxScrollMode,
     required this.tmuxPrefixKey,
@@ -40,6 +41,9 @@ class TerminalKeyboardBar extends StatelessWidget {
   final VoidCallback onToggleFullscreen;
   final bool composeActive;
   final VoidCallback? onToggleCompose;
+
+  /// Starts the phone-file upload flow for the active session.
+  final VoidCallback? onUpload;
   final VoidCallback onEnterTmuxScrollMode;
   final VoidCallback onExitTmuxScrollMode;
   final TmuxPrefixKey tmuxPrefixKey;
@@ -232,6 +236,12 @@ class TerminalKeyboardBar extends StatelessWidget {
         onSelected: _triggerSnippetMenuItem,
         items: _snippetMenuItems(),
       ),
+      TerminalKeyboardAction.upload => _Key(
+        icon: Icons.upload_file_rounded,
+        palette: palette,
+        brightness: brightness,
+        onPressed: onUpload == null ? null : () => onUpload!(),
+      ),
       _ => _Key(
         label: action.label,
         palette: palette,
@@ -286,6 +296,7 @@ class TerminalKeyboardBar extends StatelessWidget {
       case TerminalKeyboardAction.tmuxMenu:
       case TerminalKeyboardAction.snippets:
       case TerminalKeyboardAction.compose:
+      case TerminalKeyboardAction.upload:
         break;
     }
   }

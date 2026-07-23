@@ -44,6 +44,7 @@ dev_dependencies:
 
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.4
+  wakelock_plus_platform_interface: ^1.5.1
 
 flutter_launcher_icons:
   android: "ic_launcher"

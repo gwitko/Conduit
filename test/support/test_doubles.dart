@@ -11,6 +11,7 @@ import 'package:conduit/features/sftp/domain/file_export.dart';
 import 'package:conduit/features/sftp/domain/sftp_entry.dart';
 import 'package:conduit/features/sftp/domain/sftp_repository.dart';
 import 'package:conduit/features/sftp/domain/sftp_session.dart';
+import 'package:conduit/features/sftp/domain/upload_manifest.dart';
 import 'package:conduit/features/terminal/domain/host_key_prompt.dart';
 import 'package:conduit/features/terminal/domain/host_key_verifier.dart';
 import 'package:conduit/features/terminal/domain/network_connectivity.dart';
@@ -426,6 +427,26 @@ class NoopVerifier implements HostKeyVerifier {
   }) async => false;
 }
 
+class InMemoryUploadManifest implements UploadManifestRepository {
+  final Map<String, List<UploadManifestEntry>> entries = {};
+
+  @override
+  Future<List<UploadManifestEntry>> entriesFor(String hostId) async =>
+      List.of(entries[hostId] ?? const []);
+
+  @override
+  Future<void> setEntries(
+    String hostId,
+    List<UploadManifestEntry> newEntries,
+  ) async {
+    if (newEntries.isEmpty) {
+      entries.remove(hostId);
+    } else {
+      entries[hostId] = List.of(newEntries);
+    }
+  }
+}
+
 class NoNetworkSftpRepository implements SftpRepository {
   @override
   Future<SftpSession> connect(SavedHost host) {
@@ -448,13 +469,18 @@ class ThrowingSftpRepository implements SftpRepository {
 }
 
 class FakeSftpSession implements SftpSession {
-  FakeSftpSession({required this.home, required this.tree});
+  FakeSftpSession({required this.home, required this.tree, this.writeError});
 
   final String home;
   final Map<String, List<SftpEntry>> tree;
   final List<String> madeDirectories = [];
   final Map<String, List<int>> writtenFiles = {};
   final Map<String, int> listCalls = {};
+  final List<String> deletedPaths = [];
+  int closeCount = 0;
+
+  /// When set, every write throws this error after draining nothing.
+  final Object? writeError;
 
   @override
   Future<List<SftpEntry>> list(String path) async {
@@ -486,6 +512,10 @@ class FakeSftpSession implements SftpSession {
     int length, {
     void Function(int bytesSent)? onProgress,
   }) async {
+    final error = writeError;
+    if (error != null) {
+      throw error;
+    }
     final bytes = <int>[];
     await for (final chunk in data) {
       bytes.addAll(chunk);
@@ -497,17 +527,21 @@ class FakeSftpSession implements SftpSession {
   @override
   Future<void> makeDirectory(String path) async {
     madeDirectories.add(path);
-    tree[path] = <SftpEntry>[];
+    tree.putIfAbsent(path, () => <SftpEntry>[]);
   }
 
   @override
   Future<void> rename(String from, String to) async {}
 
   @override
-  Future<void> delete(SftpEntry entry) async {}
+  Future<void> delete(SftpEntry entry) async {
+    deletedPaths.add(entry.path);
+  }
 
   @override
-  Future<void> close() async {}
+  Future<void> close() async {
+    closeCount += 1;
+  }
 }
 
 class RecordingFileExport implements FileExport {

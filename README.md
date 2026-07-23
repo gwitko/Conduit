@@ -69,6 +69,10 @@ Dart implementation of the protocol, and the terminal is
   password.
 - Customizable on-screen key row with modifiers, arrows, function keys, key
   repeat, latching modifiers, and your own text snippets and control-key combos.
+- Upload key: pick phone files, photos, or videos, stream them to the machine
+  over SFTP into `~/.conduit/uploads/<date>/`, and insert the shell-quoted
+  remote path into the terminal, with per-machine directory and optional
+  cleanup of Conduit's own old uploads.
 - Saved global and per-machine snippets from the key row, with hidden snippets
   for passwords or secrets and optional per-machine run-on-connect snippets.
 - Optional device-auth app lock for protecting saved machines and credentials.

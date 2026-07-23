@@ -148,6 +148,8 @@ class SavedHost {
     this.tmuxStartDirectory = '',
     this.snippets = const [],
     this.connectSnippetId = '',
+    this.uploadDirectory = '',
+    this.uploadCleanupDays,
     this.lastConnectedAt,
     this.isLocal = false,
   });
@@ -188,6 +190,15 @@ class SavedHost {
   final String tmuxStartDirectory;
   final List<TerminalSnippet> snippets;
   final String connectSnippetId;
+
+  /// Remote directory for phone-file uploads. Empty means the default
+  /// `~/.conduit/uploads/<date>`; may be absolute or `~/`-relative.
+  final String uploadDirectory;
+
+  /// Age in days after which Conduit-uploaded files are deleted on the next
+  /// upload. Null disables automatic cleanup (the default).
+  final int? uploadCleanupDays;
+
   final DateTime? lastConnectedAt;
   final bool isLocal;
 
@@ -261,6 +272,9 @@ class SavedHost {
     String? tmuxStartDirectory,
     List<TerminalSnippet>? snippets,
     String? connectSnippetId,
+    String? uploadDirectory,
+    int? uploadCleanupDays,
+    bool clearUploadCleanupDays = false,
     DateTime? lastConnectedAt,
     bool clearLastConnectedAt = false,
     bool? isLocal,
@@ -292,6 +306,10 @@ class SavedHost {
       tmuxStartDirectory: tmuxStartDirectory ?? this.tmuxStartDirectory,
       snippets: snippets ?? this.snippets,
       connectSnippetId: connectSnippetId ?? this.connectSnippetId,
+      uploadDirectory: uploadDirectory ?? this.uploadDirectory,
+      uploadCleanupDays: clearUploadCleanupDays
+          ? null
+          : uploadCleanupDays ?? this.uploadCleanupDays,
       lastConnectedAt: clearLastConnectedAt
           ? null
           : lastConnectedAt ?? this.lastConnectedAt,
@@ -332,6 +350,8 @@ class SavedHost {
       'tmuxStartDirectory': tmuxStartDirectory,
       'snippets': [for (final snippet in snippets) snippet.toJson()],
       'connectSnippetId': connectSnippetId,
+      'uploadDirectory': uploadDirectory,
+      'uploadCleanupDays': uploadCleanupDays,
       'lastConnectedAt': lastConnectedAt?.toIso8601String(),
       'isLocal': isLocal,
     };
@@ -386,6 +406,11 @@ class SavedHost {
           .whereType<TerminalSnippet>()
           .toList(growable: false),
       connectSnippetId: json['connectSnippetId'] as String? ?? '',
+      uploadDirectory: (json['uploadDirectory'] as String?)?.trim() ?? '',
+      uploadCleanupDays: switch (json['uploadCleanupDays']) {
+        final int days when days > 0 => days,
+        _ => null,
+      },
       lastConnectedAt: lastConnectedAtRaw == null
           ? null
           : DateTime.tryParse(lastConnectedAtRaw),

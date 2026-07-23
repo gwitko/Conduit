@@ -16,8 +16,10 @@ import 'package:conduit/features/local_shell/local_shell_licenses.dart';
 import 'package:conduit/features/local_shell/presentation/local_shell_controller.dart';
 import 'package:conduit/features/sftp/data/dart_ssh_sftp_repository.dart';
 import 'package:conduit/features/sftp/data/file_picker_file_export.dart';
+import 'package:conduit/features/sftp/data/secure_upload_manifest_repository.dart';
 import 'package:conduit/features/sftp/domain/file_export.dart';
 import 'package:conduit/features/sftp/domain/sftp_repository.dart';
+import 'package:conduit/features/sftp/domain/upload_manifest.dart';
 import 'package:conduit/features/terminal/data/connectivity_plus_network.dart';
 import 'package:conduit/features/terminal/data/dart_ssh_terminal_repository.dart';
 import 'package:conduit/features/terminal/data/mosh_terminal_repository.dart';
@@ -64,6 +66,9 @@ void main() {
     ConnectivityPlusNetwork(),
   );
   final sftpRepository = DartSshSftpRepository(hostKeyVerifier);
+  const uploadManifestRepository = SecureUploadManifestRepository(
+    secureStorage,
+  );
   final backupService = AppBackupService(
     hostsController: hostsController,
     themeController: themeController,
@@ -84,6 +89,7 @@ void main() {
       hostKeyVerifier: hostKeyVerifier,
       promptCoordinator: promptCoordinator,
       sftpRepository: sftpRepository,
+      uploadManifestRepository: uploadManifestRepository,
       backupService: backupService,
       fileExport: fileExport,
     ),
@@ -101,6 +107,7 @@ class ConduitApp extends StatefulWidget {
     required this.hostKeyVerifier,
     required this.promptCoordinator,
     required this.sftpRepository,
+    required this.uploadManifestRepository,
     required this.backupService,
     required this.fileExport,
     super.key,
@@ -115,6 +122,7 @@ class ConduitApp extends StatefulWidget {
   final HostKeyVerifier hostKeyVerifier;
   final HostKeyPromptCoordinator promptCoordinator;
   final SftpRepository sftpRepository;
+  final UploadManifestRepository uploadManifestRepository;
   final AppBackupService backupService;
   final FileExport fileExport;
 
@@ -258,6 +266,7 @@ class _ConduitAppState extends State<ConduitApp> with WidgetsBindingObserver {
                 hostKeyVerifier: widget.hostKeyVerifier,
                 promptCoordinator: widget.promptCoordinator,
                 sftpRepository: widget.sftpRepository,
+                uploadManifestRepository: widget.uploadManifestRepository,
                 backupService: widget.backupService,
                 fileExport: widget.fileExport,
               );

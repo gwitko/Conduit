@@ -299,10 +299,12 @@ class HostAdvancedSection extends StatelessWidget {
     required this.moshPortsController,
     required this.tmuxSessionNameController,
     required this.tmuxStartDirectoryController,
+    required this.uploadDirectoryController,
     required this.useMosh,
     required this.predictiveEchoEnabled,
     required this.startTmuxOnConnect,
     required this.tmuxPrefixKey,
+    required this.uploadCleanupDays,
     required this.snippets,
     required this.connectSnippetId,
     required this.timeoutValidator,
@@ -313,6 +315,7 @@ class HostAdvancedSection extends StatelessWidget {
     required this.onPredictiveEchoChanged,
     required this.onStartTmuxOnConnectChanged,
     required this.onTmuxPrefixKeyChanged,
+    required this.onUploadCleanupDaysChanged,
     required this.onSnippetsChanged,
     required this.onConnectSnippetChanged,
     super.key,
@@ -326,10 +329,12 @@ class HostAdvancedSection extends StatelessWidget {
   final TextEditingController moshPortsController;
   final TextEditingController tmuxSessionNameController;
   final TextEditingController tmuxStartDirectoryController;
+  final TextEditingController uploadDirectoryController;
   final bool useMosh;
   final bool predictiveEchoEnabled;
   final bool startTmuxOnConnect;
   final TmuxPrefixKey tmuxPrefixKey;
+  final int? uploadCleanupDays;
   final List<TerminalSnippet> snippets;
   final String connectSnippetId;
   final FormFieldValidator<String> timeoutValidator;
@@ -340,6 +345,7 @@ class HostAdvancedSection extends StatelessWidget {
   final ValueChanged<bool> onPredictiveEchoChanged;
   final ValueChanged<bool> onStartTmuxOnConnectChanged;
   final ValueChanged<TmuxPrefixKey> onTmuxPrefixKeyChanged;
+  final ValueChanged<int?> onUploadCleanupDaysChanged;
   final ValueChanged<List<TerminalSnippet>> onSnippetsChanged;
   final ValueChanged<String> onConnectSnippetChanged;
 
@@ -493,6 +499,41 @@ class HostAdvancedSection extends StatelessWidget {
               onTmuxPrefixKeyChanged(value);
             }
           },
+        ),
+        const SizedBox(height: 16),
+        TextFormField(
+          controller: uploadDirectoryController,
+          decoration: const InputDecoration(
+            labelText: 'Upload directory',
+            hintText: '~/.conduit/uploads',
+            helperText:
+                'Where the key-row Upload key stores phone files. Empty uses '
+                '~/.conduit/uploads with one folder per day.',
+            helperMaxLines: 3,
+            prefixIcon: Icon(Icons.drive_folder_upload_outlined),
+          ),
+          autocorrect: false,
+          enableSuggestions: false,
+          textInputAction: TextInputAction.next,
+        ),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<int?>(
+          initialValue: uploadCleanupDays,
+          decoration: const InputDecoration(
+            labelText: 'Delete my uploads after',
+            helperText:
+                'Only files Conduit itself uploaded are ever deleted, on the '
+                'next upload to this machine.',
+            helperMaxLines: 3,
+            prefixIcon: Icon(Icons.auto_delete_outlined),
+          ),
+          items: const [
+            DropdownMenuItem<int?>(child: Text('Never')),
+            DropdownMenuItem<int?>(value: 7, child: Text('7 days')),
+            DropdownMenuItem<int?>(value: 30, child: Text('30 days')),
+            DropdownMenuItem<int?>(value: 90, child: Text('90 days')),
+          ],
+          onChanged: onUploadCleanupDaysChanged,
         ),
         const SizedBox(height: 18),
         SnippetListEditor(

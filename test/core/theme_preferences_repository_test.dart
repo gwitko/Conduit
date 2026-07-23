@@ -31,6 +31,7 @@ void main() {
             TerminalKeyboardAction.control,
             TerminalKeyboardAction.arrowDown,
             TerminalKeyboardAction.snippets,
+            TerminalKeyboardAction.upload,
           ],
         );
       },
@@ -51,6 +52,7 @@ void main() {
           items: [
             TerminalKeyboardItem.builtIn(TerminalKeyboardAction.escape),
             TerminalKeyboardItem.builtIn(TerminalKeyboardAction.snippets),
+            TerminalKeyboardItem.builtIn(TerminalKeyboardAction.upload),
           ],
         ),
       ]);

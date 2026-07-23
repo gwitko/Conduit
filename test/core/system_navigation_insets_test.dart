@@ -83,6 +83,7 @@ void main() {
         hostKeyVerifier: verifier,
         promptCoordinator: promptCoordinator,
         sftpRepository: NoNetworkSftpRepository(),
+        uploadManifestRepository: InMemoryUploadManifest(),
         backupService: AppBackupService(
           hostsController: hostsController,
           themeController: themeController,
@@ -130,6 +131,7 @@ void main() {
         hostKeyVerifier: verifier,
         promptCoordinator: promptCoordinator,
         sftpRepository: NoNetworkSftpRepository(),
+        uploadManifestRepository: InMemoryUploadManifest(),
         backupService: AppBackupService(
           hostsController: hostsController,
           themeController: themeController,
@@ -212,6 +214,8 @@ void main() {
         home: TerminalPage(
           workspace: workspace,
           themeController: themeController,
+          sftpRepository: NoNetworkSftpRepository(),
+          uploadManifestRepository: InMemoryUploadManifest(),
         ),
       ),
     );

@@ -169,6 +169,8 @@ void main() {
           ),
         ],
         connectSnippetId: 'snippet:deploy',
+        uploadDirectory: '~/drops',
+        uploadCleanupDays: 30,
         lastConnectedAt: DateTime.parse('2025-01-02T03:04:05Z'),
       );
 
@@ -198,7 +200,24 @@ void main() {
       expect(decoded.tmuxStartDirectory, original.tmuxStartDirectory);
       expect(decoded.snippets, original.snippets);
       expect(decoded.connectSnippetId, original.connectSnippetId);
+      expect(decoded.uploadDirectory, original.uploadDirectory);
+      expect(decoded.uploadCleanupDays, original.uploadCleanupDays);
       expect(decoded.lastConnectedAt, original.lastConnectedAt);
+    });
+
+    test('missing or corrupt upload settings load as defaults', () {
+      final decoded = SavedHost.fromJson(const {
+        'id': 'id',
+        'name': 'n',
+        'host': 'h',
+        'port': 22,
+        'username': 'u',
+        'authMethod': 'password',
+        'uploadCleanupDays': 'soon',
+      });
+
+      expect(decoded.uploadDirectory, '');
+      expect(decoded.uploadCleanupDays, isNull);
     });
 
     test('invalid persisted mosh ports fall back to the default', () {

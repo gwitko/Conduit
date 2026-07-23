@@ -79,6 +79,7 @@ enum TerminalKeyboardAction {
   tmuxMenu,
   snippets,
   compose,
+  upload,
 }
 
 enum TerminalKeyboardItemKind { builtIn, customText, customControl }
@@ -170,6 +171,7 @@ const defaultTerminalKeyboardActions = [
   TerminalKeyboardAction.tmuxScrollback,
   TerminalKeyboardAction.tmuxMenu,
   TerminalKeyboardAction.snippets,
+  TerminalKeyboardAction.upload,
   TerminalKeyboardAction.fullscreen,
 ];
 
@@ -262,6 +264,7 @@ const defaultTerminalKeyboardItems = [
   TerminalKeyboardItem.builtIn(TerminalKeyboardAction.tmuxScrollback),
   TerminalKeyboardItem.builtIn(TerminalKeyboardAction.tmuxMenu),
   TerminalKeyboardItem.builtIn(TerminalKeyboardAction.snippets),
+  TerminalKeyboardItem.builtIn(TerminalKeyboardAction.upload),
   TerminalKeyboardItem.builtIn(TerminalKeyboardAction.fullscreen),
 ];
 
@@ -383,5 +386,6 @@ extension TerminalKeyboardActionDetails on TerminalKeyboardAction {
     TerminalKeyboardAction.tmuxMenu => 'Tmux+',
     TerminalKeyboardAction.snippets => 'Snip',
     TerminalKeyboardAction.compose => 'Compose',
+    TerminalKeyboardAction.upload => 'Upload',
   };
 }
