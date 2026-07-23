@@ -962,6 +962,16 @@ class _TouchModeKeyState extends State<_TouchModeKey> {
     super.initState();
     _remoteTracking = widget.controller.remoteMouseTrackingActive;
     widget.controller.terminal.addListener(_handleTerminalChanged);
+    if (_remoteTracking) {
+      // Tracking can already be on when the key first appears (e.g.
+      // reconnecting into a TUI with the mouse armed); the discoverability
+      // hint should fire then too, not only on a live transition.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _remoteTracking) {
+          widget.onRemoteMouseTrackingActivated?.call();
+        }
+      });
+    }
   }
 
   @override
@@ -971,6 +981,9 @@ class _TouchModeKeyState extends State<_TouchModeKey> {
       oldWidget.controller.terminal.removeListener(_handleTerminalChanged);
       widget.controller.terminal.addListener(_handleTerminalChanged);
       _remoteTracking = widget.controller.remoteMouseTrackingActive;
+      if (_remoteTracking) {
+        widget.onRemoteMouseTrackingActivated?.call();
+      }
     }
   }
 
@@ -1042,28 +1055,30 @@ class _TouchModeKeyState extends State<_TouchModeKey> {
         : widget.palette.panelFor(widget.brightness);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 2),
-      child: Semantics(
-        label: semanticsLabel,
-        button: true,
-        child: PopupMenuButton<_TouchModeMenuAction>(
-          tooltip: 'Touch mode',
-          onSelected: _handleMenuAction,
-          itemBuilder: _buildMenuItems,
-          child: Container(
-            height: _keyHeight,
-            constraints: const BoxConstraints(minWidth: _iconKeyMinWidth),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: background,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: selected
-                    ? widget.palette.accent.withValues(alpha: 0.7)
-                    : widget.palette.hairlineFor(widget.brightness),
-                width: selected ? 1.3 : 1,
+      child: MergeSemantics(
+        child: Semantics(
+          label: semanticsLabel,
+          button: true,
+          child: PopupMenuButton<_TouchModeMenuAction>(
+            tooltip: 'Touch mode',
+            onSelected: _handleMenuAction,
+            itemBuilder: _buildMenuItems,
+            child: Container(
+              height: _keyHeight,
+              constraints: const BoxConstraints(minWidth: _iconKeyMinWidth),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: background,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: selected
+                      ? widget.palette.accent.withValues(alpha: 0.7)
+                      : widget.palette.hairlineFor(widget.brightness),
+                  width: selected ? 1.3 : 1,
+                ),
               ),
+              child: Icon(icon, color: foreground, size: 20),
             ),
-            child: Icon(icon, color: foreground, size: 20),
           ),
         ),
       ),

@@ -995,6 +995,49 @@ void main() {
       expect(activations, 2);
     });
 
+    testWidgets('touch mode key reports tracking that is already active '
+        'when it first appears', (tester) async {
+      final controller = _RecordingTerminalSessionController();
+      final focusNode = FocusNode();
+      var activations = 0;
+      addTearDown(focusNode.dispose);
+      addTearDown(controller.dispose);
+      controller.terminal.write('\x1b[?1000h');
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TerminalKeyboardBar(
+              controller: controller,
+              focusNode: focusNode,
+              palette: AppPalette.catppuccin,
+              brightness: Brightness.dark,
+              rows: const [
+                TerminalKeyboardRow(
+                  items: [
+                    TerminalKeyboardItem.builtIn(
+                      TerminalKeyboardAction.touchMode,
+                    ),
+                  ],
+                ),
+              ],
+              globalSnippets: const [],
+              fullscreen: false,
+              onToggleFullscreen: () {},
+              onEnterTmuxScrollMode: () {},
+              onExitTmuxScrollMode: () {},
+              tmuxPrefixKey: TmuxPrefixKey.controlB,
+              tmuxScrollMode: false,
+              onRemoteMouseTrackingActivated: () => activations += 1,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(activations, 1);
+    });
+
     testWidgets('tmux scroll mode drags without visible overlay', (
       tester,
     ) async {
