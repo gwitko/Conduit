@@ -122,9 +122,18 @@ class TerminalUploadController extends ChangeNotifier {
     _phase = TerminalUploadPhase.connecting;
     _notify();
     SftpSession? session;
+    // Every file written to the server this batch, persisted to the
+    // manifest in the finally block so partial batches (failure or cancel
+    // mid-write) never leave unrecorded app-owned files behind.
+    final newEntries = <UploadManifestEntry>[];
     try {
       session = await _repository.connect(host);
       _session = session;
+      if (_cancelRequested) {
+        _phase = TerminalUploadPhase.cancelled;
+        _notify();
+        return;
+      }
       final home = await session.resolve('.');
       final directory = resolveUploadDirectory(
         home: home,
@@ -139,7 +148,6 @@ class TerminalUploadController extends ChangeNotifier {
       _phase = TerminalUploadPhase.uploading;
       _notify();
 
-      final newEntries = <UploadManifestEntry>[];
       for (final item in _items) {
         if (_cancelRequested) {
           break;
@@ -168,12 +176,12 @@ class TerminalUploadController extends ChangeNotifier {
         _notify();
       }
 
-      if (newEntries.isNotEmpty) {
-        await _recordAndCleanUp(session, newEntries);
-      }
       if (_cancelRequested) {
         _phase = TerminalUploadPhase.cancelled;
       } else {
+        // Cleanup of expired earlier uploads only runs after a fully
+        // successful batch; a cancelled or failed batch never deletes.
+        await _cleanUpExpired(session);
         _phase = TerminalUploadPhase.success;
       }
       _notify();
@@ -186,6 +194,18 @@ class TerminalUploadController extends ChangeNotifier {
       }
       _notify();
     } finally {
+      // Record everything that reached the server, even after a failure or
+      // cancellation, so cleanup stays able to manage these files later.
+      if (newEntries.isNotEmpty) {
+        try {
+          await _manifest.setEntries(host.id, [
+            ...await _manifest.entriesFor(host.id),
+            ...newEntries,
+          ]);
+        } catch (_) {
+          // Manifest recording is best-effort; the upload result stands.
+        }
+      }
       final open = _session;
       _session = null;
       if (open != null) {
@@ -214,36 +234,39 @@ class TerminalUploadController extends ChangeNotifier {
     }
   }
 
-  Future<void> _recordAndCleanUp(
-    SftpSession session,
-    List<UploadManifestEntry> newEntries,
-  ) async {
-    var entries = [...await _manifest.entriesFor(host.id), ...newEntries];
+  /// Deletes manifest-listed files older than the host's cleanup cutoff and
+  /// drops them from the manifest. Only ever touches exact paths this app
+  /// recorded; never directories.
+  Future<void> _cleanUpExpired(SftpSession session) async {
     final days = host.uploadCleanupDays;
-    if (days != null && days > 0) {
-      final cutoff = _now().toUtc().subtract(Duration(days: days));
-      final kept = <UploadManifestEntry>[];
-      for (final entry in entries) {
-        if (entry.uploadedAt.isAfter(cutoff)) {
-          kept.add(entry);
-          continue;
-        }
-        try {
-          await session.delete(
-            SftpEntry(
-              name: entry.path.split('/').last,
-              path: entry.path,
-              kind: SftpEntryKind.file,
-            ),
-          );
-        } catch (_) {
-          // Already gone or not deletable; either way the entry is dropped
-          // so a broken file cannot be retried forever.
-        }
-      }
-      entries = kept;
+    if (days == null || days <= 0) {
+      return;
     }
-    await _manifest.setEntries(host.id, entries);
+    final entries = await _manifest.entriesFor(host.id);
+    if (entries.isEmpty) {
+      return;
+    }
+    final cutoff = _now().toUtc().subtract(Duration(days: days));
+    final kept = <UploadManifestEntry>[];
+    for (final entry in entries) {
+      if (entry.uploadedAt.isAfter(cutoff)) {
+        kept.add(entry);
+        continue;
+      }
+      try {
+        await session.delete(
+          SftpEntry(
+            name: entry.path.split('/').last,
+            path: entry.path,
+            kind: SftpEntryKind.file,
+          ),
+        );
+      } catch (_) {
+        // Already gone or not deletable; either way the entry is dropped
+        // so a broken file cannot be retried forever.
+      }
+    }
+    await _manifest.setEntries(host.id, kept);
   }
 
   void _notify() {

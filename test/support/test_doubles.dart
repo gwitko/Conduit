@@ -469,7 +469,12 @@ class ThrowingSftpRepository implements SftpRepository {
 }
 
 class FakeSftpSession implements SftpSession {
-  FakeSftpSession({required this.home, required this.tree, this.writeError});
+  FakeSftpSession({
+    required this.home,
+    required this.tree,
+    this.writeError,
+    this.failWriteAtIndex,
+  });
 
   final String home;
   final Map<String, List<SftpEntry>> tree;
@@ -481,6 +486,10 @@ class FakeSftpSession implements SftpSession {
 
   /// When set, every write throws this error after draining nothing.
   final Object? writeError;
+
+  /// When set, only the write with this zero-based index throws.
+  final int? failWriteAtIndex;
+  int _writeCount = 0;
 
   @override
   Future<List<SftpEntry>> list(String path) async {
@@ -512,9 +521,11 @@ class FakeSftpSession implements SftpSession {
     int length, {
     void Function(int bytesSent)? onProgress,
   }) async {
+    final index = _writeCount;
+    _writeCount += 1;
     final error = writeError;
-    if (error != null) {
-      throw error;
+    if (error != null || index == failWriteAtIndex) {
+      throw error ?? StateError('write $index failed');
     }
     final bytes = <int>[];
     await for (final chunk in data) {

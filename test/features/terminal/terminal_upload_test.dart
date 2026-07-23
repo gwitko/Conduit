@@ -150,6 +150,70 @@ void main() {
       },
     );
 
+    test('records already-uploaded files in the manifest when a later file '
+        'fails', () async {
+      session = FakeSftpSession(
+        home: '/home/u',
+        tree: {'/home/u': []},
+        failWriteAtIndex: 1,
+      );
+      manifest = InMemoryUploadManifest();
+      final controller = TerminalUploadController(
+        host: buildHost('h1'),
+        repository: FakeSftpRepository(session),
+        manifest: manifest,
+        now: () => fixedNow,
+      );
+      controller.prepare([
+        _file('first.txt', [1]),
+        _file('second.txt', [2]),
+      ]);
+
+      await controller.uploadAll();
+
+      expect(controller.phase, TerminalUploadPhase.failed);
+      // The first file reached the server, so cleanup must know about it.
+      expect(manifest.entries['h1']!.map((e) => e.path), [
+        '/home/u/.conduit/uploads/2026-07-04/first.txt',
+      ]);
+      // A failed batch never deletes anything.
+      expect(session.deletedPaths, isEmpty);
+    });
+
+    test('a cancelled batch records uploads but never deletes', () async {
+      final controller = buildController(
+        host: buildHost('h1').copyWith(uploadCleanupDays: 7),
+      );
+      manifest.entries['h1'] = [
+        UploadManifestEntry(
+          path: '/old/expired.png',
+          uploadedAt: DateTime.utc(2020),
+        ),
+      ];
+      controller.prepare([
+        _file('a.txt', [1]),
+        _file('b.txt', [2]),
+      ]);
+      controller.addListener(() {
+        if (controller.items.first.done &&
+            controller.phase == TerminalUploadPhase.uploading) {
+          controller.cancel();
+        }
+      });
+
+      await controller.uploadAll();
+
+      expect(controller.phase, TerminalUploadPhase.cancelled);
+      expect(session.deletedPaths, isEmpty);
+      expect(
+        manifest.entries['h1']!.map((e) => e.path),
+        containsAll([
+          '/old/expired.png',
+          '/home/u/.conduit/uploads/2026-07-04/a.txt',
+        ]),
+      );
+    });
+
     test('fails cleanly when the connection cannot be opened', () async {
       final controller = TerminalUploadController(
         host: buildHost('h1'),
