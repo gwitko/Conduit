@@ -103,6 +103,25 @@ class _TerminalPageState extends State<TerminalPage> {
     });
   }
 
+  void _maybeShowTouchModeHint() {
+    final themeController = widget.themeController;
+    if (!mounted ||
+        themeController.touchModeHintSeen ||
+        themeController.terminalMouseInput) {
+      return;
+    }
+    unawaited(themeController.markTouchModeHintSeen());
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'This app supports mouse taps. Use the Touch key to forward taps '
+          'as terminal mouse clicks.',
+        ),
+        duration: Duration(seconds: 6),
+      ),
+    );
+  }
+
   void _toggleFullscreen() {
     setState(() => _fullscreen = !_fullscreen);
     _setSystemUiFullscreen(_fullscreen);
@@ -267,6 +286,17 @@ class _TerminalPageState extends State<TerminalPage> {
                             setState(() => _composeMode = !_composeMode),
                         tmuxPrefixKey: activeSession.host.tmuxPrefixKey,
                         tmuxScrollMode: _tmuxScrollMode,
+                        terminalMouseInput:
+                            widget.themeController.terminalMouseInput,
+                        onTerminalMouseInputChanged: (enabled) {
+                          unawaited(
+                            widget.themeController.setTerminalMouseInput(
+                              enabled,
+                            ),
+                          );
+                          _focusNode.requestFocus();
+                        },
+                        onRemoteMouseTrackingActivated: _maybeShowTouchModeHint,
                         onEnterTmuxScrollMode: () {
                           setState(() => _tmuxScrollMode = true);
                           _focusNode.requestFocus();

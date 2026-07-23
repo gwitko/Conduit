@@ -18,6 +18,7 @@ class ThemeController extends ChangeNotifier {
   bool _showLocalShell = true;
   bool _terminalMouseInput = false;
   TerminalEnterSequence _terminalEnterSequence = TerminalEnterSequence.cr;
+  bool _touchModeHintSeen = false;
 
   ThemeMode get themeMode => _themeMode;
   AppPalette get palette => _palette;
@@ -30,6 +31,7 @@ class ThemeController extends ChangeNotifier {
   bool get showLocalShell => _showLocalShell;
   bool get terminalMouseInput => _terminalMouseInput;
   TerminalEnterSequence get terminalEnterSequence => _terminalEnterSequence;
+  bool get touchModeHintSeen => _touchModeHintSeen;
 
   Future<void> load() async {
     final preferences = await _repository.load();
@@ -42,6 +44,7 @@ class ThemeController extends ChangeNotifier {
     _showLocalShell = preferences.showLocalShell;
     _terminalMouseInput = preferences.terminalMouseInput;
     _terminalEnterSequence = preferences.terminalEnterSequence;
+    _touchModeHintSeen = preferences.touchModeHintSeen;
     notifyListeners();
   }
 
@@ -164,6 +167,15 @@ class ThemeController extends ChangeNotifier {
     await _save();
   }
 
+  Future<void> markTouchModeHintSeen() async {
+    if (_touchModeHintSeen) {
+      return;
+    }
+    _touchModeHintSeen = true;
+    notifyListeners();
+    await _save();
+  }
+
   Future<void> _save() {
     return _repository.save(
       ThemePreferences(
@@ -176,6 +188,7 @@ class ThemeController extends ChangeNotifier {
         showLocalShell: _showLocalShell,
         terminalMouseInput: _terminalMouseInput,
         terminalEnterSequence: _terminalEnterSequence,
+        touchModeHintSeen: _touchModeHintSeen,
       ),
     );
   }

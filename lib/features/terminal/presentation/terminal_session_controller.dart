@@ -79,6 +79,11 @@ class TerminalSessionController extends ChangeNotifier {
   TerminalEnterSequence get enterSequence => _enterSequence;
   Listenable get terminalPaintListenable => _terminalPaintNotifier;
 
+  /// Whether the remote application has enabled mouse tracking (DECSET
+  /// 1000/1002/1003), meaning forwarded taps would actually be delivered
+  /// as mouse clicks rather than ignored.
+  bool get remoteMouseTrackingActive => terminal.mouseMode != MouseMode.none;
+
   List<TerminalCellOverlay> get overlays {
     if (!_predictiveEchoEnabled) {
       return const <TerminalCellOverlay>[];

@@ -17,6 +17,7 @@ class ThemePreferences {
     this.showLocalShell = true,
     this.terminalMouseInput = false,
     this.terminalEnterSequence = TerminalEnterSequence.cr,
+    this.touchModeHintSeen = false,
   });
 
   final ThemeMode themeMode;
@@ -28,6 +29,9 @@ class ThemePreferences {
   final bool showLocalShell;
   final bool terminalMouseInput;
   final TerminalEnterSequence terminalEnterSequence;
+
+  /// Whether the one-time touch-mode discoverability hint has been shown.
+  final bool touchModeHintSeen;
 }
 
 class ThemePreferencesRepository {
@@ -46,6 +50,7 @@ class ThemePreferencesRepository {
   static const _showLocalShellKey = 'conduit.show_local_shell.v1';
   static const _terminalMouseInputKey = 'conduit.terminal_mouse_input.v1';
   static const _terminalEnterSequenceKey = 'conduit.terminal_enter_sequence.v1';
+  static const _touchModeHintSeenKey = 'conduit.touch_mode_hint_seen.v1';
 
   final FlutterSecureStorage _storage;
 
@@ -70,6 +75,9 @@ class ThemePreferencesRepository {
     );
     final rawTerminalEnterSequence = await _storage.read(
       key: _terminalEnterSequenceKey,
+    );
+    final rawTouchModeHintSeen = await _storage.read(
+      key: _touchModeHintSeenKey,
     );
     final terminalFontSize = double.tryParse(rawTerminalFontSize ?? '');
     final terminalKeyboardRows = _appendUnseenBuiltIns(
@@ -104,6 +112,7 @@ class ThemePreferencesRepository {
         (sequence) => sequence.name == rawTerminalEnterSequence,
         orElse: () => TerminalEnterSequence.cr,
       ),
+      touchModeHintSeen: rawTouchModeHintSeen == 'true',
     );
   }
 
@@ -153,6 +162,10 @@ class ThemePreferencesRepository {
     await _storage.write(
       key: _terminalEnterSequenceKey,
       value: preferences.terminalEnterSequence.name,
+    );
+    await _storage.write(
+      key: _touchModeHintSeenKey,
+      value: preferences.touchModeHintSeen.toString(),
     );
   }
 

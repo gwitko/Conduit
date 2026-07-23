@@ -31,6 +31,7 @@ void main() {
             TerminalKeyboardAction.control,
             TerminalKeyboardAction.arrowDown,
             TerminalKeyboardAction.snippets,
+            TerminalKeyboardAction.touchMode,
           ],
         );
       },
@@ -51,6 +52,7 @@ void main() {
           items: [
             TerminalKeyboardItem.builtIn(TerminalKeyboardAction.escape),
             TerminalKeyboardItem.builtIn(TerminalKeyboardAction.snippets),
+            TerminalKeyboardItem.builtIn(TerminalKeyboardAction.touchMode),
           ],
         ),
       ]);
@@ -204,6 +206,41 @@ void main() {
 
       final preferences = await repository.load();
       expect(preferences.terminalEnterSequence, TerminalEnterSequence.crlf);
+    });
+
+    test(
+      'defaults touch mode hint to unseen and persists once shown',
+      () async {
+        final storage = InMemorySecureStorage();
+        final repository = ThemePreferencesRepository(storage);
+
+        final defaults = await repository.load();
+        expect(defaults.touchModeHintSeen, isFalse);
+
+        await repository.save(
+          const ThemePreferences(
+            themeMode: ThemeMode.dark,
+            palette: AppPalette.synthwave,
+            touchModeHintSeen: true,
+          ),
+        );
+
+        final preferences = await repository.load();
+        expect(preferences.touchModeHintSeen, isTrue);
+      },
+    );
+
+    test('treats a corrupt touch mode hint value as unseen', () async {
+      final storage = InMemorySecureStorage();
+      await storage.write(
+        key: 'conduit.touch_mode_hint_seen.v1',
+        value: 'not-a-bool',
+      );
+      final repository = ThemePreferencesRepository(storage);
+
+      final preferences = await repository.load();
+
+      expect(preferences.touchModeHintSeen, isFalse);
     });
 
     test('persists and loads global snippets', () async {

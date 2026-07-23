@@ -686,6 +686,315 @@ void main() {
       expect(exitedScrollMode, isTrue);
     });
 
+    testWidgets('touch mode key reflects selection, armed, and active '
+        'mouse states', (tester) async {
+      final controller = _RecordingTerminalSessionController();
+      final focusNode = FocusNode();
+      addTearDown(focusNode.dispose);
+      addTearDown(controller.dispose);
+
+      Widget buildBar({required bool terminalMouseInput}) => MaterialApp(
+        home: Scaffold(
+          body: TerminalKeyboardBar(
+            controller: controller,
+            focusNode: focusNode,
+            palette: AppPalette.catppuccin,
+            brightness: Brightness.dark,
+            rows: const [
+              TerminalKeyboardRow(
+                items: [
+                  TerminalKeyboardItem.builtIn(
+                    TerminalKeyboardAction.touchMode,
+                  ),
+                ],
+              ),
+            ],
+            globalSnippets: const [],
+            fullscreen: false,
+            onToggleFullscreen: () {},
+            onEnterTmuxScrollMode: () {},
+            onExitTmuxScrollMode: () {},
+            tmuxPrefixKey: TmuxPrefixKey.controlB,
+            tmuxScrollMode: false,
+            terminalMouseInput: terminalMouseInput,
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(buildBar(terminalMouseInput: false));
+      expect(find.byIcon(Icons.touch_app_outlined), findsOneWidget);
+
+      // Preference on, but the remote app is not tracking: armed, not active.
+      await tester.pumpWidget(buildBar(terminalMouseInput: true));
+      expect(find.byIcon(Icons.mouse_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.mouse_rounded), findsNothing);
+
+      // Remote app enables mouse tracking (DECSET 1000): active.
+      controller.terminal.write('\x1b[?1000h');
+      await tester.pump();
+      expect(find.byIcon(Icons.mouse_rounded), findsOneWidget);
+
+      // Remote app disables tracking again: back to armed.
+      controller.terminal.write('\x1b[?1000l');
+      await tester.pump();
+      expect(find.byIcon(Icons.mouse_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.mouse_rounded), findsNothing);
+
+      // Preference off while remote tracks: taps stay selection.
+      controller.terminal.write('\x1b[?1000h');
+      await tester.pumpWidget(buildBar(terminalMouseInput: false));
+      expect(find.byIcon(Icons.touch_app_outlined), findsOneWidget);
+    });
+
+    testWidgets('touch mode key shows scrollback state', (tester) async {
+      final controller = _RecordingTerminalSessionController();
+      final focusNode = FocusNode();
+      addTearDown(focusNode.dispose);
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TerminalKeyboardBar(
+              controller: controller,
+              focusNode: focusNode,
+              palette: AppPalette.catppuccin,
+              brightness: Brightness.dark,
+              rows: const [
+                TerminalKeyboardRow(
+                  items: [
+                    TerminalKeyboardItem.builtIn(
+                      TerminalKeyboardAction.touchMode,
+                    ),
+                  ],
+                ),
+              ],
+              globalSnippets: const [],
+              fullscreen: false,
+              onToggleFullscreen: () {},
+              onEnterTmuxScrollMode: () {},
+              onExitTmuxScrollMode: () {},
+              tmuxPrefixKey: TmuxPrefixKey.controlB,
+              tmuxScrollMode: true,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byIcon(Icons.swap_vert_rounded), findsOneWidget);
+    });
+
+    testWidgets('touch mode key opens its menu without sending terminal '
+        'input', (tester) async {
+      final controller = _RecordingTerminalSessionController();
+      final focusNode = FocusNode();
+      addTearDown(focusNode.dispose);
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TerminalKeyboardBar(
+              controller: controller,
+              focusNode: focusNode,
+              palette: AppPalette.catppuccin,
+              brightness: Brightness.dark,
+              rows: const [
+                TerminalKeyboardRow(
+                  items: [
+                    TerminalKeyboardItem.builtIn(
+                      TerminalKeyboardAction.touchMode,
+                    ),
+                  ],
+                ),
+              ],
+              globalSnippets: const [],
+              fullscreen: false,
+              onToggleFullscreen: () {},
+              onEnterTmuxScrollMode: () {},
+              onExitTmuxScrollMode: () {},
+              tmuxPrefixKey: TmuxPrefixKey.controlB,
+              tmuxScrollMode: false,
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byIcon(Icons.touch_app_outlined));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Send mouse taps'), findsOneWidget);
+      expect(find.text('Scrollback mode'), findsOneWidget);
+      expect(find.text('Remote app is not tracking the mouse'), findsOneWidget);
+      expect(controller.sentKeys, isEmpty);
+      expect(controller.sentControlKeys, isEmpty);
+      expect(controller.sentText, isEmpty);
+    });
+
+    testWidgets('touch mode menu toggles the mouse input preference', (
+      tester,
+    ) async {
+      final controller = _RecordingTerminalSessionController();
+      final focusNode = FocusNode();
+      final changes = <bool>[];
+      addTearDown(focusNode.dispose);
+      addTearDown(controller.dispose);
+
+      Widget buildBar({required bool terminalMouseInput}) => MaterialApp(
+        home: Scaffold(
+          body: TerminalKeyboardBar(
+            controller: controller,
+            focusNode: focusNode,
+            palette: AppPalette.catppuccin,
+            brightness: Brightness.dark,
+            rows: const [
+              TerminalKeyboardRow(
+                items: [
+                  TerminalKeyboardItem.builtIn(
+                    TerminalKeyboardAction.touchMode,
+                  ),
+                ],
+              ),
+            ],
+            globalSnippets: const [],
+            fullscreen: false,
+            onToggleFullscreen: () {},
+            onEnterTmuxScrollMode: () {},
+            onExitTmuxScrollMode: () {},
+            tmuxPrefixKey: TmuxPrefixKey.controlB,
+            tmuxScrollMode: false,
+            terminalMouseInput: terminalMouseInput,
+            onTerminalMouseInputChanged: changes.add,
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(buildBar(terminalMouseInput: false));
+      await tester.tap(find.byIcon(Icons.touch_app_outlined));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Send mouse taps'));
+      await tester.pumpAndSettle();
+      expect(changes, [true]);
+
+      await tester.pumpWidget(buildBar(terminalMouseInput: true));
+      await tester.tap(find.byIcon(Icons.mouse_outlined));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Send mouse taps'));
+      await tester.pumpAndSettle();
+      expect(changes, [true, false]);
+    });
+
+    testWidgets('touch mode menu enters and exits scrollback mode', (
+      tester,
+    ) async {
+      final controller = _RecordingTerminalSessionController();
+      final focusNode = FocusNode();
+      var enteredScrollMode = false;
+      var exitedScrollMode = false;
+      addTearDown(focusNode.dispose);
+      addTearDown(controller.dispose);
+
+      Widget buildBar({required bool tmuxScrollMode}) => MaterialApp(
+        home: Scaffold(
+          body: TerminalKeyboardBar(
+            controller: controller,
+            focusNode: focusNode,
+            palette: AppPalette.catppuccin,
+            brightness: Brightness.dark,
+            rows: const [
+              TerminalKeyboardRow(
+                items: [
+                  TerminalKeyboardItem.builtIn(
+                    TerminalKeyboardAction.touchMode,
+                  ),
+                ],
+              ),
+            ],
+            globalSnippets: const [],
+            fullscreen: false,
+            onToggleFullscreen: () {},
+            onEnterTmuxScrollMode: () => enteredScrollMode = true,
+            onExitTmuxScrollMode: () => exitedScrollMode = true,
+            tmuxPrefixKey: TmuxPrefixKey.controlB,
+            tmuxScrollMode: tmuxScrollMode,
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(buildBar(tmuxScrollMode: false));
+      await tester.tap(find.byIcon(Icons.touch_app_outlined));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Scrollback mode'));
+      await tester.pumpAndSettle();
+
+      expect(controller.sentControlKeys, [TerminalKey.keyB]);
+      expect(controller.sentText, ['[']);
+      expect(enteredScrollMode, isTrue);
+
+      await tester.pumpWidget(buildBar(tmuxScrollMode: true));
+      await tester.tap(find.byIcon(Icons.swap_vert_rounded));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Scrollback mode'));
+      await tester.pumpAndSettle();
+
+      expect(controller.sentText, ['[', 'q']);
+      expect(exitedScrollMode, isTrue);
+    });
+
+    testWidgets('touch mode key reports remote tracking activation once per '
+        'transition', (tester) async {
+      final controller = _RecordingTerminalSessionController();
+      final focusNode = FocusNode();
+      var activations = 0;
+      addTearDown(focusNode.dispose);
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TerminalKeyboardBar(
+              controller: controller,
+              focusNode: focusNode,
+              palette: AppPalette.catppuccin,
+              brightness: Brightness.dark,
+              rows: const [
+                TerminalKeyboardRow(
+                  items: [
+                    TerminalKeyboardItem.builtIn(
+                      TerminalKeyboardAction.touchMode,
+                    ),
+                  ],
+                ),
+              ],
+              globalSnippets: const [],
+              fullscreen: false,
+              onToggleFullscreen: () {},
+              onEnterTmuxScrollMode: () {},
+              onExitTmuxScrollMode: () {},
+              tmuxPrefixKey: TmuxPrefixKey.controlB,
+              tmuxScrollMode: false,
+              onRemoteMouseTrackingActivated: () => activations += 1,
+            ),
+          ),
+        ),
+      );
+
+      controller.terminal.write('\x1b[?1000h');
+      await tester.pump();
+      expect(activations, 1);
+
+      // More output while tracking stays on must not re-fire the callback.
+      controller.terminal.write('hello');
+      await tester.pump();
+      expect(activations, 1);
+
+      controller.terminal.write('\x1b[?1000l');
+      await tester.pump();
+      controller.terminal.write('\x1b[?1002h');
+      await tester.pump();
+      expect(activations, 2);
+    });
+
     testWidgets('tmux scroll mode drags without visible overlay', (
       tester,
     ) async {
