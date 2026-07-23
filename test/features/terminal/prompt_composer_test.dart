@@ -58,6 +58,41 @@ void main() {
       ]);
     });
 
+    test('strips embedded paste-end markers so content cannot break out of '
+        'bracketed paste', () async {
+      final session = TrackableTerminalSession();
+      final controller = TerminalSessionController(
+        host: buildHost('a'),
+        repository: ImmediateTerminalRepository(session),
+      );
+      addTearDown(controller.dispose);
+      await controller.connect();
+      controller.terminal.write('\x1b[?2004h');
+
+      await controller.sendComposed(
+        'safe\x1b[201~\x1b[200~; rm -rf ~\ntail',
+        submit: false,
+      );
+
+      expect(session.sent, [
+        utf8.encode('\x1b[200~safe\x1b[200~; rm -rf ~\ntail\x1b[201~'),
+      ]);
+    });
+
+    test('drops trailing newlines so insert-only cannot self-submit', () async {
+      final session = TrackableTerminalSession();
+      final controller = TerminalSessionController(
+        host: buildHost('a'),
+        repository: ImmediateTerminalRepository(session),
+      );
+      addTearDown(controller.dispose);
+      await controller.connect();
+
+      await controller.sendComposed('echo hi\n\n', submit: false);
+
+      expect(session.sent, [utf8.encode('echo hi')]);
+    });
+
     test('delivers Enter as a separate write when submitting', () async {
       final session = TrackableTerminalSession();
       final controller = TerminalSessionController(

@@ -211,11 +211,14 @@ class _PromptComposerSheetState extends State<PromptComposerSheet> {
               children: [
                 if (_oversized)
                   Expanded(
-                    child: Text(
-                      'Too large to send safely. Trim or split the prompt; '
-                      'it stays saved as a draft.',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.error,
+                    child: Semantics(
+                      liveRegion: true,
+                      child: Text(
+                        'Too large to send safely. Trim or split the prompt; '
+                        'it stays saved as a draft.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.error,
+                        ),
                       ),
                     ),
                   )

@@ -256,6 +256,23 @@ class _TerminalPageState extends State<TerminalPage> {
                         },
                         onExpand: () => _openPromptComposer(activeSession),
                         onSend: (line) {
+                          if (!activeSession.isConnected) {
+                            // The line would be silently dropped; keep it as
+                            // the draft instead of clearing it.
+                            setState(() {
+                              _composeDrafts[activeSession.host.id] = line;
+                              _composeRevision += 1;
+                            });
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Not connected. The line was kept as a '
+                                  'draft.',
+                                ),
+                              ),
+                            );
+                            return;
+                          }
                           // Send the line, then deliver Enter as a SEPARATE write a
                           // short moment later. Some remote TUIs (e.g. Claude Code
                           // and other Ink/readline apps) classify a single terminal

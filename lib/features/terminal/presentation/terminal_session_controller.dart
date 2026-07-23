@@ -311,9 +311,19 @@ class TerminalSessionController extends ChangeNotifier {
   /// submitting; an isolated Enter keypress submits regardless.
   Future<void> sendComposed(String text, {required bool submit}) async {
     if (terminal.bracketedPasteMode) {
-      terminal.paste(text);
+      // Strip any embedded paste-end marker so pasted content can never
+      // break out of the bracketed-paste guard and be interpreted as
+      // keystrokes or control sequences by the remote application.
+      terminal.paste(text.replaceAll('\x1b[201~', ''));
     } else {
-      terminal.textInput(text.replaceAll('\r\n', '\n').replaceAll('\n', '\r'));
+      // Without bracketed paste, newlines are delivered as carriage returns
+      // (what Enter sends). Trailing newlines are dropped so "insert only"
+      // never submits the final line on its own.
+      final normalized = text
+          .replaceAll('\r\n', '\n')
+          .replaceAll(RegExp(r'\n+$'), '')
+          .replaceAll('\n', '\r');
+      terminal.textInput(normalized);
     }
     keyboard.clearModifiers();
     if (submit) {
