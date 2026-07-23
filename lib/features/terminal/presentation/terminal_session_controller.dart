@@ -289,6 +289,41 @@ class TerminalSessionController extends ChangeNotifier {
     keyboard.clearModifiers();
   }
 
+  /// Whether the remote application has switched bracketed paste on
+  /// (DECSET 2004), so pasted text is delivered atomically instead of being
+  /// interpreted as individual key presses.
+  bool get bracketedPasteSupported => terminal.bracketedPasteMode;
+
+  static const composedEnterDelay = Duration(milliseconds: 120);
+
+  /// Sends a composed, possibly multiline prompt into the terminal.
+  ///
+  /// The payload goes through the terminal's paste path: when the remote
+  /// application advertises bracketed paste (DECSET 2004) the text — newlines,
+  /// quotes, and all — is wrapped in paste markers and arrives as one literal
+  /// block. Without bracketed paste the text falls back to the plain input
+  /// path with newlines normalized to carriage returns, which is what each
+  /// line's Enter key would have sent.
+  ///
+  /// With [submit], Enter is delivered as a separate write shortly after the
+  /// text. Some TUIs classify a single read that contains a long line ending
+  /// in CR as a paste and insert the trailing CR literally instead of
+  /// submitting; an isolated Enter keypress submits regardless.
+  Future<void> sendComposed(String text, {required bool submit}) async {
+    if (terminal.bracketedPasteMode) {
+      terminal.paste(text);
+    } else {
+      terminal.textInput(text.replaceAll('\r\n', '\n').replaceAll('\n', '\r'));
+    }
+    keyboard.clearModifiers();
+    if (submit) {
+      await Future<void>.delayed(composedEnterDelay);
+      if (!_disposed) {
+        terminal.keyInput(TerminalKey.enter);
+      }
+    }
+  }
+
   void _startTmuxIfConfigured(SshTerminalSession session) {
     final command = _buildTmuxCommand();
     if (command == null) {

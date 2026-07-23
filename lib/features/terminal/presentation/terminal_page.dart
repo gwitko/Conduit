@@ -12,6 +12,7 @@ import 'package:conduit/features/terminal/presentation/terminal_keyboard_bar.dar
 import 'package:conduit/features/terminal/presentation/terminal_session_controller.dart';
 import 'package:conduit/features/terminal/presentation/terminal_workspace_controller.dart';
 import 'package:conduit/features/terminal/presentation/widgets/empty_terminal_state.dart';
+import 'package:conduit/features/terminal/presentation/widgets/prompt_composer_sheet.dart';
 import 'package:conduit/features/terminal/presentation/widgets/session_tabs.dart';
 import 'package:conduit/features/terminal/presentation/widgets/terminal_header.dart';
 import 'package:conduit/features/terminal/presentation/widgets/terminal_surface.dart';
@@ -41,11 +42,17 @@ class _TerminalPageState extends State<TerminalPage> {
   bool _tmuxScrollMode = false;
   bool _composeMode = false;
   // Compose recall: recently SENT lines (deduped, oldest first, capped) so a
-  // line sent into a mode that discarded it can be recalled; plus the current
-  // UNSENT draft, preserved across close so closing compose can't lose it.
+  // line sent into a mode that discarded it can be recalled; plus one UNSENT
+  // draft per session (keyed by host id), preserved across compose close,
+  // tab switches, and backgrounding so composing can't silently lose text.
+  // Drafts are deliberately in-memory only: prompts can be sensitive, so
+  // they are not persisted across a full app restart.
   static const int _composeHistoryLimit = 20;
   final List<String> _composeHistory = <String>[];
-  String _composeDraft = '';
+  final Map<String, String> _composeDrafts = <String, String>{};
+  // Bumped whenever a draft is edited outside the inline bar (the composer
+  // sheet), forcing the bar to rebuild with the updated text.
+  int _composeRevision = 0;
 
   @override
   void initState() {
@@ -106,6 +113,27 @@ class _TerminalPageState extends State<TerminalPage> {
   void _toggleFullscreen() {
     setState(() => _fullscreen = !_fullscreen);
     _setSystemUiFullscreen(_fullscreen);
+  }
+
+  Future<void> _openPromptComposer(TerminalSessionController session) async {
+    final hostId = session.host.id;
+    await showPromptComposerSheet(
+      context: context,
+      initialText: _composeDrafts[hostId] ?? '',
+      onDraftChanged: (draft) => _composeDrafts[hostId] = draft,
+      onSend: session.sendComposed,
+      submitEnter: widget.themeController.composeSubmitEnter,
+      onSubmitEnterChanged: (enabled) =>
+          unawaited(widget.themeController.setComposeSubmitEnter(enabled)),
+      isConnected: () => session.isConnected,
+    );
+    if (!mounted) {
+      return;
+    }
+    // The sheet may have edited or cleared this session's draft; rebuild the
+    // inline bar so it shows the latest text.
+    setState(() => _composeRevision += 1);
+    _focusNode.requestFocus();
   }
 
   void _setSystemUiFullscreen(bool fullscreen) {
@@ -215,10 +243,18 @@ class _TerminalPageState extends State<TerminalPage> {
                     ),
                     if (_composeMode)
                       _ComposeInputBar(
+                        key: ValueKey(
+                          'compose-${activeSession.host.id}-$_composeRevision',
+                        ),
                         palette: palette,
                         brightness: brightness,
                         history: _composeHistory,
-                        initialText: _composeDraft,
+                        initialText:
+                            _composeDrafts[activeSession.host.id] ?? '',
+                        onChanged: (draft) {
+                          _composeDrafts[activeSession.host.id] = draft;
+                        },
+                        onExpand: () => _openPromptComposer(activeSession),
                         onSend: (line) {
                           // Send the line, then deliver Enter as a SEPARATE write a
                           // short moment later. Some remote TUIs (e.g. Claude Code
@@ -241,13 +277,14 @@ class _TerminalPageState extends State<TerminalPage> {
                             if (_composeHistory.length > _composeHistoryLimit) {
                               _composeHistory.removeAt(0);
                             }
-                            _composeDraft = '';
+                            _composeDrafts[activeSession.host.id] = '';
                           });
                         },
                         onClose: (draft) {
                           setState(() {
                             _composeMode = false;
-                            _composeDraft = draft; // preserve the unsent draft
+                            // Preserve the unsent draft for this session.
+                            _composeDrafts[activeSession.host.id] = draft;
                           });
                           _focusNode.requestFocus();
                         },
@@ -293,13 +330,24 @@ class _ComposeInputBar extends StatefulWidget {
     required this.brightness,
     required this.onSend,
     required this.onClose,
+    this.onChanged,
+    this.onExpand,
     this.history = const <String>[],
     this.initialText = '',
+    super.key,
   });
 
   final AppPalette palette;
   final Brightness brightness;
   final ValueChanged<String> onSend;
+
+  /// Called on every edit with the current field text so the owner can keep
+  /// the per-session draft up to date even if the bar is torn down (e.g. on
+  /// a tab switch) without a close event.
+  final ValueChanged<String>? onChanged;
+
+  /// Opens the full multiline composer seeded with the current draft.
+  final VoidCallback? onExpand;
 
   /// Called on close with the current (unsent) field text so the caller can
   /// preserve it — closing compose must not silently discard a draft.
@@ -329,13 +377,19 @@ class _ComposeInputBarState extends State<_ComposeInputBar> {
         selection: TextSelection.collapsed(offset: widget.initialText.length),
       );
     }
+    _controller.addListener(_notifyChanged);
     WidgetsBinding.instance.addPostFrameCallback(
       (_) => _focusNode.requestFocus(),
     );
   }
 
+  void _notifyChanged() {
+    widget.onChanged?.call(_controller.text);
+  }
+
   @override
   void dispose() {
+    _controller.removeListener(_notifyChanged);
     _controller.dispose();
     _focusNode.dispose();
     super.dispose();
@@ -434,6 +488,12 @@ class _ComposeInputBarState extends State<_ComposeInputBar> {
                 ),
               ),
             ),
+            if (widget.onExpand != null)
+              IconButton(
+                icon: const Icon(Icons.open_in_full_rounded),
+                tooltip: 'Expand composer',
+                onPressed: widget.onExpand,
+              ),
             IconButton(
               icon: const Icon(Icons.close_rounded),
               tooltip: 'Close compose',

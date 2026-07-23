@@ -144,6 +144,7 @@ class AppBackupService {
       'showLocalShell': _themeController.showLocalShell,
       'terminalMouseInput': _themeController.terminalMouseInput,
       'terminalEnterSequence': _themeController.terminalEnterSequence.name,
+      'composeSubmitEnter': _themeController.composeSubmitEnter,
     };
   }
 
@@ -201,6 +202,10 @@ class AppBackupService {
         orElse: () => _themeController.terminalEnterSequence,
       ),
     );
+    final composeSubmitEnter = json['composeSubmitEnter'];
+    if (composeSubmitEnter is bool) {
+      await _themeController.setComposeSubmitEnter(composeSubmitEnter);
+    }
   }
 
   Map<String, Object?> _decodeDocument(Uint8List bytes) {

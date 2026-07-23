@@ -69,6 +69,9 @@ Dart implementation of the protocol, and the terminal is
   password.
 - Customizable on-screen key row with modifiers, arrows, function keys, key
   repeat, latching modifiers, and your own text snippets and control-key combos.
+- Multiline prompt composer: expand the Compose key into a full mobile editor
+  with drafts per session, voice dictation via the system keyboard, and safe
+  bracketed-paste delivery into TUIs, with insert-only or insert-and-send.
 - Saved global and per-machine snippets from the key row, with hidden snippets
   for passwords or secrets and optional per-machine run-on-connect snippets.
 - Optional device-auth app lock for protecting saved machines and credentials.
