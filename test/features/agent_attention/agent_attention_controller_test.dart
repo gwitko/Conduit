@@ -233,6 +233,29 @@ void main() {
     expect(notifier.shown, hasLength(1));
   });
 
+  test(
+    'resuming the app does not resurrect polling on unavailable hosts',
+    () async {
+      final (workspace, controller, runner, _) = build([
+        const AgentCommandResult(
+          stdout: '',
+          stderr: 'sh: herdr: command not found',
+          exitCode: 127,
+        ),
+      ]);
+      await workspace.open(monitoredHost('h')).connect();
+      await pumpEventQueue();
+      expect(controller.statusFor('h')?.unavailableReason, isNotNull);
+      final commandsAfterDetection = runner.commands.length;
+
+      controller.setAppActive(false);
+      controller.setAppActive(true);
+      await pumpEventQueue();
+
+      expect(runner.commands.length, commandsAfterDetection);
+    },
+  );
+
   test('runs the provider focus command for an agent', () async {
     final (workspace, controller, runner, _) = build([agents(working)]);
     await workspace.open(monitoredHost('h')).connect();

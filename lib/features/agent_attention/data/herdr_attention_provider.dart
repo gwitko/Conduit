@@ -177,11 +177,16 @@ class HerdrAttentionProvider implements AgentAttentionProvider {
 
   static DateTime? _parseTimestamp(Object? value) {
     if (value is int) {
-      // Interpret plausibly-sized integers as epoch milliseconds.
-      if (value > 100000000000) {
-        return DateTime.fromMillisecondsSinceEpoch(value, isUtc: true);
+      try {
+        // Interpret plausibly-sized integers as epoch milliseconds; absurd
+        // values are dropped rather than failing the whole snapshot.
+        if (value > 100000000000) {
+          return DateTime.fromMillisecondsSinceEpoch(value, isUtc: true);
+        }
+        return DateTime.fromMillisecondsSinceEpoch(value * 1000, isUtc: true);
+      } on ArgumentError {
+        return null;
       }
-      return DateTime.fromMillisecondsSinceEpoch(value * 1000, isUtc: true);
     }
     if (value is String) {
       return DateTime.tryParse(value);

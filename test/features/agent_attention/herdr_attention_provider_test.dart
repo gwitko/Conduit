@@ -66,6 +66,15 @@ void main() {
       expect(agents.single.name, 'ok');
     });
 
+    test('drops absurd timestamps instead of failing the snapshot', () {
+      final agents = HerdrAttentionProvider.parseAgentList(
+        '[{"name": "a", "state": "working", '
+        '"state_changed_at": 99999999999999999999999}]',
+      );
+      expect(agents, hasLength(1));
+      expect(agents.single.stateChangedAt, isNull);
+    });
+
     test('parses timestamps and sequence numbers when present', () {
       final agents = HerdrAttentionProvider.parseAgentList(
         '[{"name": "a", "state": "working", '

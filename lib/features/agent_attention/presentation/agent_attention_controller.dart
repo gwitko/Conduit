@@ -108,8 +108,12 @@ class AgentAttentionController extends ChangeNotifier {
     _appActive = active;
     for (final monitor in _monitors.values) {
       if (active) {
-        _startTimer(monitor);
-        unawaited(_poll(monitor));
+        // Hosts marked unavailable stay stopped; a manual refresh or a
+        // reconnect gives them another chance.
+        if (monitor.status.unavailableReason == null) {
+          _startTimer(monitor);
+          unawaited(_poll(monitor));
+        }
       } else {
         monitor.timer?.cancel();
         monitor.timer = null;
@@ -255,9 +259,10 @@ class AgentAttentionController extends ChangeNotifier {
     _HostMonitor monitor,
     AgentAttentionSnapshot snapshot,
   ) async {
-    if (monitor.sawInitialSnapshot) {
-      await _notifyTransitions(monitor, snapshot);
-    }
+    final previousStates = monitor.lastStates;
+    final notify = monitor.sawInitialSnapshot;
+    // Commit the new states before notifying so a throwing notifier can
+    // never cause the same transition to notify twice on the next poll.
     monitor.lastStates = {
       for (final agent in snapshot.agents) agent.id: agent.state,
     };
@@ -266,11 +271,15 @@ class AgentAttentionController extends ChangeNotifier {
       agents: snapshot.agents,
       updatedAt: DateTime.now(),
     );
+    if (notify) {
+      await _notifyTransitions(monitor, snapshot, previousStates);
+    }
   }
 
   Future<void> _notifyTransitions(
     _HostMonitor monitor,
     AgentAttentionSnapshot snapshot,
+    Map<String, AgentAttentionState> previousStates,
   ) async {
     final notifier = _notifier;
     if (notifier == null) {
@@ -278,7 +287,7 @@ class AgentAttentionController extends ChangeNotifier {
     }
     final host = monitor.host;
     for (final agent in snapshot.agents) {
-      final previous = monitor.lastStates[agent.id];
+      final previous = previousStates[agent.id];
       if (previous == agent.state) {
         continue;
       }
