@@ -148,6 +148,9 @@ class SavedHost {
     this.tmuxStartDirectory = '',
     this.snippets = const [],
     this.connectSnippetId = '',
+    this.agentAttentionEnabled = false,
+    this.agentNotifyInput = true,
+    this.agentNotifyFinished = true,
     this.lastConnectedAt,
     this.isLocal = false,
   });
@@ -188,6 +191,16 @@ class SavedHost {
   final String tmuxStartDirectory;
   final List<TerminalSnippet> snippets;
   final String connectSnippetId;
+
+  /// Opt-in agent monitoring (Agent Attention) for this machine.
+  final bool agentAttentionEnabled;
+
+  /// Notify when a monitored agent starts needing input or is blocked.
+  final bool agentNotifyInput;
+
+  /// Notify when a monitored agent finishes background work.
+  final bool agentNotifyFinished;
+
   final DateTime? lastConnectedAt;
   final bool isLocal;
 
@@ -261,6 +274,9 @@ class SavedHost {
     String? tmuxStartDirectory,
     List<TerminalSnippet>? snippets,
     String? connectSnippetId,
+    bool? agentAttentionEnabled,
+    bool? agentNotifyInput,
+    bool? agentNotifyFinished,
     DateTime? lastConnectedAt,
     bool clearLastConnectedAt = false,
     bool? isLocal,
@@ -292,6 +308,10 @@ class SavedHost {
       tmuxStartDirectory: tmuxStartDirectory ?? this.tmuxStartDirectory,
       snippets: snippets ?? this.snippets,
       connectSnippetId: connectSnippetId ?? this.connectSnippetId,
+      agentAttentionEnabled:
+          agentAttentionEnabled ?? this.agentAttentionEnabled,
+      agentNotifyInput: agentNotifyInput ?? this.agentNotifyInput,
+      agentNotifyFinished: agentNotifyFinished ?? this.agentNotifyFinished,
       lastConnectedAt: clearLastConnectedAt
           ? null
           : lastConnectedAt ?? this.lastConnectedAt,
@@ -332,6 +352,9 @@ class SavedHost {
       'tmuxStartDirectory': tmuxStartDirectory,
       'snippets': [for (final snippet in snippets) snippet.toJson()],
       'connectSnippetId': connectSnippetId,
+      'agentAttentionEnabled': agentAttentionEnabled,
+      'agentNotifyInput': agentNotifyInput,
+      'agentNotifyFinished': agentNotifyFinished,
       'lastConnectedAt': lastConnectedAt?.toIso8601String(),
       'isLocal': isLocal,
     };
@@ -386,6 +409,9 @@ class SavedHost {
           .whereType<TerminalSnippet>()
           .toList(growable: false),
       connectSnippetId: json['connectSnippetId'] as String? ?? '',
+      agentAttentionEnabled: json['agentAttentionEnabled'] as bool? ?? false,
+      agentNotifyInput: json['agentNotifyInput'] as bool? ?? true,
+      agentNotifyFinished: json['agentNotifyFinished'] as bool? ?? true,
       lastConnectedAt: lastConnectedAtRaw == null
           ? null
           : DateTime.tryParse(lastConnectedAtRaw),

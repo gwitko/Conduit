@@ -303,6 +303,9 @@ class HostAdvancedSection extends StatelessWidget {
     required this.predictiveEchoEnabled,
     required this.startTmuxOnConnect,
     required this.tmuxPrefixKey,
+    required this.agentAttentionEnabled,
+    required this.agentNotifyInput,
+    required this.agentNotifyFinished,
     required this.snippets,
     required this.connectSnippetId,
     required this.timeoutValidator,
@@ -313,6 +316,9 @@ class HostAdvancedSection extends StatelessWidget {
     required this.onPredictiveEchoChanged,
     required this.onStartTmuxOnConnectChanged,
     required this.onTmuxPrefixKeyChanged,
+    required this.onAgentAttentionEnabledChanged,
+    required this.onAgentNotifyInputChanged,
+    required this.onAgentNotifyFinishedChanged,
     required this.onSnippetsChanged,
     required this.onConnectSnippetChanged,
     super.key,
@@ -330,6 +336,9 @@ class HostAdvancedSection extends StatelessWidget {
   final bool predictiveEchoEnabled;
   final bool startTmuxOnConnect;
   final TmuxPrefixKey tmuxPrefixKey;
+  final bool agentAttentionEnabled;
+  final bool agentNotifyInput;
+  final bool agentNotifyFinished;
   final List<TerminalSnippet> snippets;
   final String connectSnippetId;
   final FormFieldValidator<String> timeoutValidator;
@@ -340,6 +349,9 @@ class HostAdvancedSection extends StatelessWidget {
   final ValueChanged<bool> onPredictiveEchoChanged;
   final ValueChanged<bool> onStartTmuxOnConnectChanged;
   final ValueChanged<TmuxPrefixKey> onTmuxPrefixKeyChanged;
+  final ValueChanged<bool> onAgentAttentionEnabledChanged;
+  final ValueChanged<bool> onAgentNotifyInputChanged;
+  final ValueChanged<bool> onAgentNotifyFinishedChanged;
   final ValueChanged<List<TerminalSnippet>> onSnippetsChanged;
   final ValueChanged<String> onConnectSnippetChanged;
 
@@ -494,6 +506,40 @@ class HostAdvancedSection extends StatelessWidget {
             }
           },
         ),
+        const SizedBox(height: 16),
+        Material(
+          color: Colors.transparent,
+          child: SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Monitor coding agents'),
+            subtitle: const Text(
+              'Poll Herdr on this machine while connected and show agent '
+              'states in the terminal dashboard.',
+            ),
+            value: agentAttentionEnabled,
+            onChanged: onAgentAttentionEnabledChanged,
+          ),
+        ),
+        if (agentAttentionEnabled) ...[
+          Material(
+            color: Colors.transparent,
+            child: SwitchListTile(
+              contentPadding: const EdgeInsetsDirectional.only(start: 16),
+              title: const Text('Notify when an agent needs input'),
+              value: agentNotifyInput,
+              onChanged: onAgentNotifyInputChanged,
+            ),
+          ),
+          Material(
+            color: Colors.transparent,
+            child: SwitchListTile(
+              contentPadding: const EdgeInsetsDirectional.only(start: 16),
+              title: const Text('Notify when an agent finishes'),
+              value: agentNotifyFinished,
+              onChanged: onAgentNotifyFinishedChanged,
+            ),
+          ),
+        ],
         const SizedBox(height: 18),
         SnippetListEditor(
           title: 'Host snippets',

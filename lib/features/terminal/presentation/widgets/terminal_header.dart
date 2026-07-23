@@ -9,6 +9,8 @@ class TerminalHeader extends StatelessWidget {
     required this.brightness,
     required this.onBack,
     required this.onReconnect,
+    this.attentionCount = 0,
+    this.onOpenAgentAttention,
     super.key,
   });
 
@@ -17,6 +19,12 @@ class TerminalHeader extends StatelessWidget {
   final Brightness brightness;
   final VoidCallback onBack;
   final VoidCallback onReconnect;
+
+  /// Number of monitored agents currently needing attention (badge).
+  final int attentionCount;
+
+  /// Opens the Agent Attention dashboard; null hides the button.
+  final VoidCallback? onOpenAgentAttention;
 
   @override
   Widget build(BuildContext context) {
@@ -67,6 +75,17 @@ class TerminalHeader extends StatelessWidget {
               ],
             ),
           ),
+          if (onOpenAgentAttention != null)
+            IconButton(
+              tooltip: 'Agents',
+              color: foreground,
+              icon: Badge.count(
+                count: attentionCount,
+                isLabelVisible: attentionCount > 0,
+                child: const Icon(Icons.monitor_heart_outlined),
+              ),
+              onPressed: onOpenAgentAttention,
+            ),
           IconButton(
             tooltip: 'Reconnect',
             color: foreground,

@@ -4,6 +4,10 @@ import 'package:conduit/core/presentation/system_navigation_insets.dart';
 import 'package:conduit/core/theme/app_theme.dart';
 import 'package:conduit/core/theme/theme_controller.dart';
 import 'package:conduit/core/theme/theme_preferences_repository.dart';
+import 'package:conduit/features/agent_attention/data/herdr_attention_provider.dart';
+import 'package:conduit/features/agent_attention/data/platform_agent_notifier.dart';
+import 'package:conduit/features/agent_attention/data/ssh_agent_command_runner.dart';
+import 'package:conduit/features/agent_attention/presentation/agent_attention_controller.dart';
 import 'package:conduit/features/app_lock/data/local_app_authenticator.dart';
 import 'package:conduit/features/app_lock/presentation/app_lock_controller.dart';
 import 'package:conduit/features/app_lock/presentation/lock_page.dart';
@@ -64,6 +68,12 @@ void main() {
     ConnectivityPlusNetwork(),
   );
   final sftpRepository = DartSshSftpRepository(hostKeyVerifier);
+  final agentAttention = AgentAttentionController(
+    workspace: workspaceController,
+    runnerFactory: (host) => SshAgentCommandRunner(hostKeyVerifier, host),
+    provider: const HerdrAttentionProvider(),
+    notifier: const PlatformAgentAttentionNotifier(),
+  );
   final backupService = AppBackupService(
     hostsController: hostsController,
     themeController: themeController,
@@ -84,6 +94,7 @@ void main() {
       hostKeyVerifier: hostKeyVerifier,
       promptCoordinator: promptCoordinator,
       sftpRepository: sftpRepository,
+      agentAttention: agentAttention,
       backupService: backupService,
       fileExport: fileExport,
     ),
@@ -101,6 +112,7 @@ class ConduitApp extends StatefulWidget {
     required this.hostKeyVerifier,
     required this.promptCoordinator,
     required this.sftpRepository,
+    required this.agentAttention,
     required this.backupService,
     required this.fileExport,
     super.key,
@@ -115,6 +127,7 @@ class ConduitApp extends StatefulWidget {
   final HostKeyVerifier hostKeyVerifier;
   final HostKeyPromptCoordinator promptCoordinator;
   final SftpRepository sftpRepository;
+  final AgentAttentionController agentAttention;
   final AppBackupService backupService;
   final FileExport fileExport;
 
@@ -148,12 +161,25 @@ class _ConduitAppState extends State<ConduitApp> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _lifecycleState = state;
     _syncBackgroundKeepalive();
+    _syncAgentAttention(state);
 
     if (state == AppLifecycleState.resumed) {
       for (final session in widget.workspaceController.sessions) {
         session.forceResize();
       }
     }
+  }
+
+  void _syncAgentAttention(AppLifecycleState state) {
+    // On Android the keepalive foreground service holds connections open in
+    // the background, which is exactly when attention notifications matter,
+    // so polling continues. Elsewhere backgrounded sockets die anyway, so
+    // polling pauses until the app returns.
+    final active =
+        state == AppLifecycleState.resumed ||
+        (defaultTargetPlatform == TargetPlatform.android &&
+            state != AppLifecycleState.detached);
+    widget.agentAttention.setAppActive(active);
   }
 
   void _syncBackgroundKeepalive() {
@@ -258,6 +284,7 @@ class _ConduitAppState extends State<ConduitApp> with WidgetsBindingObserver {
                 hostKeyVerifier: widget.hostKeyVerifier,
                 promptCoordinator: widget.promptCoordinator,
                 sftpRepository: widget.sftpRepository,
+                agentAttention: widget.agentAttention,
                 backupService: widget.backupService,
                 fileExport: widget.fileExport,
               );

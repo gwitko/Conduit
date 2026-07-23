@@ -56,6 +56,9 @@ class _HostFormPageState extends State<HostFormPage> {
   bool _showPassword = false;
   bool _showPassphrase = false;
   bool _useMosh = false;
+  bool _agentAttentionEnabled = false;
+  bool _agentNotifyInput = true;
+  bool _agentNotifyFinished = true;
   bool _predictiveEchoEnabled = false;
   bool _externalAuthOfferKey = true;
   bool _forwardAgent = false;
@@ -116,6 +119,9 @@ class _HostFormPageState extends State<HostFormPage> {
       _tmuxStartDirectoryController.text = host.tmuxStartDirectory;
       _snippets = List<TerminalSnippet>.from(host.snippets);
       _connectSnippetId = host.connectSnippetId;
+      _agentAttentionEnabled = host.agentAttentionEnabled;
+      _agentNotifyInput = host.agentNotifyInput;
+      _agentNotifyFinished = host.agentNotifyFinished;
     }
     _keyInspection = _cheapPreview();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -294,6 +300,9 @@ class _HostFormPageState extends State<HostFormPage> {
               predictiveEchoEnabled: _predictiveEchoEnabled,
               startTmuxOnConnect: _startTmuxOnConnect,
               tmuxPrefixKey: _tmuxPrefixKey,
+              agentAttentionEnabled: _agentAttentionEnabled,
+              agentNotifyInput: _agentNotifyInput,
+              agentNotifyFinished: _agentNotifyFinished,
               snippets: _snippets,
               connectSnippetId: _connectSnippetId,
               timeoutValidator: _validateTimeout,
@@ -312,6 +321,12 @@ class _HostFormPageState extends State<HostFormPage> {
                   setState(() => _startTmuxOnConnect = value),
               onTmuxPrefixKeyChanged: (value) =>
                   setState(() => _tmuxPrefixKey = value),
+              onAgentAttentionEnabledChanged: (value) =>
+                  setState(() => _agentAttentionEnabled = value),
+              onAgentNotifyInputChanged: (value) =>
+                  setState(() => _agentNotifyInput = value),
+              onAgentNotifyFinishedChanged: (value) =>
+                  setState(() => _agentNotifyFinished = value),
               onSnippetsChanged: (snippets) => setState(() {
                 _snippets = snippets;
                 if (!_snippets.any(
@@ -717,6 +732,9 @@ class _HostFormPageState extends State<HostFormPage> {
           ? defaultTmuxSessionName
           : _tmuxSessionNameController.text.trim(),
       tmuxStartDirectory: _tmuxStartDirectoryController.text.trim(),
+      agentAttentionEnabled: _agentAttentionEnabled,
+      agentNotifyInput: _agentNotifyInput,
+      agentNotifyFinished: _agentNotifyFinished,
       snippets: List<TerminalSnippet>.unmodifiable(_snippets),
       connectSnippetId:
           _snippets.any((snippet) => snippet.id == _connectSnippetId)

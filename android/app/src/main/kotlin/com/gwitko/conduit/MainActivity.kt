@@ -48,6 +48,21 @@ class MainActivity : FlutterFragmentActivity() {
         }
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
+            AGENT_NOTIFICATIONS_CHANNEL,
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "show" -> {
+                    val id = call.argument<String>("id") ?: ""
+                    val title = call.argument<String>("title") ?: ""
+                    val body = call.argument<String>("body") ?: ""
+                    showAgentNotification(id, title, body)
+                    result.success(null)
+                }
+                else -> result.notImplemented()
+            }
+        }
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
             FIDO_USB_CHANNEL,
         ).setMethodCallHandler { call, result ->
             fidoUsbCtapTransport.handle(call, result)
@@ -108,6 +123,49 @@ class MainActivity : FlutterFragmentActivity() {
         return Environment.getExternalStorageDirectory().absolutePath
     }
 
+    private fun showAgentNotification(id: String, title: String, body: String) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        val manager = getSystemService(NotificationManager::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                AGENT_NOTIFICATION_CHANNEL_ID,
+                "Agent attention",
+                NotificationManager.IMPORTANCE_DEFAULT,
+            ).apply {
+                description = "Alerts when a monitored coding agent needs input or finishes."
+            }
+            manager.createNotificationChannel(channel)
+        }
+        val launchIntent = Intent(this, MainActivity::class.java)
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            launchIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Notification.Builder(this, AGENT_NOTIFICATION_CHANNEL_ID)
+        } else {
+            @Suppress("DEPRECATION")
+            Notification.Builder(this)
+        }
+        val notification = builder
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .build()
+        // A stable per-agent id: a new state for the same agent replaces the
+        // old notification instead of stacking.
+        manager.notify(AGENT_NOTIFICATION_TAG, id.hashCode(), notification)
+    }
+
     private fun requestNotificationPermissionIfNeeded() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
         val granted = checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
@@ -121,8 +179,11 @@ class MainActivity : FlutterFragmentActivity() {
 
     companion object {
         const val BACKGROUND_KEEPALIVE_CHANNEL = "conduit/background_keepalive"
+        const val AGENT_NOTIFICATIONS_CHANNEL = "conduit/agent_notifications"
         const val FIDO_USB_CHANNEL = "conduit/fido_usb"
         const val LOCAL_SHELL_CHANNEL = "conduit/local_shell"
+        private const val AGENT_NOTIFICATION_CHANNEL_ID = "agent_attention"
+        private const val AGENT_NOTIFICATION_TAG = "conduit_agent"
         private const val NOTIFICATION_PERMISSION_REQUEST_CODE = 2001
         private const val SHARED_STORAGE_PERMISSION_REQUEST_CODE = 2002
     }

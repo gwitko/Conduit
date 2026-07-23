@@ -169,6 +169,9 @@ void main() {
           ),
         ],
         connectSnippetId: 'snippet:deploy',
+        agentAttentionEnabled: true,
+        agentNotifyInput: false,
+        agentNotifyFinished: false,
         lastConnectedAt: DateTime.parse('2025-01-02T03:04:05Z'),
       );
 
@@ -198,7 +201,26 @@ void main() {
       expect(decoded.tmuxStartDirectory, original.tmuxStartDirectory);
       expect(decoded.snippets, original.snippets);
       expect(decoded.connectSnippetId, original.connectSnippetId);
+      expect(decoded.agentAttentionEnabled, original.agentAttentionEnabled);
+      expect(decoded.agentNotifyInput, original.agentNotifyInput);
+      expect(decoded.agentNotifyFinished, original.agentNotifyFinished);
       expect(decoded.lastConnectedAt, original.lastConnectedAt);
+    });
+
+    test('missing agent monitoring settings default to disabled with '
+        'notifications on', () {
+      final decoded = SavedHost.fromJson(const {
+        'id': 'id',
+        'name': 'n',
+        'host': 'h',
+        'port': 22,
+        'username': 'u',
+        'authMethod': 'password',
+      });
+
+      expect(decoded.agentAttentionEnabled, isFalse);
+      expect(decoded.agentNotifyInput, isTrue);
+      expect(decoded.agentNotifyFinished, isTrue);
     });
 
     test('invalid persisted mosh ports fall back to the default', () {
@@ -451,6 +473,8 @@ void main() {
         );
         await tester.pump();
       }
+      await tester.ensureVisible(addButton);
+      await tester.pump();
       await tester.tap(addButton);
       await tester.pumpAndSettle();
       listPosition.jumpTo(0);
