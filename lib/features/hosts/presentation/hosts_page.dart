@@ -23,6 +23,7 @@ import 'package:conduit/features/local_shell/presentation/local_shell_setup_page
 import 'package:conduit/features/local_shell/presentation/widgets/local_shell_section.dart';
 import 'package:conduit/features/sftp/domain/file_export.dart';
 import 'package:conduit/features/sftp/domain/sftp_repository.dart';
+import 'package:conduit/features/sftp/domain/upload_manifest.dart';
 import 'package:conduit/features/sftp/presentation/sftp_browser_page.dart';
 import 'package:conduit/features/terminal/domain/host_key_prompt.dart';
 import 'package:conduit/features/terminal/domain/host_key_verifier.dart';
@@ -47,6 +48,7 @@ class HostsPage extends StatefulWidget {
     required this.hostKeyVerifier,
     required this.promptCoordinator,
     required this.sftpRepository,
+    required this.uploadManifestRepository,
     required this.backupService,
     required this.fileExport,
     super.key,
@@ -61,6 +63,7 @@ class HostsPage extends StatefulWidget {
   final HostKeyVerifier hostKeyVerifier;
   final HostKeyPromptCoordinator promptCoordinator;
   final SftpRepository sftpRepository;
+  final UploadManifestRepository uploadManifestRepository;
   final AppBackupService backupService;
   final FileExport fileExport;
 
@@ -440,6 +443,8 @@ class _HostsPageState extends State<HostsPage> {
         builder: (_) => TerminalPage(
           workspace: widget.workspaceController,
           themeController: widget.themeController,
+          sftpRepository: widget.sftpRepository,
+          uploadManifestRepository: widget.uploadManifestRepository,
         ),
       ),
     );

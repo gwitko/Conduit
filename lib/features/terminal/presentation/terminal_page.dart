@@ -5,30 +5,47 @@ import 'package:conduit/core/presentation/system_navigation_insets.dart';
 import 'package:conduit/core/theme/app_palette.dart';
 import 'package:conduit/core/theme/terminal_appearance.dart';
 import 'package:conduit/core/theme/theme_controller.dart';
+import 'package:conduit/features/sftp/domain/sftp_repository.dart';
+import 'package:conduit/features/sftp/domain/upload_manifest.dart';
+import 'package:conduit/features/sftp/presentation/sftp_browser_controller.dart'
+    show SftpUploadFile;
 import 'package:conduit/features/terminal/domain/security_key_interaction.dart';
 import 'package:conduit/features/terminal/presentation/security_key_picker_dialog.dart';
 import 'package:conduit/features/terminal/presentation/security_key_pin_dialog.dart';
 import 'package:conduit/features/terminal/presentation/terminal_keyboard_bar.dart';
 import 'package:conduit/features/terminal/presentation/terminal_session_controller.dart';
+import 'package:conduit/features/terminal/presentation/terminal_upload_controller.dart';
 import 'package:conduit/features/terminal/presentation/terminal_workspace_controller.dart';
 import 'package:conduit/features/terminal/presentation/widgets/empty_terminal_state.dart';
 import 'package:conduit/features/terminal/presentation/widgets/session_tabs.dart';
 import 'package:conduit/features/terminal/presentation/widgets/terminal_header.dart';
 import 'package:conduit/features/terminal/presentation/widgets/terminal_surface.dart';
+import 'package:conduit/features/terminal/presentation/widgets/terminal_upload_sheet.dart';
 import 'package:conduit_vt/conduit_vt.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+
+/// Picks local files for upload; injectable so tests can avoid the native
+/// file picker. Returns null when the user cancels.
+typedef TerminalUploadFilePicker = Future<List<SftpUploadFile>?> Function();
 
 class TerminalPage extends StatefulWidget {
   const TerminalPage({
     required this.workspace,
     required this.themeController,
+    required this.sftpRepository,
+    required this.uploadManifestRepository,
+    this.uploadFilePicker,
     super.key,
   });
 
   final TerminalWorkspaceController workspace;
   final ThemeController themeController;
+  final SftpRepository sftpRepository;
+  final UploadManifestRepository uploadManifestRepository;
+  final TerminalUploadFilePicker? uploadFilePicker;
 
   @override
   State<TerminalPage> createState() => _TerminalPageState();
@@ -106,6 +123,84 @@ class _TerminalPageState extends State<TerminalPage> {
   void _toggleFullscreen() {
     setState(() => _fullscreen = !_fullscreen);
     _setSystemUiFullscreen(_fullscreen);
+  }
+
+  Future<List<SftpUploadFile>?> _pickUploadFiles() async {
+    final custom = widget.uploadFilePicker;
+    if (custom != null) {
+      return custom();
+    }
+    final FilePickerResult? result = await FilePicker.pickFiles(
+      allowMultiple: true,
+      withReadStream: true,
+    );
+    if (result == null || result.files.isEmpty) {
+      return null;
+    }
+    final files = <SftpUploadFile>[];
+    for (final file in result.files) {
+      final readStream = file.readStream;
+      final path = file.path;
+      if (readStream == null && path == null) {
+        continue;
+      }
+      files.add(
+        readStream == null
+            ? SftpUploadFile.local(
+                localPath: path!,
+                name: file.name,
+                size: file.size,
+              )
+            : SftpUploadFile(
+                source: () => readStream,
+                name: file.name,
+                size: file.size,
+              ),
+      );
+    }
+    return files;
+  }
+
+  Future<void> _openUploadFlow(TerminalSessionController session) async {
+    if (session.host.isLocal) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Uploads need an SSH machine; the local shell has '
+            'no SFTP endpoint.',
+          ),
+        ),
+      );
+      return;
+    }
+    final List<SftpUploadFile>? files;
+    try {
+      files = await _pickUploadFiles();
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not read the selected files.')),
+        );
+      }
+      return;
+    }
+    if (files == null || files.isEmpty || !mounted) {
+      return;
+    }
+    final controller = TerminalUploadController(
+      host: session.host,
+      repository: widget.sftpRepository,
+      manifest: widget.uploadManifestRepository,
+    );
+    controller.prepare(files);
+    await showTerminalUploadSheet(
+      context: context,
+      controller: controller,
+      // Insert without submitting so the user can add text around the paths.
+      onInsert: session.sendText,
+    );
+    controller.dispose();
+    _focusNode.requestFocus();
   }
 
   void _setSystemUiFullscreen(bool fullscreen) {
@@ -265,6 +360,8 @@ class _TerminalPageState extends State<TerminalPage> {
                         composeActive: _composeMode,
                         onToggleCompose: () =>
                             setState(() => _composeMode = !_composeMode),
+                        onUpload: () =>
+                            unawaited(_openUploadFlow(activeSession)),
                         tmuxPrefixKey: activeSession.host.tmuxPrefixKey,
                         tmuxScrollMode: _tmuxScrollMode,
                         onEnterTmuxScrollMode: () {

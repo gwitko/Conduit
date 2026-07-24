@@ -51,11 +51,13 @@ class _HostFormPageState extends State<HostFormPage> {
     text: defaultTmuxSessionName,
   );
   final _tmuxStartDirectoryController = TextEditingController();
+  final _uploadDirectoryController = TextEditingController();
   final FocusNode _tagFocusNode = FocusNode();
   SshAuthMethod _authMethod = SshAuthMethod.password;
   bool _showPassword = false;
   bool _showPassphrase = false;
   bool _useMosh = false;
+  int? _uploadCleanupDays;
   bool _predictiveEchoEnabled = false;
   bool _externalAuthOfferKey = true;
   bool _forwardAgent = false;
@@ -116,6 +118,8 @@ class _HostFormPageState extends State<HostFormPage> {
       _tmuxStartDirectoryController.text = host.tmuxStartDirectory;
       _snippets = List<TerminalSnippet>.from(host.snippets);
       _connectSnippetId = host.connectSnippetId;
+      _uploadDirectoryController.text = host.uploadDirectory;
+      _uploadCleanupDays = host.uploadCleanupDays;
     }
     _keyInspection = _cheapPreview();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -196,6 +200,7 @@ class _HostFormPageState extends State<HostFormPage> {
     _moshPortsController.dispose();
     _tmuxSessionNameController.dispose();
     _tmuxStartDirectoryController.dispose();
+    _uploadDirectoryController.dispose();
     super.dispose();
   }
 
@@ -290,10 +295,12 @@ class _HostFormPageState extends State<HostFormPage> {
               moshPortsController: _moshPortsController,
               tmuxSessionNameController: _tmuxSessionNameController,
               tmuxStartDirectoryController: _tmuxStartDirectoryController,
+              uploadDirectoryController: _uploadDirectoryController,
               useMosh: _useMosh,
               predictiveEchoEnabled: _predictiveEchoEnabled,
               startTmuxOnConnect: _startTmuxOnConnect,
               tmuxPrefixKey: _tmuxPrefixKey,
+              uploadCleanupDays: _uploadCleanupDays,
               snippets: _snippets,
               connectSnippetId: _connectSnippetId,
               timeoutValidator: _validateTimeout,
@@ -312,6 +319,8 @@ class _HostFormPageState extends State<HostFormPage> {
                   setState(() => _startTmuxOnConnect = value),
               onTmuxPrefixKeyChanged: (value) =>
                   setState(() => _tmuxPrefixKey = value),
+              onUploadCleanupDaysChanged: (value) =>
+                  setState(() => _uploadCleanupDays = value),
               onSnippetsChanged: (snippets) => setState(() {
                 _snippets = snippets;
                 if (!_snippets.any(
@@ -717,6 +726,8 @@ class _HostFormPageState extends State<HostFormPage> {
           ? defaultTmuxSessionName
           : _tmuxSessionNameController.text.trim(),
       tmuxStartDirectory: _tmuxStartDirectoryController.text.trim(),
+      uploadDirectory: _uploadDirectoryController.text.trim(),
+      uploadCleanupDays: _uploadCleanupDays,
       snippets: List<TerminalSnippet>.unmodifiable(_snippets),
       connectSnippetId:
           _snippets.any((snippet) => snippet.id == _connectSnippetId)
