@@ -5,12 +5,14 @@ class KeySourceActions extends StatelessWidget {
     required this.onImportFile,
     required this.onPaste,
     this.onGenerate,
+    this.onDownloadFromKey,
     super.key,
   });
 
   final VoidCallback onImportFile;
   final VoidCallback onPaste;
   final VoidCallback? onGenerate;
+  final VoidCallback? onDownloadFromKey;
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +40,16 @@ class KeySourceActions extends StatelessWidget {
               icon: Icons.auto_awesome_rounded,
               label: 'Generate',
               onPressed: onGenerate!,
+            ),
+          ),
+        ],
+        if (onDownloadFromKey != null) ...[
+          const SizedBox(width: 8),
+          Expanded(
+            child: _SourceButton(
+              icon: Icons.sim_card_download_rounded,
+              label: 'From key',
+              onPressed: onDownloadFromKey!,
             ),
           ),
         ],
