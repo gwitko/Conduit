@@ -8,6 +8,11 @@ import 'package:conduit/features/hosts/domain/ssh_key.dart';
 import 'package:conduit/features/hosts/presentation/public_key_sheet.dart';
 import 'package:conduit/features/hosts/presentation/widgets/key_source_actions.dart';
 import 'package:conduit/features/hosts/presentation/widgets/ssh_key_summary.dart';
+import 'package:conduit/features/terminal/data/fido_hardware_key_ctap_device.dart';
+import 'package:conduit/features/terminal/data/fido_resident_key_downloader.dart';
+import 'package:conduit/features/terminal/data/ssh_error_formatter.dart';
+import 'package:conduit/features/terminal/domain/security_key_interaction.dart';
+import 'package:conduit/features/terminal/presentation/security_key_pin_dialog.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -69,6 +74,8 @@ class _AddHardwareKeySheetState extends State<_AddHardwareKeySheet> {
   String? _blockingError;
   bool _showPassphrase = false;
   bool _labelEdited = false;
+  bool _downloading = false;
+  String? _downloadStatus;
   Timer? _verifyTimer;
   int _verifyToken = 0;
 
@@ -197,6 +204,83 @@ class _AddHardwareKeySheetState extends State<_AddHardwareKeySheet> {
     _setStub(text);
   }
 
+  Future<void> _downloadFromKey() async {
+    if (_downloading) return;
+    setState(() {
+      _downloading = true;
+      _downloadStatus = 'Waiting for hardware key over USB or NFC...';
+    });
+    try {
+      final downloader = FidoResidentKeyDownloader(
+        openDevice: FidoHardwareKeyCtapDevice.open,
+        closeDevice: FidoHardwareKeyCtapDevice.close,
+        onStatus: (message) {
+          if (mounted) setState(() => _downloadStatus = message);
+        },
+        onPinRequest: ({int? retriesRemaining}) => showSecurityKeyPinDialog(
+          context,
+          SecurityKeyPinRequest(retriesRemaining: retriesRemaining),
+        ),
+      );
+      final keys = await downloader.download();
+      if (!mounted) return;
+      if (keys.isEmpty) {
+        setState(
+          () => _downloadStatus =
+              'No resident SSH keys were found on this security key.',
+        );
+        return;
+      }
+      final key = keys.length == 1 ? keys.first : await _pickResidentKey(keys);
+      if (key == null || !mounted) return;
+      _setStub(key.toPem());
+      final suggestedLabel = key.suggestedLabel;
+      if (!_labelEdited && suggestedLabel.isNotEmpty) {
+        _labelController.text = suggestedLabel;
+      }
+      setState(() => _downloadStatus = null);
+    } on ResidentKeyDownloadCancelled {
+      if (mounted) setState(() => _downloadStatus = null);
+    } catch (error) {
+      if (mounted) {
+        setState(() => _downloadStatus = describeSshConnectionError(error));
+      }
+    } finally {
+      if (mounted) setState(() => _downloading = false);
+    }
+  }
+
+  Future<ResidentSecurityKey?> _pickResidentKey(
+    List<ResidentSecurityKey> keys,
+  ) {
+    return showDialog<ResidentSecurityKey>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Choose a resident key'),
+        children: [
+          for (final key in keys)
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(context).pop(key),
+              child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.vpn_key_outlined),
+                title: Text(
+                  key.suggestedLabel.isEmpty
+                      ? key.algorithm
+                      : key.suggestedLabel,
+                ),
+                subtitle: Text(
+                  '${key.algorithm} · ${key.application}\n'
+                  '${key.fingerprintSha256}',
+                ),
+                isThreeLine: true,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   void _showSnack(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(
@@ -247,15 +331,27 @@ class _AddHardwareKeySheetState extends State<_AddHardwareKeySheet> {
           const SizedBox(height: 6),
           Text(
             'Import or paste the OpenSSH *_sk stub that ssh-keygen created '
-            'for this security key. The stub only points to the key; the '
-            'private part never leaves the hardware.',
+            'for this security key, or download a resident key straight '
+            'from the key. The stub only points to the key; the private '
+            'part never leaves the hardware.',
             style: theme.textTheme.bodySmall?.copyWith(
               color: colorScheme.onSurfaceVariant,
               height: 1.3,
             ),
           ),
           const SizedBox(height: 16),
-          KeySourceActions(onImportFile: _importFile, onPaste: _paste),
+          KeySourceActions(
+            onImportFile: _importFile,
+            onPaste: _paste,
+            onDownloadFromKey: _downloadFromKey,
+          ),
+          if (_downloadStatus != null) ...[
+            const SizedBox(height: 14),
+            _DownloadStatusNotice(
+              message: _downloadStatus!,
+              inProgress: _downloading,
+            ),
+          ],
           const SizedBox(height: 14),
           TextField(
             controller: _stubController,
@@ -331,6 +427,61 @@ class _AddHardwareKeySheetState extends State<_AddHardwareKeySheet> {
               onPressed: _canAdd ? _add : null,
               icon: const Icon(Icons.check_rounded),
               label: const Text('Add key'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DownloadStatusNotice extends StatelessWidget {
+  const _DownloadStatusNotice({
+    required this.message,
+    required this.inProgress,
+  });
+
+  final String message;
+  final bool inProgress;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Color.alphaBlend(
+          colorScheme.primary.withValues(alpha: 0.06),
+          colorScheme.surface,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colorScheme.outlineVariant),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (inProgress)
+            const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          else
+            Icon(
+              Icons.info_outline_rounded,
+              size: 18,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurface,
+                height: 1.25,
+              ),
             ),
           ),
         ],

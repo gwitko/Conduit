@@ -526,12 +526,17 @@ class FakeCtapDevice extends CtapDevice {
     required this.authData,
     this.respond,
     this.pinRetries = 8,
+    this.pinTokenBytes = 32,
   });
 
   final List<int> signature;
   final List<int> authData;
   final CtapResponse<List<int>>? Function(List<int> command)? respond;
   final int pinRetries;
+
+  /// Length of the returned pinUvAuthToken ciphertext. PIN protocol 2
+  /// prepends a 16-byte IV, so it needs 48 to decrypt to a 32-byte token.
+  final int pinTokenBytes;
   int rejectPinChecks = 0;
   int pinTokenGrants = 0;
   final List<List<int>> commands = [];
@@ -630,7 +635,7 @@ class FakeCtapDevice extends CtapDevice {
         cbor.encode(
           CborValue({
             ClientPinResponse.pinUvAuthTokenIdx: CborBytes(
-              List<int>.generate(32, (index) => index + 1),
+              List<int>.generate(pinTokenBytes, (index) => index + 1),
             ),
           }),
         ),
