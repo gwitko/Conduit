@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/core/presentation/conduit_brand.dart';
 import 'package:conduit/core/presentation/system_navigation_insets.dart';
 import 'package:conduit/core/theme/theme_controller.dart';
@@ -231,10 +232,12 @@ class _HostFormPageState extends State<HostFormPage> {
           padding: const EdgeInsets.fromLTRB(18, 10, 18, 28),
           children: [
             HostFormHeader(
-              title: _isEditing ? 'Edit machine' : 'New machine',
+              title: _isEditing
+                  ? context.l10n.hostFormEditTitle
+                  : context.l10n.hostFormNewTitle,
               subtitle: _isEditing
-                  ? 'Update connection details and credentials.'
-                  : 'Connection profile and credentials.',
+                  ? context.l10n.hostFormEditSubtitle
+                  : context.l10n.hostFormNewSubtitle,
               onBack: () => Navigator.of(context).pop(),
             ),
             const SizedBox(height: 20),
@@ -329,13 +332,17 @@ class _HostFormPageState extends State<HostFormPage> {
               child: FilledButton.icon(
                 onPressed: _save,
                 icon: const Icon(Icons.check_rounded),
-                label: Text(_isEditing ? 'Save changes' : 'Add machine'),
+                label: Text(
+                  _isEditing
+                      ? context.l10n.hostFormSave
+                      : context.l10n.hostFormAdd,
+                ),
               ),
             ),
             const SizedBox(height: 12),
             Center(
               child: Text(
-                'Stored on-device only • never synced to the cloud',
+                context.l10n.hostFormStoredLocally,
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: colorScheme.onSurfaceVariant,
                 ),
@@ -415,6 +422,7 @@ class _HostFormPageState extends State<HostFormPage> {
     if (index < 0) return;
     final controller = TextEditingController(
       text: displayLabelForHardwareKey(
+        context.l10n,
         entry,
         index,
         _hardwareKeyInspections[entry.id],
@@ -423,22 +431,22 @@ class _HostFormPageState extends State<HostFormPage> {
     final label = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Rename hardware key'),
+        title: Text(context.l10n.hostFormRenameHardwareKey),
         content: TextField(
           controller: controller,
           autofocus: true,
-          decoration: const InputDecoration(labelText: 'Label'),
+          decoration: InputDecoration(labelText: context.l10n.labelLabel),
           textInputAction: TextInputAction.done,
           onSubmitted: (value) => Navigator.of(context).pop(value),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.actionCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(controller.text),
-            child: const Text('Rename'),
+            child: Text(context.l10n.actionRename),
           ),
         ],
       ),
@@ -456,6 +464,7 @@ class _HostFormPageState extends State<HostFormPage> {
     final index = _hardwareKeys.indexWhere((key) => key.id == entry.id);
     if (index < 0) return;
     final label = displayLabelForHardwareKey(
+      context.l10n,
       entry,
       index,
       _hardwareKeyInspections[entry.id],
@@ -463,19 +472,16 @@ class _HostFormPageState extends State<HostFormPage> {
     final remove = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Remove "$label"?'),
-        content: const Text(
-          'The stub is removed from this host. Your security key and the '
-          'server are not affected.',
-        ),
+        title: Text(context.l10n.hostFormRemoveHardwareKeyTitle(label)),
+        content: Text(context.l10n.hostFormRemoveHardwareKeyBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.actionCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Remove'),
+            child: Text(context.l10n.actionRemove),
           ),
         ],
       ),
@@ -511,21 +517,21 @@ class _HostFormPageState extends State<HostFormPage> {
     try {
       result = await FilePicker.pickFiles(withData: true);
     } catch (_) {
-      if (mounted) _showSnack('Could not open the file picker.');
+      if (mounted) _showSnack(context.l10n.commonFilePickerFailed);
       return;
     }
     if (result == null || result.files.isEmpty) return;
     final file = result.files.first;
     final bytes = file.bytes;
     if (bytes == null) {
-      if (mounted) _showSnack('That file could not be read.');
+      if (mounted) _showSnack(context.l10n.commonFileReadFailed);
       return;
     }
     final String text;
     try {
       text = utf8.decode(bytes);
     } catch (_) {
-      if (mounted) _showSnack("That file isn't a text private key.");
+      if (mounted) _showSnack(context.l10n.hostFormNotTextKey);
       return;
     }
     if (!mounted) return;
@@ -536,8 +542,8 @@ class _HostFormPageState extends State<HostFormPage> {
     if (!mounted) return;
     _showSnack(
       _cheapPreview()?.status == SshKeyStatus.invalid
-          ? "That file isn't a recognized private key."
-          : 'Imported ${file.name}',
+          ? context.l10n.hostFormNotPrivateKey
+          : context.l10n.hostFormImported(file.name),
     );
   }
 
@@ -555,7 +561,7 @@ class _HostFormPageState extends State<HostFormPage> {
         passphrase: options.passphrase,
       );
     } catch (_) {
-      if (mounted) _showSnack('Could not generate a key.');
+      if (mounted) _showSnack(context.l10n.hostFormGenerateFailed);
       return;
     }
     setState(() => _authMethod = SshAuthMethod.privateKey);
@@ -579,18 +585,16 @@ class _HostFormPageState extends State<HostFormPage> {
     final replace = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Replace key?'),
-        content: const Text(
-          'The private key field already has content. Replace it?',
-        ),
+        title: Text(context.l10n.hostFormReplaceKeyTitle),
+        content: Text(context.l10n.hostFormReplaceKeyBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.actionCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Replace'),
+            child: Text(context.l10n.actionReplace),
           ),
         ],
       ),
@@ -607,22 +611,19 @@ class _HostFormPageState extends State<HostFormPage> {
     return showDialog<({String comment, String passphrase})>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Generate Ed25519 key'),
+        title: Text(context.l10n.hostFormGenerateKeyTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'A new key pair is created on this device. The public key is '
-              'shown next so you can add it to the server.',
-            ),
+            Text(context.l10n.hostFormGenerateKeyBody),
             const SizedBox(height: 16),
             TextField(
               controller: commentController,
               autofocus: true,
-              decoration: const InputDecoration(
-                labelText: 'Label',
-                helperText: 'Shown as the key comment.',
+              decoration: InputDecoration(
+                labelText: context.l10n.labelLabel,
+                helperText: context.l10n.hostFormKeyLabelHint,
                 helperMaxLines: 2,
               ),
               textInputAction: TextInputAction.next,
@@ -631,9 +632,9 @@ class _HostFormPageState extends State<HostFormPage> {
             TextField(
               controller: passphraseController,
               obscureText: true,
-              decoration: const InputDecoration(
-                labelText: 'Passphrase (optional)',
-                helperText: 'Encrypts the private key. Leave empty for none.',
+              decoration: InputDecoration(
+                labelText: context.l10n.hostFormKeyPassphrase,
+                helperText: context.l10n.hostFormKeyPassphraseHint,
                 helperMaxLines: 2,
               ),
               textInputAction: TextInputAction.done,
@@ -643,7 +644,7 @@ class _HostFormPageState extends State<HostFormPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.actionCancel),
           ),
           FilledButton.icon(
             onPressed: () => Navigator.of(context).pop((
@@ -651,7 +652,7 @@ class _HostFormPageState extends State<HostFormPage> {
               passphrase: passphraseController.text,
             )),
             icon: const Icon(Icons.auto_awesome_rounded, size: 18),
-            label: const Text('Generate'),
+            label: Text(context.l10n.actionGenerate),
           ),
         ],
       ),
@@ -672,7 +673,7 @@ class _HostFormPageState extends State<HostFormPage> {
 
     if (_authMethod == SshAuthMethod.hardwareKey && _hardwareKeys.isEmpty) {
       setState(() {
-        _hardwareKeysError = 'Add at least one hardware key.';
+        _hardwareKeysError = context.l10n.hostFormNeedHardwareKey;
       });
       return;
     }
@@ -729,7 +730,9 @@ class _HostFormPageState extends State<HostFormPage> {
   }
 
   String? _required(String? value) {
-    if (value == null || value.trim().isEmpty) return 'Required';
+    if (value == null || value.trim().isEmpty) {
+      return context.l10n.commonRequired;
+    }
     return null;
   }
 
@@ -743,12 +746,11 @@ class _HostFormPageState extends State<HostFormPage> {
       passphrase: _passphraseController.text,
     );
     return switch (inspection.status) {
-      SshKeyStatus.needsPassphrase => 'Enter the key passphrase to unlock it.',
+      SshKeyStatus.needsPassphrase => context.l10n.hostFormEnterKeyPassphrase,
       SshKeyStatus.verifying => null,
-      SshKeyStatus.wrongPassphrase => 'That passphrase did not match this key.',
-      SshKeyStatus.invalid => 'Use a valid PEM or OpenSSH private key.',
-      SshKeyStatus.securityKeyStub =>
-        'This is a hardware-key stub. Choose Hardware key instead.',
+      SshKeyStatus.wrongPassphrase => context.l10n.hostKeyPassphraseMismatch,
+      SshKeyStatus.invalid => context.l10n.hostFormInvalidPrivateKey,
+      SshKeyStatus.securityKeyStub => context.l10n.hostFormStubUseHardwareKey,
       SshKeyStatus.valid => null,
     };
   }
@@ -769,7 +771,7 @@ class _HostFormPageState extends State<HostFormPage> {
     final trimmed = value?.trim() ?? '';
     if (trimmed.isEmpty) return null;
     if (MoshPortRange.tryParse(trimmed) == null) {
-      return 'Use a port or low:high range within 1-65535.';
+      return context.l10n.hostFormInvalidPort;
     }
     return null;
   }

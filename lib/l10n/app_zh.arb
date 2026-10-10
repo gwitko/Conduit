@@ -1,0 +1,886 @@
+{
+  "@@locale": "zh",
+  "actionCancel": "取消",
+  "actionClose": "关闭",
+  "actionDone": "完成",
+  "actionAdd": "添加",
+  "actionRemove": "移除",
+  "actionDelete": "删除",
+  "actionRename": "重命名",
+  "actionEdit": "编辑",
+  "actionSave": "保存",
+  "actionBack": "返回",
+  "actionCopy": "复制",
+  "actionReset": "重置",
+  "actionRetry": "重试",
+  "actionContinue": "继续",
+  "actionImport": "导入",
+  "actionPaste": "粘贴",
+  "actionGenerate": "生成",
+  "actionUpload": "上传",
+  "actionInstall": "安装",
+  "actionCreate": "创建",
+  "actionReplace": "替换",
+  "actionTrust": "信任",
+  "actionReject": "拒绝",
+  "actionForget": "忘记",
+  "actionReinstall": "重新安装",
+  "actionUnlock": "解锁",
+  "actionTryAgain": "重试",
+  "actionShow": "显示",
+  "actionHide": "隐藏",
+  "actionClear": "清除",
+  "actionManage": "管理",
+  "actionRefresh": "刷新",
+  "actionReconnect": "重新连接",
+  "labelPassword": "密码",
+  "labelLabel": "标签",
+  "labelName": "名称",
+  "labelText": "文本",
+  "labelHost": "主机",
+  "hostFormHost": "主机或 IP",
+  "hostFormPort": "端口",
+  "hostFormUsername": "用户名",
+  "hostFormDisplayName": "显示名称",
+  "hostFormSectionConnection": "连接",
+  "hostFormSectionAuthentication": "认证",
+  "hostFormSectionAdvanced": "高级",
+  "labelAlgorithm": "算法",
+  "labelFingerprint": "指纹",
+  "labelVersion": "版本",
+  "labelDistribution": "发行版",
+  "labelDiskUsage": "磁盘占用",
+  "labelAndroidFiles": "Android 文件",
+  "labelTags": "标签",
+  "labelFiles": "文件",
+  "labelMachines": "设备",
+  "labelSnippets": "片段",
+  "terminalCloseCompose": "关闭输入栏",
+  "actionCopyPath": "复制路径",
+  "actionDownload": "下载",
+  "actionDownloadAsTar": "下载为 tar",
+  "labelOpenSourceLicenses": "开源许可",
+  "securityKeyChooseTitle": "选择安全密钥",
+  "securityKeyPinLabel": "FIDO2 PIN",
+  "securityKeyPinTitle": "安全密钥 PIN",
+  "securityKeyPinBody": "请输入硬件安全密钥的 PIN 码。",
+  "languageTitle": "语言",
+  "languageSystem": "跟随系统",
+  "languageSubtitle": "立即对整个应用生效，无需重启。",
+  "appearanceTitle": "外观",
+  "appearanceSubtitle": "挑选一套开发者配色。主界面、编辑器和对话框共用同一套外观。",
+  "appearanceShowLocalShell": "显示本地 Shell",
+  "appearanceShowLocalShellHint": "在主界面显示本地终端快捷入口。",
+  "backupTitle": "备份与恢复",
+  "appearanceBackupRestoreHint": "导出设置与设备，或导入已保存的备份。",
+  "appearanceThemeSystem": "跟随系统",
+  "appearanceThemeDark": "深色",
+  "appearanceThemeLight": "浅色",
+  "appearanceFontSize": "字号",
+  "appearanceKeyRows": "按键行",
+  "appearanceEnterSends": "回车即发送",
+  "appearanceSendMouseTaps": "发送鼠标点按",
+  "appearanceSendMouseTapsHint": "当应用启用鼠标跟踪时，把终端中的点击转发为鼠标点击。",
+  "appearanceGlobalSnippets": "全局片段",
+  "appearanceGlobalSnippetsHint": "在所有设备的「片段」按键行菜单中显示。",
+  "appearanceAddRow": "添加一行",
+  "appearanceEditKeys": "编辑按键",
+  "appearanceRemoveRow": "移除该行",
+  "appearanceCustom": "自定义",
+  "appearanceCustomKey": "自定义按键",
+  "appearanceSendEnterAfterText": "文本后发送回车",
+  "appearanceControlKey": "控制键",
+  "appearanceKeyPassphraseHint": "留空表示密钥不加密。",
+  "appearanceTmuxPrefixHint": "供 Tmux 与 Tmux+ 按键行按钮使用。",
+  "appearanceTmuxSessionHint": "附加到指定名称的 tmux 会话；不存在则创建。",
+  "appearanceTmuxAutostart": "Conduit 会附加到该会话；不存在则创建。",
+  "appearanceDisableRunOnConnect": "取消连接时执行",
+  "appearanceRunOnConnect": "连接时执行",
+  "appearanceKeyRowsCount": "按键行（{count}）",
+  "@appearanceKeyRowsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "appearanceRowLabel": "第 {index} 行",
+  "@appearanceRowLabel": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      }
+    }
+  },
+  "appearanceRowKeysTitle": "第 {index} 行的按键",
+  "@appearanceRowKeysTitle": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      }
+    }
+  },
+  "appearanceKeyCount": "{count, plural, other{{count} 个按键}}",
+  "@appearanceKeyCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "paletteCaptionCatppuccin": "摩卡色调，沉稳精致",
+  "paletteCaptionTokyoNight": "深蓝 IDE 专注色调",
+  "paletteCaptionDracula": "高对比霓虹经典",
+  "paletteCaptionNord": "极地冷调，克制清冷",
+  "paletteCaptionGruvbox": "温暖的复古终端气息",
+  "paletteCaptionSolarized": "均衡低眩光对比",
+  "paletteCaptionOneDark": "Atom 风格编辑器，宁静耐看",
+  "paletteCaptionRosePine": "柔和暮色，对比较弱",
+  "paletteCaptionEverforest": "绿色低眩光林地质感",
+  "paletteCaptionMonokai": "经典浓烈代码配色",
+  "paletteCaptionAyuDark": "温暖琥珀夜间编码",
+  "paletteCaptionKanagawa": "淡墨与海浪色调",
+  "paletteCaptionNightOwl": "清爽蓝调，深夜专注",
+  "paletteCaptionPalenight": "柔和紫罗兰编辑器辉光",
+  "paletteCaptionSynthwave": "电光复古终端冲击感",
+  "paletteCaptionGithubDark": "安静的现代代码对比",
+  "hostsTrustedKeys": "已信任密钥",
+  "hostsLock": "锁定",
+  "hostsStatSaved": "已保存",
+  "hostsStatLiveSessions": "活动会话",
+  "hostsResumeSessions": "恢复会话",
+  "hostsSavedMachines": "已保存的设备",
+  "hostsSavedMachinesHint": "你已保存的 SSH 与 Mosh 连接。",
+  "hostsSortMachines": "排序设备",
+  "hostsErrorTitle": "出错了",
+  "hostsEmptyTitle": "还没有保存的设备",
+  "commonNoMatches": "无匹配结果",
+  "commonNoMatchesHint": "换个关键词，或清除筛选条件。",
+  "hostsPickMachine": "选择一台设备即可打开新标签页。",
+  "hostsGrantFileAccess": "请授予文件访问权限，然后重新打开 Shell。",
+  "hostsDuplicateTitle": "复制设备",
+  "hostsDuplicateBody": "是否把已保存的密码与密钥材料复制到新设备？",
+  "hostsDuplicateWithoutSecrets": "不含密钥信息",
+  "hostsDuplicateWithSecrets": "复制密钥信息",
+  "hostsDeleteTitle": "删除设备？",
+  "hostsCopiedEndpoint": "已复制 {endpoint}",
+  "@hostsCopiedEndpoint": {
+    "placeholders": {
+      "endpoint": {
+        "type": "String"
+      }
+    }
+  },
+  "hostsDeleteBody": "Conduit 将忘记“{name}”。",
+  "@hostsDeleteBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hostsActiveSessionCount": "{count, plural, other{{count} 个活动}}",
+  "@hostsActiveSessionCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "hostFormEditTitle": "编辑设备",
+  "hostFormNewTitle": "新设备",
+  "hostFormEditSubtitle": "修改连接信息与凭据。",
+  "hostFormNewSubtitle": "连接配置与凭据。",
+  "hostFormSave": "保存更改",
+  "hostFormAdd": "添加设备",
+  "hostFormStoredLocally": "仅保存在本机 • 绝不上传云端",
+  "hostFormRenameHardwareKey": "重命名硬件密钥",
+  "hostFormRemoveHardwareKeyTitle": "移除“{label}”？",
+  "@hostFormRemoveHardwareKeyTitle": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "hostFormRemoveHardwareKeyBody": "仅从该主机移除这份存根，安全密钥与服务器不受影响。",
+  "hostFormReplaceKeyTitle": "替换密钥？",
+  "hostFormReplaceKeyBody": "私钥内容已存在，要替换吗？",
+  "hostFormGenerateKeyTitle": "生成 Ed25519 密钥",
+  "hostFormGenerateKeyBody": "将在本机生成一对新密钥，随后显示公钥，便于你添加到服务器。",
+  "hostFormKeyLabelHint": "用作密钥备注。",
+  "hostFormKeyPassphrase": "口令（可选）",
+  "hostFormKeyPassphraseHint": "用于加密私钥，留空则不加密。",
+  "hostFormOfferTempKey": "提供临时公钥",
+  "hostFormOfferTempKeyHint": "适用于在外部完成认证、但仍需尝试公钥登录的服务器。",
+  "hostFormPrivateKey": "私钥",
+  "hostFormKeyPassphraseLabel": "密钥口令",
+  "hostFormPrivateKeyHint": "使用普通 SSH 私钥。若密钥已加密，请在下方填入口令。",
+  "hostFormPrivateKeyEmpty": "导入、粘贴或生成密钥。",
+  "hostFormForwardAgent": "转发 SSH agent",
+  "hostFormForwardAgentHint": "允许你连接的主机借用该密钥继续认证跳转。硬件密钥每次使用都需触碰确认。",
+  "hostFormConnectionTimeout": "连接超时",
+  "hostFormConnectWithMosh": "使用 Mosh 连接",
+  "hostFormConnectWithMoshHint": "基于 SSH 的漫游 UDP 会话。需要主机安装 mosh-server 并开放 UDP 端口。",
+  "hostFormMoshLocale": "Mosh 语言环境",
+  "hostFormMoshLocaleHint": "必须是主机上已安装的 UTF-8 语言环境。",
+  "hostFormMoshPorts": "Mosh UDP 端口",
+  "hostFormMoshPortsHint": "端口或端口范围，例如 60000:61000。留空则用 60001:60999。",
+  "hostFormPredictiveEcho": "预测回显（实验性）",
+  "hostFormPredictiveEchoHint": "在 Mosh 延迟较高时显示本地输入预览。",
+  "hostFormStartTmux": "连接时启动 tmux",
+  "hostFormTmuxSession": "Tmux 会话名",
+  "hostFormTmuxDirectory": "Tmux 启动目录",
+  "hostFormTmuxPrefix": "Tmux 前缀",
+  "hostFormTmuxDirectoryHint": "仅在新建 tmux 会话时使用；已存在的 tmux 会话保留原目录。",
+  "hostFormHostSnippets": "主机片段",
+  "hostFormHostSnippetsHint": "在该设备的「片段」按键行菜单中显示。隐藏片段适合存密码等机密内容。",
+  "authPasswordHint": "使用账户密码进行 SSH 登录。",
+  "authPasswordDetail": "仅使用密码的 SSH 登录方式。",
+  "authHardwareKey": "硬件密钥",
+  "authPrivateKeyHint": "使用 PEM 或 OpenSSH 私钥。",
+  "authHardwareKeyHint": "通过 USB 或 NFC 使用一个或多个安全密钥。",
+  "authExternal": "外部",
+  "authExternalHint": "认证由 Conduit 之外处理时使用，不在应用内存放密码或私钥。",
+  "authHardwareKeyDetail": "为你持有的每个安全密钥添加 OpenSSH *_sk 存根。连接时，Conduit 会要求你用当前接入的密钥通过 USB 或 NFC 进行签名。",
+  "hardwareKeysTitle": "硬件密钥",
+  "hardwareKeysEmpty": "还没有硬件密钥。为该主机要使用的每个安全密钥添加 OpenSSH *_sk 存根，任意一个都能解锁连接。",
+  "hardwareKeysCount": "硬件密钥（{count}）",
+  "@hardwareKeysCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "hardwareKeysOptions": "密钥选项",
+  "hostCardOptions": "设备选项",
+  "hostCardDuplicate": "复制一份",
+  "hostCardCopyAddress": "复制地址",
+  "hostCardViewPublicKey": "查看公钥",
+  "hostKeyPassphraseMismatch": "口令与该密钥不匹配。",
+  "hostsSearchHint": "搜索设备、主机、标签…",
+  "hostFormTagsHint": "production, edge, eu-west…  回车添加",
+  "hostFormAddTag": "添加标签",
+  "publicKeyCreatedBody": "新的 {algorithm} 密钥已保存在本机。把下方公钥添加到服务器后即可连接。",
+  "@publicKeyCreatedBody": {
+    "placeholders": {
+      "algorithm": {
+        "type": "String"
+      }
+    }
+  },
+  "publicKeyInstructions": "把这一行添加到目标主机的 ~/.ssh/authorized_keys 中。",
+  "publicKeySave": "保存 .pub",
+  "publicKeyCopied": "公钥已复制到剪贴板",
+  "publicKeySaved": "公钥已保存",
+  "publicKeySaveFailed": "无法保存公钥",
+  "publicKeyPrivateNote": "私钥部分始终留在本机，与你的其他凭据一起存放在系统安全存储中。",
+  "addHardwareKeyTitle": "添加硬件密钥",
+  "addHardwareKeyBody": "导入或粘贴 ssh-keygen 为该安全密钥生成的 OpenSSH *_sk 存根。存根只指向密钥本身，私钥部分始终留在硬件中。",
+  "addHardwareKeyStubLabel": "OpenSSH 硬件密钥存根",
+  "addHardwareKeyStubHint": "导入或粘贴 id_ed25519_sk 或 id_ecdsa_sk 文件。",
+  "addHardwareKeyPassphrase": "存根口令",
+  "addHardwareKeyPassphraseHint": "该存根文件已加密。",
+  "addHardwareKeyLabelHint": "当 Conduit 请求该密钥时显示，例如“5C work”或“NFC backup”。",
+  "addHardwareKeySubmit": "添加密钥",
+  "terminalRecallLine": "调出已发送的行",
+  "terminalComposeHint": "输入一行，回车发送 …",
+  "terminalNoSessions": "没有打开的会话",
+  "terminalBackToMachines": "返回设备列表",
+  "terminalFunctionKeys": "功能键",
+  "terminalTmuxActions": "Tmux 操作",
+  "tmuxActionNewWindow": "新建窗口",
+  "tmuxActionPreviousWindow": "上一个窗口",
+  "tmuxActionNextWindow": "下一个窗口",
+  "tmuxActionWindowList": "窗口列表",
+  "tmuxActionLastWindow": "切换回上一个窗口",
+  "tmuxActionRenameWindow": "重命名窗口",
+  "tmuxActionSplitHorizontal": "水平分屏",
+  "tmuxActionSplitVertical": "垂直分屏",
+  "tmuxActionPaneLeft": "光标移到左窗格",
+  "tmuxActionPaneRight": "光标移到右窗格",
+  "tmuxActionPaneUp": "光标移到上窗格",
+  "tmuxActionPaneDown": "光标移到下窗格",
+  "tmuxActionZoomPane": "窗格最大化",
+  "tmuxActionCommandPrompt": "命令提示符",
+  "tmuxActionScrollback": "回滚缓冲",
+  "tmuxActionClosePane": "关闭窗格",
+  "tmuxActionCloseWindow": "关闭窗口",
+  "tmuxActionDetach": "分离会话",
+  "terminalNoSnippets": "没有保存的片段",
+  "commonWorking": "处理中…",
+  "trustedKeysTitle": "已信任的主机密钥",
+  "trustedKeysSubtitle": "Conduit 之前连接过的服务器。",
+  "trustedKeysEmpty": "连接主机时会被要求信任其密钥，指纹会显示在这里。",
+  "trustedKeysEmptyTitle": "还没有已信任的密钥",
+  "trustedKeysForgetTitle": "忘记已信任的密钥？",
+  "hostKeyPreviouslyTrusted": "之前信任的是：",
+  "trustedKeysForgetBody": "下次连接到 {host}:{port} 时会重新询问。",
+  "@trustedKeysForgetBody": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      },
+      "port": {
+        "type": "int"
+      }
+    }
+  },
+  "hostKeyChangedTitle": "主机密钥已变更",
+  "hostKeyTrustTitle": "信任该主机？",
+  "hostKeyTrustNew": "信任新密钥",
+  "hostKeyUnknownBody": "Conduit 之前从未连接过 {host}:{port}。请确认该指纹与服务器报告的指纹一致（例如 `ssh-keygen -E md5 -lf <key>`）。",
+  "@hostKeyUnknownBody": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      },
+      "port": {
+        "type": "int"
+      }
+    }
+  },
+  "hostKeyMismatchBody": "服务器 {host}:{port} 出示的密钥与你之前信任的不同。这可能意味着中间人攻击，也可能是服务器正常更换了密钥。",
+  "@hostKeyMismatchBody": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      },
+      "port": {
+        "type": "int"
+      }
+    }
+  },
+  "keyChecking": "正在检查密钥…",
+  "keyCheckingPassphrase": "正在检查口令…",
+  "localShellReadyBody": "打开一个 Shell，或同时运行多个会话。",
+  "localShellUpdateHint": "在 Shell 内用  {command}  更新软件包。 ",
+  "@localShellUpdateHint": {
+    "placeholders": {
+      "command": {
+        "type": "String"
+      }
+    }
+  },
+  "sftpOpening": "正在打开文件…",
+  "sftpOpenFailed": "无法打开文件",
+  "sftpEmptyTitle": "空文件夹",
+  "sftpEmptyBody": "上传文件或新建文件夹即可开始。",
+  "sftpNewFolder": "新建文件夹",
+  "sftpFolderName": "文件夹名",
+  "sftpNewName": "新名称",
+  "sftpItemOptions": "项目选项",
+  "sftpSearchFolder": "搜索文件夹",
+  "sftpClearSearch": "清除搜索",
+  "sftpSortFiles": "排序文件",
+  "sftpSortModified": "修改时间",
+  "sftpSortSize": "大小",
+  "sftpSortType": "类型",
+  "sftpKindFolder": "文件夹",
+  "sftpKindFile": "文件",
+  "sftpUploading": "正在上传",
+  "sftpDownloading": "正在下载",
+  "sftpDeleteBody": "“{name}”将从服务器上移除。",
+  "@sftpDeleteBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "sftpItemCount": "{count, plural, other{{count} 项}}",
+  "@sftpItemCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sftpFolderCount": "{count, plural, other{{count} 个文件夹}}",
+  "@sftpFolderCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sftpFileCount": "{count, plural, other{{count} 个文件}}",
+  "@sftpFileCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "snippetAdd": "添加片段",
+  "snippetEdit": "编辑片段",
+  "snippetCommandLabel": "命令或文本",
+  "snippetSendEnter": "片段后发送回车",
+  "snippetHidden": "隐藏片段",
+  "snippetHiddenHint": "用于密码等机密内容。",
+  "snippetEmpty": "没有保存的片段。",
+  "backupBody": "备份包含外观、终端设置、已保存的设备、排序及已信任的主机密钥。",
+  "backupExportPlain": "导出（不含密钥）",
+  "backupExportPlainHint": "会移除密码与私钥材料。",
+  "backupExportEncrypted": "导出（含密钥，加密）",
+  "backupExportEncryptedHint": "凭据由备份密码保护。",
+  "backupImport": "导入备份",
+  "backupImportHint": "导入的设备会合并到本机。",
+  "backupPassword": "备份密码",
+  "backupEnterPassword": "输入密码",
+  "backupConfirmPassword": "确认密码",
+  "backupShowPassword": "显示密码",
+  "backupHidePassword": "隐藏密码",
+  "backupPasswordHint": "至少 12 个字符，且至少包含小写字母、大写字母、数字、符号中的三类。",
+  "lockSubtitle": "私密 SSH 工作区，本地保护。",
+  "lockFooter": "加密的 SSH 会话 • 零云同步",
+  "lockContinueWithoutAuth": "跳过验证继续",
+  "lockNoticeNotConfigured": "未配置设备认证。请设置屏幕锁以保护已保存的主机。",
+  "lockNoticeCancelled": "认证已取消。",
+  "lockNoticeUnavailable": "此设备无法使用设备认证。设置屏幕锁可获得更好的保护。",
+  "localShellNew": "新建本地 Shell",
+  "localShellRenameTitle": "重命名 Shell",
+  "localShellNewSession": "新建会话",
+  "localShellIncompleteTitle": "设置未完成",
+  "localShellResumeInstall": "继续安装",
+  "localShellChecking": "正在检查本地 Shell…",
+  "localShellHint": "在本机运行命令，无需服务器。",
+  "localShellSetUp": "设置本地 Shell",
+  "localShellNameHint": "显示在主界面与终端标签页中。",
+  "localShellSetupTitle": "在手机上运行 Linux",
+  "localShellSetupBody": "通过 proot 在本机运行的完整 Linux 用户空间——无需服务器，也不需要 root。选择发行版即可，可创建任意多个 Shell，包括同一发行版的多个实例。",
+  "localShellSetupCaption": "Arch、Debian、Ubuntu、Alpine 等",
+  "localShellInstallHint": "镜像只需下载一次并解压到本机，建议使用 Wi-Fi。",
+  "localShellLicensesBody": "本地 Shell 基于 proot 与经 Termux 打包的根文件系统镜像，由各上游发行版维护。Conduit 按其各自的开源许可再分发这些内置工具。",
+  "localShellStageUnpacking": "正在解压根文件系统…（可能需要几分钟）",
+  "localShellStageConfiguring": "正在执行首次设置…",
+  "localShellStageDownloading": "正在下载 {distro}…",
+  "@localShellStageDownloading": {
+    "placeholders": {
+      "distro": {
+        "type": "String"
+      }
+    }
+  },
+  "localShellReinstallTitle": "重新安装 {name}？",
+  "@localShellReinstallTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "localShellRemoveTitle": "移除 {name}？",
+  "@localShellRemoveTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "localShellReadyTitle": "{distro} 已就绪",
+  "@localShellReadyTitle": {
+    "placeholders": {
+      "distro": {
+        "type": "String"
+      }
+    }
+  },
+  "localShellSettingUp": "正在设置 {distro}",
+  "@localShellSettingUp": {
+    "placeholders": {
+      "distro": {
+        "type": "String"
+      }
+    }
+  },
+  "localShellRemoveBody": "这会删除该环境及其中的全部内容。所有已打开的 {name} 标签页会先被关闭，其他 Shell 不受影响。",
+  "@localShellRemoveBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "localShellReinstallBody": "这会清空该环境（包括你安装的所有软件包）并重新下载镜像。所有已打开的 {name} 标签页会先被关闭。",
+  "@localShellReinstallBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "localShellInstallWithSize": "安装 · {size}",
+  "@localShellInstallWithSize": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "localShellDownloadWithSize": "下载 {size}",
+  "@localShellDownloadWithSize": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "commonUnknown": "未知",
+  "commonRequired": "必填",
+  "brandTagline": "SSH 工作区",
+  "terminalFontSystemMonospace": "系统等宽",
+  "terminalFontNerdFont": "Nerd 字体",
+  "terminalEnterCr": "回车",
+  "terminalEnterLf": "换行",
+  "terminalEnterCrlf": "回车 + 换行",
+  "hostsEmptyBody": "添加一台 SSH 或 Mosh 服务器，Conduit 会把凭据保存在本机的安全存储中。",
+  "hostsSortLastConnected": "最近连接",
+  "hostsSortAdded": "添加时间",
+  "hostsSortManual": "手动",
+  "publicKeyCreatedTitle": "密钥已创建",
+  "publicKeyTitle": "公钥",
+  "authExternalBody": "由 SSH 服务器自行认证，不在本机保存任何凭据。",
+  "hardwareKeyItemTitle": "硬件密钥 {index}",
+  "@hardwareKeyItemTitle": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      }
+    }
+  },
+  "hostCardJustNow": "刚刚",
+  "hostCardMinutesAgo": "{count} 分钟前",
+  "@hostCardMinutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "hostCardHoursAgo": "{count} 小时前",
+  "@hostCardHoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "hostCardDaysAgo": "{count} 天前",
+  "@hostCardDaysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "hostCardMonthsAgo": "{count} 个月前",
+  "@hostCardMonthsAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "hostFormConnectionHint": "该设备的访问地址。",
+  "hostFormAuthenticationHint": "凭据存放在系统安全存储中。",
+  "hostFormAdvancedHint": "可选的标签与连接超时设置。",
+  "sshKeyEncryptedHint": "该密钥已加密，请在下方填入口令解锁。",
+  "addHardwareKeyNormalKey": "这是普通私钥，请改用「私钥」方式。",
+  "addHardwareKeyNotStub": "无法识别为 OpenSSH 安全密钥存根（id_ed25519_sk 或 id_ecdsa_sk）。",
+  "addHardwareKeyDuplicate": "该密钥已添加到此主机。",
+  "addHardwareKeyNotTextStub": "该文件不是文本格式的安全密钥存根。",
+  "commonFilePickerFailed": "无法打开文件选择器。",
+  "commonFileReadFailed": "无法读取该文件。",
+  "hostFormImported": "已导入 {name}",
+  "@hostFormImported": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hostFormGenerateFailed": "无法生成密钥。",
+  "hostFormNeedHardwareKey": "请至少添加一个硬件密钥。",
+  "hostFormEnterKeyPassphrase": "请填入口令以解锁密钥。",
+  "hostFormInvalidPrivateKey": "请使用有效的 PEM 或 OpenSSH 私钥。",
+  "hostFormStubUseHardwareKey": "这是硬件密钥存根，请改选「硬件密钥」。",
+  "hostFormNotTextKey": "该文件不是文本格式的私钥。",
+  "hostFormNotPrivateKey": "该文件不是可识别的私钥。",
+  "hostFormInvalidPort": "请填写 1-65535 之间的端口，或「低:高」范围。",
+  "sftpNoMatchQuery": "该文件夹中没有与“{query}”匹配的内容。",
+  "@sftpNoMatchQuery": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "sftpCopiedPath": "已复制路径",
+  "sftpSavedTar": "已保存 {name}.tar",
+  "@sftpSavedTar": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "sftpSavedFile": "已保存 {name}",
+  "sftpUploadedFile": "已上传 {name}",
+  "@sftpSavedFile": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "sftpFileUnreadable": "其中有一个文件无法读取。",
+  "sftpUploadedCount": "{count, plural, other{已上传 {count} 个文件}}",
+  "@sftpUploadedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sftpDeleteTitle": "删除{kind}？",
+  "@sftpDeleteTitle": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "sftpVisibleOfTotal": "共 {total} 项，显示 {visible} 项",
+  "@sftpVisibleOfTotal": {
+    "placeholders": {
+      "visible": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "sftpCountsSummary": "{item}  ·  {folders}  ·  {files}",
+  "@sftpCountsSummary": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "folders": {
+        "type": "String"
+      },
+      "files": {
+        "type": "String"
+      }
+    }
+  },
+  "sftpTransferProgress": "{action} {name}",
+  "@sftpTransferProgress": {
+    "placeholders": {
+      "action": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "snippetWithEnter": "{text} + 回车",
+  "@snippetWithEnter": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "localShellFullBuildOnly": "仅完整版可用",
+  "localShellPermissionNeeded": "需要权限",
+  "localShellMountHint": "授予文件访问权限，才能把手机存储挂载到 /mnt/android。",
+  "localShellMountUnavailable": "手机存储挂载仅在完整版中可用。",
+  "localShellSetupFailedBody": "设置过程中出现错误。",
+  "localShellErrorDownload": "下载失败",
+  "localShellErrorStorage": "存储空间不足",
+  "localShellErrorCorrupt": "下载文件已损坏",
+  "localShellErrorUnpack": "无法解压镜像",
+  "localShellErrorConfigure": "配置失败",
+  "localShellErrorUnavailable": "该设备不支持",
+  "localShellErrorGeneric": "设置失败",
+  "localShellIncompleteBody": "该 Shell 已添加，但镜像未安装完成。可继续安装，或将其移除。",
+  "localShellStatusDownloading": "正在下载… {percent}%",
+  "@localShellStatusDownloading": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "localShellStatusUnpacking": "正在解压…",
+  "localShellStatusConfiguring": "正在配置…",
+  "localShellStatusFailed": "设置失败 - 点击重试",
+  "localShellStatusChecking": "{distro} · 检查中…",
+  "@localShellStatusChecking": {
+    "placeholders": {
+      "distro": {
+        "type": "String"
+      }
+    }
+  },
+  "localShellStatusIncomplete": "{distro} · 设置未完成，点击继续",
+  "@localShellStatusIncomplete": {
+    "placeholders": {
+      "distro": {
+        "type": "String"
+      }
+    }
+  },
+  "localShellStatusReady": "{distro} · {size}",
+  "@localShellStatusReady": {
+    "placeholders": {
+      "distro": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "backupExportCancelled": "已取消导出。",
+  "backupExported": "备份已导出。",
+  "backupImportCancelled": "已取消导入。",
+  "backupImported": "已导入 {hosts} 台设备和 {keys} 个已信任密钥。",
+  "@backupImported": {
+    "placeholders": {
+      "hosts": {
+        "type": "int"
+      },
+      "keys": {
+        "type": "int"
+      }
+    }
+  },
+  "backupFailed": "备份失败：{error}",
+  "@backupFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "backupPasswordMismatch": "两次输入的密码不一致。",
+  "backupPasswordRequired": "请输入备份密码。",
+  "lockAuthReason": "解锁 Conduit 以访问已保存的 SSH 设备。",
+  "lockAuthTitle": "需要验证身份",
+  "lockAuthHint": "验证身份",
+  "appearanceSectionMode": "模式",
+  "appearanceSectionTerminal": "终端",
+  "appearanceSectionHome": "主页",
+  "appearanceSectionBackup": "备份",
+  "appearanceSectionPalette": "配色",
+  "labelDevice": "设备",
+  "terminalSnippetGroupGlobal": "全局",
+  "securityKeyPinAttemptsRemaining": "还可尝试 {count} 次。",
+  "localShellErrorNotInstalled": "本地 Shell 尚未安装。",
+  "localShellErrorAndroidOnly": "本地 Shell 仅在 Android 上可用。",
+  "localShellErrorArm64Only": "本地 Shell 需要 64 位 ARM（arm64-v8a）设备。",
+  "localShellErrorChecksumFailed": "下载的归档文件未通过校验和验证。",
+  "localShellErrorHttpStatus": "HTTP 状态异常：{status}",
+  "localShellErrorLowDisk": "设备存储空间不足。",
+  "localShellErrorProotLaunch": "无法启动 proot/tar：{error}",
+  "localShellErrorTarExit": "tar 退出码 {code}：{stderr}",
+  "localShellErrorFirstBootLaunch": "无法启动首次配置 Shell：{error}",
+  "localShellErrorFirstBootExit": "首次配置退出码 {code}：{stderr}",
+  "localShellErrorStartFailed": "无法启动本地 Shell。",
+  "localShellErrorSessionClosed": "本地 Shell 会话已关闭。",
+  "hostsErrorNotAList": "设备列表格式异常。",
+  "hostsErrorUnreadable": "无法读取已保存的设备。",
+  "sftpErrorNotConnected": "未连接。",
+  "sftpErrorTransferInProgress": "已有传输任务正在进行。",
+  "sftpErrorUploadFailed": "无法上传 {name}。",
+  "sftpErrorOpenFailed": "无法打开 {endpoint} 上的文件。",
+  "sftpErrorPathTooLong": "路径过长，无法归档：{path}",
+  "terminalErrorConnectFailed": "无法连接到 {endpoint}。",
+  "terminalErrorSessionClosed": "SSH 会话已关闭。",
+  "terminalErrorMoshStartFailed": "无法在 {endpoint} 上启动 Mosh 会话。",
+  "terminalErrorMoshStartupTimeout": "等待 mosh-server 启动超时。",
+  "terminalErrorMoshSessionClosed": "Mosh 会话已关闭。",
+  "terminalStarting": "正在启动 {name}…",
+  "terminalConnecting": "正在连接到 {endpoint}…",
+  "terminalShellExited": "Shell 已退出。",
+  "terminalConnectionClosed": "连接已关闭。",
+  "terminalConnectionFailed": "连接失败：{error}",
+  "sshErrorKeyNotUsable": "出示的安全密钥中不包含此设备可用的密钥。",
+  "sshErrorAuthRejected": "SSH 服务器拒绝了所配置的凭据。",
+  "sshErrorAuthAborted": "SSH 认证在完成前被中止。",
+  "sshErrorHandshakeFailed": "SSH 握手失败：{message}",
+  "ctapErrorPinInvalid": "安全密钥 PIN 不正确。",
+  "ctapErrorPinBlocked": "安全密钥 PIN 已被锁定。重置密钥的 FIDO 应用后方可再次使用。",
+  "ctapErrorPinAuthBlocked": "安全密钥暂时自我锁定。请将其移离手机（或拔出）几秒钟，然后重新出示。",
+  "ctapErrorPinNotSet": "此安全密钥需要先设置 FIDO2 PIN 才能使用。",
+  "ctapErrorPuatRequired": "此安全密钥需要 PIN 或用户验证。",
+  "ctapErrorTouchTimeout": "安全密钥触摸超时。",
+  "ctapErrorUpRequired": "需要触摸安全密钥。",
+  "ctapErrorCancelled": "安全密钥认证已取消。",
+  "ctapErrorNoCredentials": "此安全密钥中没有该 SSH 密钥桩对应的凭据。",
+  "ctapErrorPinAuthInvalid": "安全密钥拒绝了 PIN 认证数据。",
+  "ctapErrorInvalidOption": "安全密钥拒绝了请求的验证方式。",
+  "ctapErrorUnauthorizedPermission": "安全密钥拒绝了请求的认证权限。",
+  "ctapErrorGeneric": "安全密钥失败，CTAP 状态：{status}。",
+  "securityKeyPermissionDenied": "USB 安全密钥权限被拒绝。",
+  "securityKeyNfcTimeout": "NFC 提示超时，未能读取安全密钥。",
+  "securityKeyNfcInterrupted": "NFC 安全密钥读取被中断。请保持密钥不动后重试。",
+  "securityKeyOperationFailed": "安全密钥操作失败：{code}。",
+  "sshErrorPrivateKeyUnreadable": "无法加载私钥。",
+  "sshErrorNoHardwareKeys": "请为此设备至少添加一个硬件密钥。",
+  "hardwareKeyFallbackName": "硬件密钥 {index}",
+  "sshErrorHardwareKeyUnreadable": "无法加载硬件密钥「{label}」。",
+  "sshErrorHardwareKeyNeedsStub": "硬件密钥「{label}」需要 OpenSSH 安全密钥桩（id_ed25519_sk 或 id_ecdsa_sk），而不是普通私钥。",
+  "backupErrorRootNotObject": "备份根节点不是对象。",
+  "backupErrorNotConduit": "这看起来不是 Conduit 的备份文件。",
+  "backupErrorFormatUnsupported": "不支持此备份格式。",
+  "backupErrorPasswordWrong": "密码错误，或备份内容已发生变化。",
+  "backupErrorPayloadInvalid": "加密备份内容无效。",
+  "backupErrorPayloadMissing": "备份内容缺失。",
+  "backupErrorEncryptedUnsupported": "不支持此加密备份。",
+  "backupErrorEncryptedInvalid": "此加密备份无效。",
+  "backupPasswordRuleLength": "至少使用 12 个字符。",
+  "backupPasswordRuleSpaces": "请去掉开头或结尾的空格。",
+  "backupPasswordRuleClasses": "小写字母、大写字母、数字、符号中至少包含三类。",
+  "securityKeyNotSelectedKey": "「{label}」不是所选的安全密钥。",
+  "securityKeyAccepted": "硬件密钥已接受。",
+  "securityKeyEnterPin": "请输入此安全密钥的 PIN。",
+  "securityKeyPinIncorrectRetry": "安全密钥 PIN 不正确，请重试。",
+  "securityKeyNotOnPresented": "出示的安全密钥中没有「{label}」。",
+  "securityKeySelectionCancelled": "安全密钥选择已取消。",
+  "securityKeyUsing": "正在使用安全密钥「{label}」。",
+  "securityKeyWaitingForAny": "正在等待通过 USB 或 NFC 连接硬件密钥。已注册的 {count} 个密钥中任意一个均可…",
+  "securityKeyWaitingForKey": "正在等待通过 USB 或 NFC 连接硬件密钥…",
+  "securityKeySwitchingTo": "此安全密钥包含「{label}」，正在切换…",
+  "securityKeyHoldsNoSaved": "此安全密钥中没有为该设备保存的任何密钥。",
+  "securityKeyNotOnThisKey": "此安全密钥中没有「{label}」。",
+  "securityKeyHoldsKeyPresentInstead": "该安全密钥中没有「{label}」。请改出示「{label}」。",
+  "securityKeyPinRequired": "需要安全密钥 PIN。",
+  "securityKeyPinRequiredShort": "需要安全密钥 PIN。",
+  "securityKeyPinEntryCancelled": "安全密钥 PIN 输入已取消。",
+  "securityKeyPinAccepted": "安全密钥 PIN 已接受。",
+  "securityKeyPinUnverified": "无法验证安全密钥 PIN。",
+  "securityKeyPinProtocolUnsupported": "不支持的安全密钥 PIN 协议。",
+  "securityKeyTouchUsb": "请触摸您的 USB 安全密钥。",
+  "securityKeyHoldNfc": "请将 NFC 安全密钥持续贴近手机。",
+  "securityKeyTouchOrHold": "请触摸 USB 密钥，或将 NFC 密钥贴近手机。",
+  "securityKeyHoldNearPhone": "请将安全密钥贴近手机。",
+  "securityKeySigningFailed": "安全密钥签名失败。",
+  "securityKeyAppletSelectFailed": "FIDO 小程序选择失败。",
+  "securityKeyCommandFailed": "FIDO 命令失败。",
+  "securityKeyResponseTooShort": "FIDO 响应过短。",
+  "securityKeyEmptyApdu": "{message} APDU 响应为空。",
+  "securityKeyApduStatus": "{message} APDU 状态 {sw}。",
+  "securityKeyUsbAndroidOnly": "USB 安全密钥仅在 Android 上受支持。",
+  "securityKeyUsbEmptyResponse": "USB 安全密钥返回了空响应。",
+  "securityKeyAuthenticatorDataShort": "认证器数据过短。",
+  "securityKeyMalformedSignature": "DER ECDSA 签名格式错误。",
+  "securityKeyNotHoldLabel": "出示的安全密钥中没有「{label}」。",
+  "securityKeyNfcRetrying": "NFC 读取被中断。请保持密钥贴近手机不动，正在重试…"
+}

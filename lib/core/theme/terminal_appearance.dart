@@ -1,3 +1,5 @@
+import 'package:conduit/l10n/app_localizations.dart';
+
 enum TerminalFontOption { systemMonospace, atkynsonNerdFont }
 
 enum TerminalEnterSequence { cr, lf, crlf }
@@ -19,9 +21,9 @@ double normalizeTerminalFontSize(double size) {
 }
 
 extension TerminalFontOptionDetails on TerminalFontOption {
-  String get label => switch (this) {
-    TerminalFontOption.systemMonospace => 'System mono',
-    TerminalFontOption.atkynsonNerdFont => 'Nerd Font',
+  String labelOf(AppLocalizations l10n) => switch (this) {
+    TerminalFontOption.systemMonospace => l10n.terminalFontSystemMonospace,
+    TerminalFontOption.atkynsonNerdFont => l10n.terminalFontNerdFont,
   };
 
   String get fontFamily => switch (this) {
@@ -37,10 +39,10 @@ extension TerminalEnterSequenceDetails on TerminalEnterSequence {
     TerminalEnterSequence.crlf => 'CRLF',
   };
 
-  String get description => switch (this) {
-    TerminalEnterSequence.cr => 'Carriage return',
-    TerminalEnterSequence.lf => 'Line feed',
-    TerminalEnterSequence.crlf => 'Carriage return + line feed',
+  String descriptionOf(AppLocalizations l10n) => switch (this) {
+    TerminalEnterSequence.cr => l10n.terminalEnterCr,
+    TerminalEnterSequence.lf => l10n.terminalEnterLf,
+    TerminalEnterSequence.crlf => l10n.terminalEnterCrlf,
   };
 
   String get value => switch (this) {

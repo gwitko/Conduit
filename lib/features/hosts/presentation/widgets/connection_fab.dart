@@ -1,3 +1,4 @@
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 
 class ConnectionFab extends StatelessWidget {
@@ -33,7 +34,7 @@ class ConnectionFab extends StatelessWidget {
                 Icon(Icons.add_rounded, color: colorScheme.onPrimary),
                 const SizedBox(width: 6),
                 Text(
-                  'New machine',
+                  context.l10n.hostFormNewTitle,
                   style: TextStyle(
                     color: colorScheme.onPrimary,
                     fontWeight: FontWeight.w800,

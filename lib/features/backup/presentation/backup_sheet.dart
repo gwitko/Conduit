@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/features/backup/data/app_backup_service.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -41,10 +42,13 @@ class _BackupSheetState extends State<_BackupSheet> {
           children: [
             Row(
               children: [
-                Text('Backup and restore', style: theme.textTheme.titleLarge),
+                Text(
+                  context.l10n.backupTitle,
+                  style: theme.textTheme.titleLarge,
+                ),
                 const Spacer(),
                 IconButton(
-                  tooltip: 'Close',
+                  tooltip: context.l10n.actionClose,
                   onPressed: _busy ? null : () => Navigator.of(context).pop(),
                   icon: const Icon(Icons.close_rounded),
                 ),
@@ -52,7 +56,7 @@ class _BackupSheetState extends State<_BackupSheet> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Backups include appearance, terminal settings, saved machines, order, and trusted host keys.',
+              context.l10n.backupBody,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),
@@ -60,22 +64,22 @@ class _BackupSheetState extends State<_BackupSheet> {
             const SizedBox(height: 18),
             _BackupActionTile(
               icon: Icons.ios_share_rounded,
-              title: 'Export without secrets',
-              subtitle: 'Passwords and private key material are removed.',
+              title: context.l10n.backupExportPlain,
+              subtitle: context.l10n.backupExportPlainHint,
               onTap: _busy ? null : () => _export(includeSecrets: false),
             ),
             const SizedBox(height: 10),
             _BackupActionTile(
               icon: Icons.enhanced_encryption_rounded,
-              title: 'Export encrypted with secrets',
-              subtitle: 'Credentials are protected with a backup password.',
+              title: context.l10n.backupExportEncrypted,
+              subtitle: context.l10n.backupExportEncryptedHint,
               onTap: _busy ? null : () => _export(includeSecrets: true),
             ),
             const SizedBox(height: 10),
             _BackupActionTile(
               icon: Icons.restore_rounded,
-              title: 'Import backup',
-              subtitle: 'Imported machines are merged into this device.',
+              title: context.l10n.backupImport,
+              subtitle: context.l10n.backupImportHint,
               onTap: _busy ? null : _import,
             ),
             if (_busy) ...[
@@ -103,7 +107,11 @@ class _BackupSheetState extends State<_BackupSheet> {
         bytes: bytes,
       );
       if (!mounted) return;
-      _showMessage(path == null ? 'Export cancelled.' : 'Backup exported.');
+      _showMessage(
+        path == null
+            ? context.l10n.backupExportCancelled
+            : context.l10n.backupExported,
+      );
     });
   }
 
@@ -124,8 +132,10 @@ class _BackupSheetState extends State<_BackupSheet> {
           );
           if (!mounted) return;
           _showMessage(
-            'Imported ${imported.hostsImported} machines and '
-            '${imported.trustedKeysImported} trusted keys.',
+            context.l10n.backupImported(
+              imported.hostsImported,
+              imported.trustedKeysImported,
+            ),
           );
           return;
         } on AppBackupException catch (error) {
@@ -135,7 +145,9 @@ class _BackupSheetState extends State<_BackupSheet> {
           if (!mounted) return;
           final nextPassword = await _requestExistingPassword(error.message);
           if (nextPassword == null) {
-            _showMessage('Import cancelled.');
+            if (mounted) {
+              _showMessage(context.l10n.backupImportCancelled);
+            }
             return;
           }
           password = nextPassword;
@@ -154,7 +166,7 @@ class _BackupSheetState extends State<_BackupSheet> {
       }
     } catch (error) {
       if (mounted) {
-        _showMessage('Backup failed: $error');
+        _showMessage(context.l10n.backupFailed('$error'));
       }
     } finally {
       if (mounted) {
@@ -258,7 +270,11 @@ class _BackupPasswordDialogState extends State<_BackupPasswordDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(widget.confirm ? 'Backup password' : 'Enter password'),
+      title: Text(
+        widget.confirm
+            ? context.l10n.backupPassword
+            : context.l10n.backupEnterPassword,
+      ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -271,10 +287,12 @@ class _BackupPasswordDialogState extends State<_BackupPasswordDialog> {
             obscureText: _obscure,
             autofocus: true,
             decoration: InputDecoration(
-              labelText: 'Password',
+              labelText: context.l10n.labelPassword,
               errorText: _error,
               suffixIcon: IconButton(
-                tooltip: _obscure ? 'Show password' : 'Hide password',
+                tooltip: _obscure
+                    ? context.l10n.backupShowPassword
+                    : context.l10n.backupHidePassword,
                 onPressed: () => setState(() => _obscure = !_obscure),
                 icon: Icon(
                   _obscure
@@ -290,12 +308,14 @@ class _BackupPasswordDialogState extends State<_BackupPasswordDialog> {
             TextField(
               controller: _confirmationController,
               obscureText: _obscure,
-              decoration: const InputDecoration(labelText: 'Confirm password'),
+              decoration: InputDecoration(
+                labelText: context.l10n.backupConfirmPassword,
+              ),
               onSubmitted: (_) => _submit(),
             ),
             const SizedBox(height: 10),
             Text(
-              'Use at least 12 characters and at least three of lowercase, uppercase, numbers, and symbols.',
+              context.l10n.backupPasswordHint,
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
@@ -304,9 +324,12 @@ class _BackupPasswordDialogState extends State<_BackupPasswordDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(context.l10n.actionCancel),
         ),
-        FilledButton(onPressed: _submit, child: const Text('Continue')),
+        FilledButton(
+          onPressed: _submit,
+          child: Text(context.l10n.actionContinue),
+        ),
       ],
     );
   }
@@ -320,11 +343,11 @@ class _BackupPasswordDialogState extends State<_BackupPasswordDialog> {
         return;
       }
       if (password != _confirmationController.text) {
-        setState(() => _error = 'Passwords do not match.');
+        setState(() => _error = context.l10n.backupPasswordMismatch);
         return;
       }
     } else if (password.isEmpty) {
-      setState(() => _error = 'Enter the backup password.');
+      setState(() => _error = context.l10n.backupPasswordRequired);
       return;
     }
     Navigator.of(context).pop(password);

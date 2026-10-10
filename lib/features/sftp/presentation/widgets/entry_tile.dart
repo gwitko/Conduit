@@ -1,3 +1,4 @@
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/features/sftp/domain/sftp_entry.dart';
 import 'package:flutter/material.dart';
 
@@ -122,7 +123,7 @@ class _EntryActionsButton extends StatelessWidget {
       width: 36,
       height: 36,
       child: PopupMenuButton<EntryAction>(
-        tooltip: 'Item options',
+        tooltip: context.l10n.sftpItemOptions,
         padding: EdgeInsets.zero,
         iconSize: 18,
         icon: Icon(
@@ -135,25 +136,29 @@ class _EntryActionsButton extends StatelessWidget {
             value: EntryAction.download,
             child: ListTile(
               leading: const Icon(Icons.download_rounded),
-              title: Text(entry.isDirectory ? 'Download as tar' : 'Download'),
+              title: Text(
+                entry.isDirectory
+                    ? context.l10n.actionDownloadAsTar
+                    : context.l10n.actionDownload,
+              ),
               contentPadding: EdgeInsets.zero,
               minLeadingWidth: 24,
             ),
           ),
-          const PopupMenuItem(
+          PopupMenuItem(
             value: EntryAction.copyPath,
             child: ListTile(
-              leading: Icon(Icons.copy_rounded),
-              title: Text('Copy path'),
+              leading: const Icon(Icons.copy_rounded),
+              title: Text(context.l10n.actionCopyPath),
               contentPadding: EdgeInsets.zero,
               minLeadingWidth: 24,
             ),
           ),
-          const PopupMenuItem(
+          PopupMenuItem(
             value: EntryAction.rename,
             child: ListTile(
-              leading: Icon(Icons.drive_file_rename_outline_rounded),
-              title: Text('Rename'),
+              leading: const Icon(Icons.drive_file_rename_outline_rounded),
+              title: Text(context.l10n.actionRename),
               contentPadding: EdgeInsets.zero,
               minLeadingWidth: 24,
             ),
@@ -165,7 +170,7 @@ class _EntryActionsButton extends StatelessWidget {
                 Icons.delete_outline_rounded,
                 color: colorScheme.error,
               ),
-              title: const Text('Delete'),
+              title: Text(context.l10n.actionDelete),
               contentPadding: EdgeInsets.zero,
               minLeadingWidth: 24,
             ),

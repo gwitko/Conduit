@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:fido2/fido2_client.dart';
 import 'package:flutter/services.dart';
 
@@ -117,7 +118,7 @@ class FidoHardwareKeyCtapDevice {
       return device.close(
         successful: ok,
         iosAlertMessage: ok ? 'Security key accepted.' : null,
-        iosErrorMessage: ok ? null : 'Security key signing failed.',
+        iosErrorMessage: ok ? null : AppLocalizationsHolder.current.securityKeySigningFailed,
       );
     }
     return Future<void>.value();

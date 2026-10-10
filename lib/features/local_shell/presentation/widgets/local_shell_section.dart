@@ -1,3 +1,4 @@
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/features/local_shell/domain/local_shell_instance.dart';
 import 'package:conduit/features/local_shell/domain/local_shell_state.dart';
 import 'package:conduit/features/local_shell/presentation/local_shell_controller.dart';
@@ -81,14 +82,14 @@ class _SectionHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Device',
+                context.l10n.labelDevice,
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
               ),
               const SizedBox(height: 3),
               Text(
-                'Run commands locally, no server required.',
+                context.l10n.localShellHint,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: colorScheme.onSurfaceVariant,
                   height: 1.25,
@@ -99,7 +100,7 @@ class _SectionHeader extends StatelessWidget {
         ),
         if (showAdd)
           IconButton(
-            tooltip: 'New local shell',
+            tooltip: context.l10n.localShellNew,
             visualDensity: VisualDensity.compact,
             onPressed: onAdd,
             icon: Icon(
@@ -126,7 +127,7 @@ class _CheckingCard extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Checking local shells…',
+              context.l10n.localShellChecking,
               style: TextStyle(
                 color: colorScheme.onSurfaceVariant,
                 fontSize: 12,
@@ -170,7 +171,7 @@ class _SetupPromptCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Set up a local shell',
+                      context.l10n.localShellSetUp,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.titleSmall?.copyWith(
@@ -180,7 +181,7 @@ class _SetupPromptCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Arch, Debian, Ubuntu, Alpine and more',
+                      context.l10n.localShellSetupCaption,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -259,7 +260,7 @@ class _InstanceCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      _statusLine(),
+                      _statusLine(context.l10n),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -301,27 +302,31 @@ class _InstanceCard extends StatelessWidget {
       );
     }
     return IconButton(
-      tooltip: 'Manage',
+      tooltip: context.l10n.actionManage,
       iconSize: 18,
       onPressed: onManage,
       icon: Icon(Icons.tune_rounded, color: colorScheme.onSurfaceVariant),
     );
   }
 
-  String _statusLine() {
+  String _statusLine(AppLocalizations l10n) {
     return switch (state.stage) {
-      LocalShellStage.ready =>
-        '$distroName · ${formatLocalShellBytes(state.diskUsageBytes)}',
-      LocalShellStage.checking => '$distroName · checking…',
-      LocalShellStage.notInstalled =>
-        '$distroName · setup incomplete, tap to resume',
-      LocalShellStage.downloading =>
-        'Downloading… ${((state.progress ?? 0) * 100).toStringAsFixed(0)}%',
-      LocalShellStage.extracting => 'Unpacking…',
-      LocalShellStage.configuring => 'Configuring…',
+      LocalShellStage.ready => l10n.localShellStatusReady(
+        distroName,
+        formatLocalShellBytes(state.diskUsageBytes),
+      ),
+      LocalShellStage.checking => l10n.localShellStatusChecking(distroName),
+      LocalShellStage.notInstalled => l10n.localShellStatusIncomplete(
+        distroName,
+      ),
+      LocalShellStage.downloading => l10n.localShellStatusDownloading(
+        ((state.progress ?? 0) * 100).toStringAsFixed(0),
+      ),
+      LocalShellStage.extracting => l10n.localShellStatusUnpacking,
+      LocalShellStage.configuring => l10n.localShellStatusConfiguring,
       LocalShellStage.failed =>
-        state.error?.message ?? 'Setup failed - tap to retry',
-      LocalShellStage.unsupported => 'Not available on this device',
+        state.error?.message ?? l10n.localShellStatusFailed,
+      LocalShellStage.unsupported => l10n.localShellErrorUnavailable,
     };
   }
 }

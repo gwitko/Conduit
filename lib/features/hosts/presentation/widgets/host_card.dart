@@ -1,3 +1,4 @@
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/features/hosts/domain/saved_host.dart';
 import 'package:flutter/material.dart';
 
@@ -97,7 +98,7 @@ class HostCard extends StatelessWidget {
                             children: [
                               _MetaChip(
                                 icon: authIcon,
-                                label: _authLabel(host),
+                                label: _authLabel(context.l10n, host),
                               ),
                               for (final tag in host.tags)
                                 _MetaChip(
@@ -110,6 +111,7 @@ class HostCard extends StatelessWidget {
                                 _MetaChip(
                                   icon: Icons.history_rounded,
                                   label: _lastConnectedLabel(
+                                    context.l10n,
                                     host.lastConnectedAt!,
                                   ),
                                 ),
@@ -117,7 +119,10 @@ class HostCard extends StatelessWidget {
                           ),
                         ] else ...[
                           const SizedBox(height: 6),
-                          _MetaChip(icon: authIcon, label: _authLabel(host)),
+                          _MetaChip(
+                            icon: authIcon,
+                            label: _authLabel(context.l10n, host),
+                          ),
                         ],
                       ],
                     ),
@@ -139,7 +144,7 @@ class HostCard extends StatelessWidget {
                     width: 36,
                     height: 36,
                     child: PopupMenuButton<HostAction>(
-                      tooltip: 'Machine options',
+                      tooltip: context.l10n.hostCardOptions,
                       padding: EdgeInsets.zero,
                       iconSize: 18,
                       onSelected: onAction,
@@ -147,12 +152,12 @@ class HostCard extends StatelessWidget {
                         Icons.more_vert_rounded,
                         color: colorScheme.onSurfaceVariant,
                       ),
-                      itemBuilder: (context) => const [
+                      itemBuilder: (context) => [
                         PopupMenuItem(
                           value: HostAction.files,
                           child: ListTile(
-                            leading: Icon(Icons.folder_open_outlined),
-                            title: Text('Files'),
+                            leading: const Icon(Icons.folder_open_outlined),
+                            title: Text(context.l10n.labelFiles),
                             contentPadding: EdgeInsets.zero,
                             minLeadingWidth: 24,
                           ),
@@ -160,8 +165,8 @@ class HostCard extends StatelessWidget {
                         PopupMenuItem(
                           value: HostAction.edit,
                           child: ListTile(
-                            leading: Icon(Icons.edit_outlined),
-                            title: Text('Edit'),
+                            leading: const Icon(Icons.edit_outlined),
+                            title: Text(context.l10n.actionEdit),
                             contentPadding: EdgeInsets.zero,
                             minLeadingWidth: 24,
                           ),
@@ -169,8 +174,8 @@ class HostCard extends StatelessWidget {
                         PopupMenuItem(
                           value: HostAction.duplicate,
                           child: ListTile(
-                            leading: Icon(Icons.copy_rounded),
-                            title: Text('Duplicate'),
+                            leading: const Icon(Icons.copy_rounded),
+                            title: Text(context.l10n.hostCardDuplicate),
                             contentPadding: EdgeInsets.zero,
                             minLeadingWidth: 24,
                           ),
@@ -178,8 +183,8 @@ class HostCard extends StatelessWidget {
                         PopupMenuItem(
                           value: HostAction.copyAddress,
                           child: ListTile(
-                            leading: Icon(Icons.content_copy_rounded),
-                            title: Text('Copy address'),
+                            leading: const Icon(Icons.content_copy_rounded),
+                            title: Text(context.l10n.hostCardCopyAddress),
                             contentPadding: EdgeInsets.zero,
                             minLeadingWidth: 24,
                           ),
@@ -187,8 +192,8 @@ class HostCard extends StatelessWidget {
                         PopupMenuItem(
                           value: HostAction.delete,
                           child: ListTile(
-                            leading: Icon(Icons.delete_outline_rounded),
-                            title: Text('Delete'),
+                            leading: const Icon(Icons.delete_outline_rounded),
+                            title: Text(context.l10n.actionDelete),
                             contentPadding: EdgeInsets.zero,
                             minLeadingWidth: 24,
                           ),
@@ -218,23 +223,24 @@ class HostCard extends StatelessWidget {
     );
   }
 
-  String _authLabel(SavedHost host) => switch (host.authMethod) {
-    SshAuthMethod.password => 'Password',
-    SshAuthMethod.privateKey => 'Key',
-    SshAuthMethod.hardwareKey =>
-      host.effectiveHardwareKeys.length > 1
-          ? 'Hardware keys (${host.effectiveHardwareKeys.length})'
-          : 'Hardware key',
-    SshAuthMethod.external => 'External',
-  };
+  String _authLabel(AppLocalizations l10n, SavedHost host) =>
+      switch (host.authMethod) {
+        SshAuthMethod.password => l10n.labelPassword,
+        SshAuthMethod.privateKey => l10n.hostFormPrivateKey,
+        SshAuthMethod.hardwareKey =>
+          host.effectiveHardwareKeys.length > 1
+              ? l10n.hardwareKeysCount(host.effectiveHardwareKeys.length)
+              : l10n.authHardwareKey,
+        SshAuthMethod.external => l10n.authExternal,
+      };
 
-  String _lastConnectedLabel(DateTime last) {
+  String _lastConnectedLabel(AppLocalizations l10n, DateTime last) {
     final diff = DateTime.now().difference(last);
-    if (diff.inMinutes < 1) return 'just now';
-    if (diff.inHours < 1) return '${diff.inMinutes}m ago';
-    if (diff.inDays < 1) return '${diff.inHours}h ago';
-    if (diff.inDays < 30) return '${diff.inDays}d ago';
-    return '${(diff.inDays / 30).floor()}mo ago';
+    if (diff.inMinutes < 1) return l10n.hostCardJustNow;
+    if (diff.inHours < 1) return l10n.hostCardMinutesAgo(diff.inMinutes);
+    if (diff.inDays < 1) return l10n.hostCardHoursAgo(diff.inHours);
+    if (diff.inDays < 30) return l10n.hostCardDaysAgo(diff.inDays);
+    return l10n.hostCardMonthsAgo((diff.inDays / 30).floor());
   }
 }
 

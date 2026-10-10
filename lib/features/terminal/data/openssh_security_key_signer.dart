@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:dartssh2/dartssh2.dart';
 import 'package:fido2/fido2_client.dart';
@@ -123,7 +124,7 @@ class OpenSshSecurityKeySigner {
     final selected = await _selectedEntry(session);
     if (selected != null && !identical(selected, entry)) {
       throw SSHSecurityKeyNotPresentError(
-        '"${entry.label}" was not the selected security key.',
+        AppLocalizationsHolder.current.securityKeyNotSelectedKey(entry.label),
         preferredPublicKey: selected.keyPair.toPublicKey().encode(),
       );
     }
@@ -222,7 +223,7 @@ class OpenSshSecurityKeySigner {
         }
         ok = true;
         session.record(entry, present: true);
-        onStatus?.call('Hardware key accepted.');
+        onStatus?.call(AppLocalizationsHolder.current.securityKeyAccepted);
         return GetAssertionResponse.decode(response.data);
       } on _PinRejected catch (rejection) {
         pinRetriesRemaining = rejection.retriesRemaining;
@@ -241,31 +242,29 @@ class OpenSshSecurityKeySigner {
         }
         onStatus?.call(
           rejectedCachedPin
-              ? 'Enter the PIN for this security key.'
-              : 'Security key PIN was incorrect. Try again.',
+              ? AppLocalizationsHolder.current.securityKeyEnterPin
+              : AppLocalizationsHolder.current.securityKeyPinIncorrectRetry,
         );
         continue;
       } on _WrongKeyPresented {
         wrongKeyAttempts++;
         if (wrongKeyAttempts >= maxWrongKeyAttempts) {
           onStatus?.call(
-            'The presented security key does not hold "${entry.label}".',
+            AppLocalizationsHolder.current.securityKeyNotHoldLabel(entry.label),
           );
           throw SSHSecurityKeyNotPresentError(
-            '"${entry.label}" is not on the presented security key.',
+            AppLocalizationsHolder.current.securityKeyNotOnPresented(entry.label),
           );
         }
         onStatus?.call(
-          'That security key does not hold "${entry.label}". Present '
-          '"${entry.label}" instead.',
+          AppLocalizationsHolder.current.securityKeyHoldsKeyPresentInstead(entry.label),
         );
         continue;
       } catch (error) {
         if (!nfcRetried && _shouldRetryNfc(device, error)) {
           nfcRetried = true;
           onStatus?.call(
-            'NFC read was interrupted. Keep the key still near the phone; '
-            'retrying...',
+            AppLocalizationsHolder.current.securityKeyNfcRetrying,
           );
           continue;
         }
@@ -296,20 +295,19 @@ class OpenSshSecurityKeySigner {
     }
     final index = selection.index;
     if (index == null || index < 0 || index >= session.entries.length) {
-      onStatus?.call('Security key selection was cancelled.');
-      throw StateError('Security key selection was cancelled.');
+      onStatus?.call(AppLocalizationsHolder.current.securityKeySelectionCancelled);
+      throw StateError(AppLocalizationsHolder.current.securityKeySelectionCancelled);
     }
     final entry = session.entries[index];
     session.selectedEntry = entry;
-    onStatus?.call('Using security key "${entry.label}".');
+    onStatus?.call(AppLocalizationsHolder.current.securityKeyUsing(entry.label));
     return entry;
   }
 
   String _waitingMessage(_SecurityKeySession session) {
     return session.entries.length > 1
-        ? 'Waiting for hardware key over USB or NFC. Any of your '
-              '${session.entries.length} enrolled keys will work...'
-        : 'Waiting for hardware key over USB or NFC...';
+        ? AppLocalizationsHolder.current.securityKeyWaitingForAny('${session.entries.length}')
+        : AppLocalizationsHolder.current.securityKeyWaitingForKey;
   }
 
   Future<void> _checkPresence(
@@ -429,19 +427,18 @@ class OpenSshSecurityKeySigner {
     if (announce) {
       if (present != null) {
         onStatus?.call(
-          'This security key holds "${present.label}". Switching to it...',
+          AppLocalizationsHolder.current.securityKeySwitchingTo(present.label),
         );
       } else if (session.allOthersKnownAbsent(entry)) {
         onStatus?.call(
-          'This security key does not hold any of the keys saved for '
-          'this host.',
+          AppLocalizationsHolder.current.securityKeyHoldsNoSaved,
         );
       } else {
-        onStatus?.call('"${entry.label}" is not on this security key.');
+        onStatus?.call(AppLocalizationsHolder.current.securityKeyNotOnThisKey(entry.label));
       }
     }
     return SSHSecurityKeyNotPresentError(
-      '"${entry.label}" is not on the presented security key.',
+      AppLocalizationsHolder.current.securityKeyNotOnPresented(entry.label),
       preferredPublicKey: present?.keyPair.toPublicKey().encode(),
     );
   }
@@ -486,12 +483,12 @@ class OpenSshSecurityKeySigner {
   Future<String> _promptForPin({int? retriesRemaining}) async {
     final pinRequest = onPinRequest;
     if (pinRequest == null) {
-      throw StateError('Security key PIN is required.');
+      throw StateError(AppLocalizationsHolder.current.securityKeyPinRequired);
     }
-    onStatus?.call('Security key PIN required.');
+    onStatus?.call(AppLocalizationsHolder.current.securityKeyPinRequiredShort);
     final pin = await pinRequest(retriesRemaining: retriesRemaining);
     if (pin == null || pin.isEmpty) {
-      throw StateError('Security key PIN entry was cancelled.');
+      throw StateError(AppLocalizationsHolder.current.securityKeyPinEntryCancelled);
     }
     return pin;
   }
@@ -514,7 +511,7 @@ class OpenSshSecurityKeySigner {
         permissionsRpId: rpId,
       );
       session.recordPin(pin);
-      onStatus?.call('Security key PIN accepted.');
+      onStatus?.call(AppLocalizationsHolder.current.securityKeyPinAccepted);
       final auth = await pinProtocol.authenticate(token, clientDataHash);
       return _PinAuth(authParam: auth, protocolVersion: pinProtocol.version);
     }
@@ -540,35 +537,35 @@ class OpenSshSecurityKeySigner {
           rethrow;
         }
         session.clearPin();
-        onStatus?.call('Enter the PIN for this security key.');
+        onStatus?.call(AppLocalizationsHolder.current.securityKeyEnterPin);
       }
     }
 
     final pinRequest = onPinRequest;
     if (pinRequest == null) {
-      throw StateError('Security key PIN is required.');
+      throw StateError(AppLocalizationsHolder.current.securityKeyPinRequired);
     }
 
     for (var attempt = 0; attempt < 3; attempt++) {
       final retriesRemaining = await _pinRetries(clientPin);
-      onStatus?.call('Security key PIN required.');
+      onStatus?.call(AppLocalizationsHolder.current.securityKeyPinRequiredShort);
       final pin = await pinRequest(retriesRemaining: retriesRemaining);
       if (pin == null || pin.isEmpty) {
-        throw StateError('Security key PIN entry was cancelled.');
+        throw StateError(AppLocalizationsHolder.current.securityKeyPinEntryCancelled);
       }
 
       try {
         return await authWithPin(pin);
       } on CtapError catch (error) {
         if (error.status == CtapStatusCode.ctap2ErrPinInvalid && attempt < 2) {
-          onStatus?.call('Security key PIN was incorrect.');
+          onStatus?.call(AppLocalizationsHolder.current.ctapErrorPinInvalid);
           continue;
         }
         rethrow;
       }
     }
 
-    throw StateError('Security key PIN could not be verified.');
+    throw StateError(AppLocalizationsHolder.current.securityKeyPinUnverified);
   }
 
   Future<int?> _pinRetries(ClientPin clientPin) async {
@@ -590,17 +587,17 @@ class OpenSshSecurityKeySigner {
     if (protocols.contains(1)) {
       return PinProtocolV1();
     }
-    throw StateError('Unsupported security key PIN protocol.');
+    throw StateError(AppLocalizationsHolder.current.securityKeyPinProtocolUnsupported);
   }
 
   static String _interactionMessage(CtapDevice device) {
     if (device is FidoUsbCtapDevice) {
-      return 'Touch your USB security key.';
+      return AppLocalizationsHolder.current.securityKeyTouchUsb;
     }
     if (device is FidoNfcCtapDevice) {
-      return 'Keep your NFC security key held against the phone.';
+      return AppLocalizationsHolder.current.securityKeyHoldNfc;
     }
-    return 'Touch your USB key, or hold your NFC key near the phone.';
+    return AppLocalizationsHolder.current.securityKeyTouchOrHold;
   }
 
   static bool _shouldRetryNfc(CtapDevice device, Object error) {
@@ -617,7 +614,7 @@ class OpenSshSecurityKeySigner {
 
   static (int, int) _parseAuthenticatorData(List<int> authData) {
     if (authData.length < 37) {
-      throw const FormatException('Authenticator data was too short.');
+      throw FormatException(AppLocalizationsHolder.current.securityKeyAuthenticatorDataShort);
     }
     final flags = authData[32];
     final counter = ByteData.sublistView(
@@ -636,7 +633,7 @@ class OpenSshSecurityKeySigner {
     final r = reader.readInteger();
     final s = reader.readInteger();
     if (reader.offset != sequenceEnd || sequenceEnd != signature.length) {
-      throw const FormatException('Malformed DER ECDSA signature.');
+      throw FormatException(AppLocalizationsHolder.current.securityKeyMalformedSignature);
     }
     return (r, s);
   }
@@ -756,14 +753,14 @@ class _DerReader {
 
   void expect(int byte) {
     if (offset >= _bytes.length || _bytes[offset] != byte) {
-      throw const FormatException('Malformed DER ECDSA signature.');
+      throw FormatException(AppLocalizationsHolder.current.securityKeyMalformedSignature);
     }
     offset++;
   }
 
   int readLength() {
     if (offset >= _bytes.length) {
-      throw const FormatException('Malformed DER ECDSA signature.');
+      throw FormatException(AppLocalizationsHolder.current.securityKeyMalformedSignature);
     }
     final first = _bytes[offset++];
     if (first & 0x80 == 0) {
@@ -771,12 +768,12 @@ class _DerReader {
     }
     final lengthBytes = first & 0x7f;
     if (lengthBytes == 0 || lengthBytes > 4) {
-      throw const FormatException('Malformed DER ECDSA signature.');
+      throw FormatException(AppLocalizationsHolder.current.securityKeyMalformedSignature);
     }
     var length = 0;
     for (var i = 0; i < lengthBytes; i++) {
       if (offset >= _bytes.length) {
-        throw const FormatException('Malformed DER ECDSA signature.');
+        throw FormatException(AppLocalizationsHolder.current.securityKeyMalformedSignature);
       }
       length = (length << 8) | _bytes[offset++];
     }
@@ -787,7 +784,7 @@ class _DerReader {
     expect(0x02);
     final length = readLength();
     if (length <= 0 || offset + length > _bytes.length) {
-      throw const FormatException('Malformed DER ECDSA signature.');
+      throw FormatException(AppLocalizationsHolder.current.securityKeyMalformedSignature);
     }
     final valueBytes = _bytes.sublist(offset, offset + length);
     offset += length;

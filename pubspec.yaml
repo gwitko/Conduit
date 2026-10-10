@@ -10,6 +10,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   connectivity_plus: ^6.1.0
   cbor: ^6.3.7
@@ -31,12 +33,16 @@ dependencies:
   path_provider: ^2.1.4
   flutter_secure_storage: ^10.3.1
   local_auth: ^3.0.1
+  # Used directly to localize the Android authentication prompt: the plugin
+  # ships its title, hint, and cancel label as hardcoded English constants.
+  local_auth_android: ^2.2.0
   pinenacl: ^0.6.0
   uuid: ^4.5.3
   wakelock_plus: ^1.2.10
   file_picker: ^11.0.2
   fido2: ^1.1.0
   flutter_nfc_kit: ^3.6.2
+  intl: any
 
 dev_dependencies:
   flutter_test:
@@ -57,6 +63,7 @@ flutter_launcher_icons:
 
 flutter:
   uses-material-design: true
+  generate: true
   assets:
     - third_party/licenses/
     - third_party/notices/

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/features/local_shell/domain/local_shell_instance.dart';
 import 'package:conduit/features/local_shell/domain/local_shell_state.dart';
 import 'package:conduit/features/local_shell/presentation/local_shell_controller.dart';
@@ -54,7 +55,7 @@ class _LocalShellInstancePageState extends State<LocalShellInstancePage> {
             title: Text(instance.name),
             actions: [
               IconButton(
-                tooltip: 'Rename',
+                tooltip: context.l10n.actionRename,
                 onPressed: state.isBusy ? null : () => _rename(instance),
                 icon: const Icon(Icons.edit_outlined),
               ),
@@ -141,20 +142,16 @@ class _LocalShellInstancePageState extends State<LocalShellInstancePage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Reinstall ${instance.name}?'),
-        content: Text(
-          'This wipes this environment - including any packages you '
-          'installed - and downloads a fresh image. Any open '
-          '${instance.name} tabs will be closed first.',
-        ),
+        title: Text(context.l10n.localShellReinstallTitle(instance.name)),
+        content: Text(context.l10n.localShellReinstallBody(instance.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.actionCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Reinstall'),
+            child: Text(context.l10n.actionReinstall),
           ),
         ],
       ),
@@ -169,20 +166,16 @@ class _LocalShellInstancePageState extends State<LocalShellInstancePage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Remove ${instance.name}?'),
-        content: Text(
-          'This deletes this environment and everything in it. Any open '
-          '${instance.name} tabs will be closed first. Other shells are '
-          'not affected.',
-        ),
+        title: Text(context.l10n.localShellRemoveTitle(instance.name)),
+        content: Text(context.l10n.localShellRemoveBody(instance.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.actionCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Remove'),
+            child: Text(context.l10n.actionRemove),
           ),
         ],
       ),
@@ -218,22 +211,22 @@ class _RenameDialogState extends State<_RenameDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Rename shell'),
+      title: Text(context.l10n.localShellRenameTitle),
       content: TextField(
         controller: _controller,
         autofocus: true,
         textCapitalization: TextCapitalization.words,
-        decoration: const InputDecoration(labelText: 'Name'),
+        decoration: InputDecoration(labelText: context.l10n.labelName),
         onSubmitted: (value) => Navigator.of(context).pop(value),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(context.l10n.actionCancel),
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(_controller.text),
-          child: const Text('Rename'),
+          child: Text(context.l10n.actionRename),
         ),
       ],
     );
@@ -264,39 +257,43 @@ class _Ready extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     final storageStatus = !sharedStorageFeatureEnabled
-        ? 'Full build only'
+        ? l10n.localShellFullBuildOnly
         : sharedStorageAccessGranted
         ? '/mnt/android'
-        : 'Permission needed';
+        : l10n.localShellPermissionNeeded;
     final storageHint = sharedStorageFeatureEnabled
-        ? 'Grant file access to mount phone storage at /mnt/android.'
-        : 'Phone storage mounting is available in the full build.';
+        ? l10n.localShellMountHint
+        : l10n.localShellMountUnavailable;
     final updateHint = updateCommand == null
         ? ''
-        : 'Update packages from inside the shell with  $updateCommand . ';
+        : l10n.localShellUpdateHint(updateCommand!);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _Hero(
           icon: Icons.check_circle_outline_rounded,
-          title: '$distroName is ready',
-          body: 'Open a shell, or run several sessions side by side.',
+          title: context.l10n.localShellReadyTitle(distroName),
+          body: l10n.localShellReadyBody,
         ),
         const SizedBox(height: 24),
         FilledButton.icon(
           onPressed: onOpen,
           icon: const Icon(Icons.terminal_rounded),
-          label: const Text('New session'),
+          label: Text(context.l10n.localShellNewSession),
         ),
         const SizedBox(height: 24),
-        _InfoRow(label: 'Distribution', value: distroName),
-        _InfoRow(label: 'Version', value: state.installedVersion ?? 'unknown'),
+        _InfoRow(label: context.l10n.labelDistribution, value: distroName),
         _InfoRow(
-          label: 'Disk usage',
+          label: context.l10n.labelVersion,
+          value: state.installedVersion ?? context.l10n.commonUnknown,
+        ),
+        _InfoRow(
+          label: context.l10n.labelDiskUsage,
           value: formatLocalShellBytes(state.diskUsageBytes),
         ),
-        _InfoRow(label: 'Android files', value: storageStatus),
+        _InfoRow(label: context.l10n.labelAndroidFiles, value: storageStatus),
         const SizedBox(height: 16),
         Text(
           '$updateHint$storageHint',
@@ -308,14 +305,14 @@ class _Ready extends StatelessWidget {
         OutlinedButton.icon(
           onPressed: onReinstall,
           icon: const Icon(Icons.refresh_rounded),
-          label: const Text('Reinstall'),
+          label: Text(context.l10n.actionReinstall),
         ),
         const SizedBox(height: 8),
         TextButton.icon(
           onPressed: onRemove,
           style: TextButton.styleFrom(foregroundColor: theme.colorScheme.error),
           icon: const Icon(Icons.delete_outline_rounded),
-          label: const Text('Remove'),
+          label: Text(context.l10n.actionRemove),
         ),
       ],
     );
@@ -331,13 +328,22 @@ class _Installing extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final progress = state.progress;
+    final l10n = context.l10n;
+    final stageBody = switch (state.stage) {
+      LocalShellStage.downloading => l10n.localShellStageDownloading(
+        distroName,
+      ),
+      LocalShellStage.extracting => l10n.localShellStageUnpacking,
+      LocalShellStage.configuring => l10n.localShellStageConfiguring,
+      _ => l10n.commonWorking,
+    };
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _Hero(
           icon: Icons.settings_suggest_outlined,
-          title: 'Setting up $distroName',
-          body: state.message ?? 'Working…',
+          title: context.l10n.localShellSettingUp(distroName),
+          body: stageBody,
         ),
         const SizedBox(height: 24),
         LinearProgressIndicator(value: progress),
@@ -371,14 +377,14 @@ class _Failed extends StatelessWidget {
       children: [
         _Hero(
           icon: Icons.error_outline_rounded,
-          title: _title(error?.kind),
-          body: error?.message ?? 'Something went wrong during setup.',
+          title: _title(context.l10n, error?.kind),
+          body: error?.message ?? context.l10n.localShellSetupFailedBody,
         ),
         const SizedBox(height: 24),
         FilledButton.icon(
           onPressed: onRetry,
           icon: const Icon(Icons.refresh_rounded),
-          label: const Text('Try again'),
+          label: Text(context.l10n.actionTryAgain),
         ),
         const SizedBox(height: 8),
         TextButton.icon(
@@ -387,21 +393,21 @@ class _Failed extends StatelessWidget {
             foregroundColor: Theme.of(context).colorScheme.error,
           ),
           icon: const Icon(Icons.delete_outline_rounded),
-          label: const Text('Remove'),
+          label: Text(context.l10n.actionRemove),
         ),
       ],
     );
   }
 
-  String _title(LocalShellErrorKind? kind) {
+  String _title(AppLocalizations l10n, LocalShellErrorKind? kind) {
     return switch (kind) {
-      LocalShellErrorKind.network => 'Download failed',
-      LocalShellErrorKind.lowDisk => 'Not enough storage',
-      LocalShellErrorKind.corruptDownload => 'Download was corrupted',
-      LocalShellErrorKind.extractionFailed => 'Could not unpack the image',
-      LocalShellErrorKind.configureFailed => 'Configuration failed',
-      LocalShellErrorKind.unsupportedDevice => 'Not available on this device',
-      LocalShellErrorKind.unknown || null => 'Setup failed',
+      LocalShellErrorKind.network => l10n.localShellErrorDownload,
+      LocalShellErrorKind.lowDisk => l10n.localShellErrorStorage,
+      LocalShellErrorKind.corruptDownload => l10n.localShellErrorCorrupt,
+      LocalShellErrorKind.extractionFailed => l10n.localShellErrorUnpack,
+      LocalShellErrorKind.configureFailed => l10n.localShellErrorConfigure,
+      LocalShellErrorKind.unsupportedDevice => l10n.localShellErrorUnavailable,
+      LocalShellErrorKind.unknown || null => l10n.localShellErrorGeneric,
     };
   }
 }
@@ -417,18 +423,16 @@ class _Incomplete extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const _Hero(
+        _Hero(
           icon: Icons.downloading_rounded,
-          title: 'Setup is incomplete',
-          body:
-              'This shell was added but its image never finished installing. '
-              'Resume to pick up where it left off, or remove it.',
+          title: context.l10n.localShellIncompleteTitle,
+          body: context.l10n.localShellIncompleteBody,
         ),
         const SizedBox(height: 24),
         FilledButton.icon(
           onPressed: onResume,
           icon: const Icon(Icons.download_rounded),
-          label: const Text('Resume install'),
+          label: Text(context.l10n.localShellResumeInstall),
         ),
         const SizedBox(height: 8),
         TextButton.icon(
@@ -437,7 +441,7 @@ class _Incomplete extends StatelessWidget {
             foregroundColor: Theme.of(context).colorScheme.error,
           ),
           icon: const Icon(Icons.delete_outline_rounded),
-          label: const Text('Remove'),
+          label: Text(context.l10n.actionRemove),
         ),
       ],
     );
@@ -516,10 +520,7 @@ class _CreditFooter extends StatelessWidget {
         Divider(color: theme.colorScheme.outlineVariant),
         const SizedBox(height: 8),
         Text(
-          'The local shell uses proot and root filesystem images packaged '
-          'through Termux, maintained by their upstream distributions. '
-          'Conduit redistributes the bundled tools under their own '
-          'open-source licenses.',
+          context.l10n.localShellLicensesBody,
           style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),
@@ -533,7 +534,7 @@ class _CreditFooter extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 4),
             ),
             icon: const Icon(Icons.description_outlined, size: 16),
-            label: const Text('Open-source licenses'),
+            label: Text(context.l10n.labelOpenSourceLicenses),
           ),
         ),
       ],

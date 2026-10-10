@@ -1,3 +1,4 @@
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/core/presentation/conduit_brand.dart';
 import 'package:flutter/material.dart';
 
@@ -5,6 +6,7 @@ class HostsHero extends StatelessWidget {
   const HostsHero({
     required this.hostCount,
     required this.activeSessionCount,
+    required this.onLanguage,
     required this.onAppearance,
     required this.onTrustedKeys,
     required this.onLock,
@@ -14,6 +16,7 @@ class HostsHero extends StatelessWidget {
 
   final int hostCount;
   final int activeSessionCount;
+  final VoidCallback onLanguage;
   final VoidCallback onAppearance;
   final VoidCallback onTrustedKeys;
   final VoidCallback onLock;
@@ -21,6 +24,7 @@ class HostsHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 10, 18, 18),
       child: Column(
@@ -30,20 +34,26 @@ class HostsHero extends StatelessWidget {
             children: [
               const ConduitGlyph(size: 30),
               const Spacer(),
+              _GhostLabelButton(
+                tooltip: l10n.languageTitle,
+                label: 'LAN',
+                onPressed: onLanguage,
+              ),
+              const SizedBox(width: 8),
               _GhostIconButton(
-                tooltip: 'Trusted keys',
+                tooltip: l10n.hostsTrustedKeys,
                 icon: Icons.shield_outlined,
                 onPressed: onTrustedKeys,
               ),
               const SizedBox(width: 8),
               _GhostIconButton(
-                tooltip: 'Appearance',
+                tooltip: l10n.appearanceTitle,
                 icon: Icons.palette_outlined,
                 onPressed: onAppearance,
               ),
               const SizedBox(width: 8),
               _GhostIconButton(
-                tooltip: 'Lock',
+                tooltip: l10n.hostsLock,
                 icon: Icons.lock_outline,
                 onPressed: onLock,
               ),
@@ -75,11 +85,12 @@ class _StatsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Row(
       children: [
         Expanded(
           child: _StatTile(
-            label: 'Saved',
+            label: l10n.hostsStatSaved,
             value: '$hostCount',
             icon: Icons.storage_rounded,
             accent: false,
@@ -88,7 +99,7 @@ class _StatsRow extends StatelessWidget {
         const SizedBox(width: 10),
         Expanded(
           child: _StatTile(
-            label: 'Live sessions',
+            label: l10n.hostsStatLiveSessions,
             value: '$activeSessionCount',
             icon: Icons.bolt_rounded,
             accent: activeSessionCount > 0,
@@ -184,6 +195,7 @@ class _ResumeBanner extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final accent = colorScheme.primary;
+    final l10n = context.l10n;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -217,13 +229,13 @@ class _ResumeBanner extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Resume sessions',
+                      l10n.hostsResumeSessions,
                       style: theme.textTheme.titleSmall?.copyWith(
                         color: colorScheme.onSurface,
                       ),
                     ),
                     Text(
-                      '$activeSessionCount active',
+                      l10n.hostsActiveSessionCount(activeSessionCount),
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
@@ -269,6 +281,58 @@ class _GhostIconButton extends StatelessWidget {
             width: 40,
             height: 40,
             child: Icon(icon, size: 18, color: colorScheme.onSurface),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Same chrome as [_GhostIconButton] but renders a short text label instead of
+/// an icon. Used for the `LAN` (language) entry so it stays distinguishable
+/// from the icon-only actions next to it.
+class _GhostLabelButton extends StatelessWidget {
+  const _GhostLabelButton({
+    required this.tooltip,
+    required this.label,
+    required this.onPressed,
+  });
+
+  final String tooltip;
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: colorScheme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: BorderSide(color: colorScheme.outlineVariant),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: onPressed,
+          child: SizedBox(
+            height: 40,
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1,
+                    letterSpacing: 0.6,
+                    fontWeight: FontWeight.w800,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
       ),

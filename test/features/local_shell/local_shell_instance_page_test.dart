@@ -2,6 +2,7 @@ import 'package:conduit/features/local_shell/domain/local_shell_instance.dart';
 import 'package:conduit/features/local_shell/domain/local_shell_state.dart';
 import 'package:conduit/features/local_shell/presentation/local_shell_controller.dart';
 import 'package:conduit/features/local_shell/presentation/local_shell_instance_page.dart';
+import 'package:conduit/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -55,6 +56,8 @@ Future<void> _pumpInstancePage(
 ) async {
   await tester.pumpWidget(
     MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Builder(
         builder: (context) => TextButton(
           onPressed: () => Navigator.of(context).push(

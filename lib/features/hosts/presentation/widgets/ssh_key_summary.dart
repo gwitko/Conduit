@@ -1,3 +1,4 @@
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/features/hosts/domain/ssh_key.dart';
 import 'package:flutter/material.dart';
 
@@ -23,16 +24,15 @@ class SshKeySummary extends StatelessWidget {
         details: details,
         onViewPublicKey: onViewPublicKey,
       ),
-      SshKeyStatus.needsPassphrase => const _KeyNotice(
+      SshKeyStatus.needsPassphrase => _KeyNotice(
         icon: Icons.lock_outline_rounded,
-        message:
-            'This key is encrypted. Enter its passphrase below to unlock it.',
+        message: context.l10n.sshKeyEncryptedHint,
         tone: _NoticeTone.info,
       ),
       SshKeyStatus.verifying => const _KeyChecking(),
-      SshKeyStatus.wrongPassphrase => const _KeyNotice(
+      SshKeyStatus.wrongPassphrase => _KeyNotice(
         icon: Icons.lock_reset_rounded,
-        message: 'That passphrase did not match this key.',
+        message: context.l10n.hostKeyPassphraseMismatch,
         tone: _NoticeTone.error,
       ),
       _ => const SizedBox.shrink(),
@@ -113,7 +113,7 @@ class _KeyCard extends StatelessWidget {
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
               icon: const Icon(Icons.key_rounded, size: 16),
-              label: const Text('View public key'),
+              label: Text(context.l10n.hostCardViewPublicKey),
             ),
           ),
         ],
@@ -152,7 +152,7 @@ class _KeyChecking extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Checking passphrase…',
+              context.l10n.keyCheckingPassphrase,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: colorScheme.onSurface,
               ),

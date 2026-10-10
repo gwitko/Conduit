@@ -1,3 +1,4 @@
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/core/theme/app_palette.dart';
 import 'package:conduit/features/terminal/presentation/terminal_session_controller.dart';
 import 'package:conduit/features/terminal/presentation/terminal_workspace_controller.dart';
@@ -127,7 +128,7 @@ class _SessionTab extends StatelessWidget {
                 width: 26,
                 height: 26,
                 child: IconButton(
-                  tooltip: 'Close',
+                  tooltip: context.l10n.actionClose,
                   iconSize: 14,
                   padding: EdgeInsets.zero,
                   color: muted,

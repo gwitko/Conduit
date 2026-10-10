@@ -1,3 +1,4 @@
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/core/presentation/conduit_brand.dart';
 import 'package:conduit/core/presentation/system_navigation_insets.dart';
 import 'package:conduit/core/theme/theme_controller.dart';
@@ -141,34 +142,33 @@ class _SftpBrowserPageState extends State<SftpBrowserPage> {
       case SftpBrowserStatus.connecting:
         return CenterMessage(
           icon: Icons.folder_open_rounded,
-          title: 'Opening files…',
+          title: context.l10n.sftpOpening,
           message: _controller.securityKeyMessage,
           showSpinner: true,
         );
       case SftpBrowserStatus.failed:
         return CenterMessage(
           icon: Icons.error_outline_rounded,
-          title: 'Could not open files',
+          title: context.l10n.sftpOpenFailed,
           message: _controller.errorMessage,
-          actionLabel: 'Retry',
+          actionLabel: context.l10n.actionRetry,
           onAction: _controller.connect,
         );
       case SftpBrowserStatus.ready:
         final entries = _controller.visibleEntries;
         if (_controller.entries.isEmpty) {
-          return const CenterMessage(
+          return CenterMessage(
             icon: Icons.inbox_rounded,
-            title: 'Empty folder',
-            message: 'Upload a file or create a folder to get started.',
+            title: context.l10n.sftpEmptyTitle,
+            message: context.l10n.sftpEmptyBody,
           );
         }
         if (entries.isEmpty) {
           return CenterMessage(
             icon: Icons.search_off_rounded,
-            title: 'No matches',
-            message:
-                'Nothing in this folder matches “${_controller.searchQuery}”.',
-            actionLabel: 'Clear search',
+            title: context.l10n.commonNoMatches,
+            message: context.l10n.sftpNoMatchQuery(_controller.searchQuery),
+            actionLabel: context.l10n.sftpClearSearch,
             onAction: _clearSearch,
           );
         }
@@ -209,6 +209,7 @@ class _SftpBrowserPageState extends State<SftpBrowserPage> {
   }
 
   Future<void> _onEntryAction(EntryAction action, SftpEntry entry) async {
+    final l10n = context.l10n;
     switch (action) {
       case EntryAction.download:
         await _download(entry);
@@ -218,7 +219,7 @@ class _SftpBrowserPageState extends State<SftpBrowserPage> {
         await _confirmDelete(entry);
       case EntryAction.copyPath:
         await Clipboard.setData(ClipboardData(text: entry.path));
-        _showSnack('Copied path');
+        _showSnack(l10n.sftpCopiedPath);
     }
   }
 
@@ -233,17 +234,21 @@ class _SftpBrowserPageState extends State<SftpBrowserPage> {
           children: [
             ListTile(
               leading: const Icon(Icons.download_rounded),
-              title: Text(entry.isDirectory ? 'Download as tar' : 'Download'),
+              title: Text(
+                entry.isDirectory
+                    ? context.l10n.actionDownloadAsTar
+                    : context.l10n.actionDownload,
+              ),
               onTap: () => Navigator.of(context).pop(EntryAction.download),
             ),
             ListTile(
               leading: const Icon(Icons.copy_rounded),
-              title: const Text('Copy path'),
+              title: Text(context.l10n.actionCopyPath),
               onTap: () => Navigator.of(context).pop(EntryAction.copyPath),
             ),
             ListTile(
               leading: const Icon(Icons.drive_file_rename_outline_rounded),
-              title: const Text('Rename'),
+              title: Text(context.l10n.actionRename),
               onTap: () => Navigator.of(context).pop(EntryAction.rename),
             ),
             ListTile(
@@ -251,7 +256,7 @@ class _SftpBrowserPageState extends State<SftpBrowserPage> {
                 Icons.delete_outline_rounded,
                 color: Theme.of(context).colorScheme.error,
               ),
-              title: const Text('Delete'),
+              title: Text(context.l10n.actionDelete),
               onTap: () => Navigator.of(context).pop(EntryAction.delete),
             ),
           ],
@@ -264,11 +269,14 @@ class _SftpBrowserPageState extends State<SftpBrowserPage> {
   }
 
   Future<void> _download(SftpEntry entry) async {
+    final l10n = context.l10n;
     try {
       final location = await _controller.download(entry);
       if (location != null) {
         _showSnack(
-          entry.isDirectory ? 'Saved ${entry.name}.tar' : 'Saved ${entry.name}',
+          entry.isDirectory
+              ? l10n.sftpSavedTar(entry.name)
+              : l10n.sftpSavedFile(entry.name),
         );
       }
     } catch (error) {
@@ -278,9 +286,9 @@ class _SftpBrowserPageState extends State<SftpBrowserPage> {
 
   Future<void> _promptNewFolder() async {
     final name = await _promptName(
-      title: 'New folder',
-      label: 'Folder name',
-      action: 'Create',
+      title: context.l10n.sftpNewFolder,
+      label: context.l10n.sftpFolderName,
+      action: context.l10n.actionCreate,
     );
     if (name == null || name.isEmpty) return;
     try {
@@ -292,9 +300,9 @@ class _SftpBrowserPageState extends State<SftpBrowserPage> {
 
   Future<void> _promptRename(SftpEntry entry) async {
     final name = await _promptName(
-      title: 'Rename',
-      label: 'New name',
-      action: 'Rename',
+      title: context.l10n.actionRename,
+      label: context.l10n.sftpNewName,
+      action: context.l10n.actionRename,
       initial: entry.name,
     );
     if (name == null || name.isEmpty || name == entry.name) return;
@@ -309,19 +317,25 @@ class _SftpBrowserPageState extends State<SftpBrowserPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Delete ${entry.isDirectory ? 'folder' : 'file'}?'),
-        content: Text('“${entry.name}” will be removed from the server.'),
+        title: Text(
+          context.l10n.sftpDeleteTitle(
+            entry.isDirectory
+                ? context.l10n.sftpKindFolder
+                : context.l10n.sftpKindFile,
+          ),
+        ),
+        content: Text(context.l10n.sftpDeleteBody(entry.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.actionCancel),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete'),
+            child: Text(context.l10n.actionDelete),
           ),
         ],
       ),
@@ -336,6 +350,7 @@ class _SftpBrowserPageState extends State<SftpBrowserPage> {
   }
 
   Future<void> _pickAndUpload() async {
+    final l10n = context.l10n;
     final FilePickerResult? result;
     try {
       result = await FilePicker.pickFiles(
@@ -352,7 +367,7 @@ class _SftpBrowserPageState extends State<SftpBrowserPage> {
       final readStream = file.readStream;
       final path = file.path;
       if (readStream == null && path == null) {
-        _showSnack('One of those files could not be read.');
+        _showSnack(l10n.sftpFileUnreadable);
         return;
       }
       files.add(
@@ -371,10 +386,11 @@ class _SftpBrowserPageState extends State<SftpBrowserPage> {
     }
     try {
       await _controller.uploadFiles(files);
-      final uploaded = files.length == 1
-          ? files.single.name
-          : '${files.length} files';
-      _showSnack('Uploaded $uploaded');
+      _showSnack(
+        files.length == 1
+            ? l10n.sftpUploadedFile(files.single.name)
+            : l10n.sftpUploadedCount(files.length),
+      );
     } catch (error) {
       _showError(error);
     }
@@ -405,7 +421,7 @@ class _SftpBrowserPageState extends State<SftpBrowserPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.actionCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(controller.text.trim()),

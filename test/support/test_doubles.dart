@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:cbor/cbor.dart';
+import 'package:conduit/core/l10n/locale_preferences_repository.dart';
 import 'package:conduit/core/theme/app_palette.dart';
 import 'package:conduit/core/theme/theme_preferences_repository.dart';
 import 'package:conduit/features/app_lock/domain/app_authenticator.dart';
@@ -68,9 +69,25 @@ class InMemoryThemePreferences implements ThemePreferencesRepository {
   }
 }
 
+class InMemoryLocalePreferences implements LocalePreferencesRepository {
+  InMemoryLocalePreferences([this._locale]);
+
+  Locale? _locale;
+
+  @override
+  Future<Locale?> load() async => _locale;
+
+  @override
+  Future<void> save(Locale? locale) async {
+    _locale = locale;
+  }
+}
+
 class AlwaysAuthenticates implements AppAuthenticator {
   @override
-  Future<AppAuthenticationResult> authenticate() async =>
+  Future<AppAuthenticationResult> authenticate(
+    AppAuthenticationPrompt prompt,
+  ) async =>
       AppAuthenticationResult.success;
 
   @override
@@ -79,7 +96,9 @@ class AlwaysAuthenticates implements AppAuthenticator {
 
 class UnavailableAuthenticator implements AppAuthenticator {
   @override
-  Future<AppAuthenticationResult> authenticate() async =>
+  Future<AppAuthenticationResult> authenticate(
+    AppAuthenticationPrompt prompt,
+  ) async =>
       AppAuthenticationResult.unavailable;
 
   @override
@@ -92,7 +111,9 @@ class ScriptedAuthenticator implements AppAuthenticator {
   final AppAuthenticationResult result;
 
   @override
-  Future<AppAuthenticationResult> authenticate() async => result;
+  Future<AppAuthenticationResult> authenticate(
+    AppAuthenticationPrompt prompt,
+  ) async => result;
 
   @override
   Future<bool> canAuthenticate() async => true;
@@ -104,7 +125,9 @@ class ThrowingAuthenticator implements AppAuthenticator {
   final bool throwFromCanAuthenticate;
 
   @override
-  Future<AppAuthenticationResult> authenticate() async {
+  Future<AppAuthenticationResult> authenticate(
+    AppAuthenticationPrompt prompt,
+  ) async {
     throw StateError('auth failed');
   }
 

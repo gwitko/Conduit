@@ -1,3 +1,4 @@
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/features/sftp/presentation/sftp_browser_controller.dart';
 import 'package:flutter/material.dart';
 
@@ -31,8 +32,12 @@ class TransferBar extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  '${transfer.isUpload ? 'Uploading' : 'Downloading'} '
-                  '${transfer.name}',
+                  context.l10n.sftpTransferProgress(
+                    transfer.isUpload
+                        ? context.l10n.sftpUploading
+                        : context.l10n.sftpDownloading,
+                    transfer.name,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodySmall?.copyWith(

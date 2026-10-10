@@ -3,6 +3,7 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/core/theme/app_palette.dart';
 import 'package:conduit/core/theme/terminal_appearance.dart';
 import 'package:conduit/core/theme/theme_controller.dart';
@@ -209,10 +210,10 @@ class AppBackupService {
       if (decoded is Map<Object?, Object?>) {
         return Map<String, Object?>.from(decoded);
       }
-      throw const FormatException('Backup root is not an object.');
+      throw FormatException(AppLocalizationsHolder.current.backupErrorRootNotObject);
     } catch (error) {
-      throw const AppBackupException(
-        'This does not look like a Conduit backup.',
+      throw AppBackupException(
+        AppLocalizationsHolder.current.backupErrorNotConduit,
       );
     }
   }
@@ -222,7 +223,7 @@ class AppBackupService {
     String? password,
   }) {
     if (document['format'] != 'conduit.backup' || document['version'] != 1) {
-      throw const AppBackupException('This backup format is not supported.');
+      throw AppBackupException(AppLocalizationsHolder.current.backupErrorFormatUnsupported);
     }
 
     if (document['encrypted'] == true) {
@@ -237,12 +238,12 @@ class AppBackupService {
           return Map<String, Object?>.from(decoded);
         }
       } catch (_) {
-        throw const AppBackupException(
-          'The password is wrong or the backup changed.',
+        throw AppBackupException(
+          AppLocalizationsHolder.current.backupErrorPasswordWrong,
         );
       }
-      throw const AppBackupException(
-        'The encrypted backup payload is invalid.',
+      throw AppBackupException(
+        AppLocalizationsHolder.current.backupErrorPayloadInvalid,
       );
     }
 
@@ -250,7 +251,7 @@ class AppBackupService {
     if (payload is Map<Object?, Object?>) {
       return Map<String, Object?>.from(payload);
     }
-    throw const AppBackupException('The backup payload is missing.');
+    throw AppBackupException(AppLocalizationsHolder.current.backupErrorPayloadMissing);
   }
 
   List<SavedHost> _parseHosts(Object? raw) {
@@ -393,7 +394,7 @@ class AppBackupCrypto {
     final cipher = _requiredMap(document['cipher']);
     if (kdf['name'] != 'pbkdf2-hmac-sha256' ||
         cipher['name'] != 'secretbox-xsalsa20-poly1305') {
-      throw const AppBackupException('This encrypted backup is not supported.');
+      throw AppBackupException(AppLocalizationsHolder.current.backupErrorEncryptedUnsupported);
     }
     final salt = base64Decode(kdf['salt'] as String? ?? '');
     final nonce = base64Decode(cipher['nonce'] as String? ?? '');
@@ -403,7 +404,7 @@ class AppBackupCrypto {
     if (iterationCount is! int ||
         keyLength is! int ||
         keyLength != _keyLength) {
-      throw const AppBackupException('This encrypted backup is not supported.');
+      throw AppBackupException(AppLocalizationsHolder.current.backupErrorEncryptedUnsupported);
     }
     final key = _pbkdf2HmacSha256(
       utf8.encode(password),
@@ -423,7 +424,7 @@ class AppBackupCrypto {
     if (raw is Map<Object?, Object?>) {
       return Map<String, Object?>.from(raw);
     }
-    throw const AppBackupException('This encrypted backup is invalid.');
+    throw AppBackupException(AppLocalizationsHolder.current.backupErrorEncryptedInvalid);
   }
 
   static Uint8List _randomBytes(int length) {
@@ -475,10 +476,10 @@ class AppBackupPasswordPolicy {
 
   static String? validate(String password) {
     if (password.length < 12) {
-      return 'Use at least 12 characters.';
+      return AppLocalizationsHolder.current.backupPasswordRuleLength;
     }
     if (password.trim() != password) {
-      return 'Remove spaces from the start or end.';
+      return AppLocalizationsHolder.current.backupPasswordRuleSpaces;
     }
     var groups = 0;
     if (RegExp('[a-z]').hasMatch(password)) groups += 1;
@@ -486,7 +487,7 @@ class AppBackupPasswordPolicy {
     if (RegExp('[0-9]').hasMatch(password)) groups += 1;
     if (RegExp(r'[^A-Za-z0-9]').hasMatch(password)) groups += 1;
     if (groups < 3) {
-      return 'Use at least three of lowercase, uppercase, numbers, and symbols.';
+      return AppLocalizationsHolder.current.backupPasswordRuleClasses;
     }
     return null;
   }

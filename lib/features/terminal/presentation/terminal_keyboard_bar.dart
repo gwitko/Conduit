@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/core/presentation/system_navigation_insets.dart';
 import 'package:conduit/core/theme/app_palette.dart';
 import 'package:conduit/core/theme/terminal_appearance.dart';
@@ -81,7 +82,7 @@ class TerminalKeyboardBar extends StatelessWidget {
                         index == rows.length - 1 ? 7 : 2,
                       ),
                       children: [
-                        for (final item in row.items) _buildItem(item),
+                        for (final item in row.items) _buildItem(context, item),
                       ],
                     ),
                   ),
@@ -93,10 +94,10 @@ class TerminalKeyboardBar extends StatelessWidget {
     );
   }
 
-  Widget _buildItem(TerminalKeyboardItem item) {
+  Widget _buildItem(BuildContext context, TerminalKeyboardItem item) {
     final action = item.action;
     if (item.kind == TerminalKeyboardItemKind.builtIn && action != null) {
-      return _buildAction(action);
+      return _buildAction(context, action);
     }
     return _Key(
       label: item.displayLabel,
@@ -106,7 +107,7 @@ class TerminalKeyboardBar extends StatelessWidget {
     );
   }
 
-  Widget _buildAction(TerminalKeyboardAction action) {
+  Widget _buildAction(BuildContext context, TerminalKeyboardAction action) {
     return switch (action) {
       TerminalKeyboardAction.control => _ToggleKey(
         label: action.label,
@@ -182,7 +183,7 @@ class TerminalKeyboardBar extends StatelessWidget {
       ),
       TerminalKeyboardAction.functionKeys => _MenuKey<TerminalKey>(
         label: 'Fn',
-        tooltip: 'Function keys',
+        tooltip: context.l10n.terminalFunctionKeys,
         palette: palette,
         brightness: brightness,
         onSelected: _sendKey,
@@ -206,7 +207,7 @@ class TerminalKeyboardBar extends StatelessWidget {
       ),
       TerminalKeyboardAction.tmuxMenu => _MenuKey<_TmuxAction>(
         label: 'Tmux+',
-        tooltip: 'Tmux actions',
+        tooltip: context.l10n.terminalTmuxActions,
         palette: palette,
         brightness: brightness,
         onSelected: _triggerTmuxAction,
@@ -218,7 +219,7 @@ class TerminalKeyboardBar extends StatelessWidget {
                 children: [
                   Icon(action.icon, size: 18),
                   const SizedBox(width: 10),
-                  Text(action.label),
+                  Text(action.labelOf(context.l10n)),
                 ],
               ),
             ),
@@ -226,11 +227,11 @@ class TerminalKeyboardBar extends StatelessWidget {
       ),
       TerminalKeyboardAction.snippets => _MenuKey<_SnippetMenuItem>(
         label: action.label,
-        tooltip: 'Snippets',
+        tooltip: context.l10n.labelSnippets,
         palette: palette,
         brightness: brightness,
         onSelected: _triggerSnippetMenuItem,
-        items: _snippetMenuItems(),
+        items: _snippetMenuItems(context),
       ),
       _ => _Key(
         label: action.label,
@@ -290,7 +291,9 @@ class TerminalKeyboardBar extends StatelessWidget {
     }
   }
 
-  List<PopupMenuEntry<_SnippetMenuItem>> _snippetMenuItems() {
+  List<PopupMenuEntry<_SnippetMenuItem>> _snippetMenuItems(
+    BuildContext context,
+  ) {
     final entries = <PopupMenuEntry<_SnippetMenuItem>>[];
     void addSnippetGroup(String label, List<TerminalSnippet> snippets) {
       final valid = snippets.where((snippet) => snippet.isValid).toList();
@@ -311,8 +314,8 @@ class TerminalKeyboardBar extends StatelessWidget {
       }
     }
 
-    addSnippetGroup('Host', controller.host.snippets);
-    addSnippetGroup('Global', globalSnippets);
+    addSnippetGroup(context.l10n.labelHost, controller.host.snippets);
+    addSnippetGroup(context.l10n.terminalSnippetGroupGlobal, globalSnippets);
     if (controller.host.password.isNotEmpty) {
       if (entries.isNotEmpty) {
         entries.add(const PopupMenuDivider(height: 8));
@@ -320,10 +323,10 @@ class TerminalKeyboardBar extends StatelessWidget {
       entries.add(
         PopupMenuItem(
           value: _SnippetMenuItem.password(controller.host.password),
-          child: const _SnippetMenuRow(
+          child: _SnippetMenuRow(
             snippet: TerminalSnippet(
               id: 'host-password',
-              label: 'Password',
+              label: context.l10n.labelPassword,
               text: '',
               hidden: true,
               submit: false,
@@ -335,7 +338,10 @@ class TerminalKeyboardBar extends StatelessWidget {
 
     if (entries.isEmpty) {
       entries.add(
-        const PopupMenuItem(enabled: false, child: Text('No snippets saved')),
+        PopupMenuItem(
+          enabled: false,
+          child: Text(context.l10n.terminalNoSnippets),
+        ),
       );
     }
     return entries;
@@ -490,7 +496,9 @@ class _SnippetMenuRow extends StatelessWidget {
               Text(snippet.label, maxLines: 1, overflow: TextOverflow.ellipsis),
               if (!snippet.hidden && snippet.text.isNotEmpty)
                 Text(
-                  snippet.submit ? '${snippet.text} + Enter' : snippet.text,
+                  snippet.submit
+                      ? context.l10n.snippetWithEnter(snippet.text)
+                      : snippet.text,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodySmall,
@@ -504,63 +512,57 @@ class _SnippetMenuRow extends StatelessWidget {
 }
 
 enum _TmuxAction {
-  newWindow('New window', Icons.add_box_rounded, text: 'c'),
-  previousWindow('Previous window', Icons.skip_previous_rounded, text: 'p'),
-  nextWindow('Next window', Icons.skip_next_rounded, text: 'n'),
-  windowList('Window list', Icons.view_list_rounded, text: 'w'),
-  lastWindow('Last window', Icons.history_rounded, text: 'l'),
-  renameWindow(
-    'Rename window',
-    Icons.drive_file_rename_outline_rounded,
-    text: ',',
-  ),
-  splitHorizontal('Split horizontal', Icons.splitscreen_rounded, text: '"'),
-  splitVertical('Split vertical', Icons.vertical_split_rounded, text: '%'),
-  paneLeft(
-    'Pane left',
-    Icons.keyboard_arrow_left_rounded,
-    key: TerminalKey.arrowLeft,
-  ),
-  paneRight(
-    'Pane right',
-    Icons.keyboard_arrow_right_rounded,
-    key: TerminalKey.arrowRight,
-  ),
-  paneUp('Pane up', Icons.keyboard_arrow_up_rounded, key: TerminalKey.arrowUp),
-  paneDown(
-    'Pane down',
-    Icons.keyboard_arrow_down_rounded,
-    key: TerminalKey.arrowDown,
-  ),
-  zoomPane('Zoom pane', Icons.zoom_out_map_rounded, text: 'z'),
-  commandPrompt(
-    'Command prompt',
-    Icons.keyboard_command_key_rounded,
-    text: ':',
-  ),
-  copyMode(
-    'Scrollback',
-    Icons.swap_vert_rounded,
-    text: '[',
-    entersScrollMode: true,
-  ),
-  closePane('Close pane', Icons.close_fullscreen_rounded, text: 'x'),
-  closeWindow('Close window', Icons.disabled_by_default_rounded, text: '&'),
-  detach('Detach', Icons.logout_rounded, text: 'd');
+  newWindow(Icons.add_box_rounded, text: 'c'),
+  previousWindow(Icons.skip_previous_rounded, text: 'p'),
+  nextWindow(Icons.skip_next_rounded, text: 'n'),
+  windowList(Icons.view_list_rounded, text: 'w'),
+  lastWindow(Icons.history_rounded, text: 'l'),
+  renameWindow(Icons.drive_file_rename_outline_rounded, text: ','),
+  splitHorizontal(Icons.splitscreen_rounded, text: '"'),
+  splitVertical(Icons.vertical_split_rounded, text: '%'),
+  paneLeft(Icons.keyboard_arrow_left_rounded, key: TerminalKey.arrowLeft),
+  paneRight(Icons.keyboard_arrow_right_rounded, key: TerminalKey.arrowRight),
+  paneUp(Icons.keyboard_arrow_up_rounded, key: TerminalKey.arrowUp),
+  paneDown(Icons.keyboard_arrow_down_rounded, key: TerminalKey.arrowDown),
+  zoomPane(Icons.zoom_out_map_rounded, text: 'z'),
+  commandPrompt(Icons.keyboard_command_key_rounded, text: ':'),
+  copyMode(Icons.swap_vert_rounded, text: '[', entersScrollMode: true),
+  closePane(Icons.close_fullscreen_rounded, text: 'x'),
+  closeWindow(Icons.disabled_by_default_rounded, text: '&'),
+  detach(Icons.logout_rounded, text: 'd');
 
   const _TmuxAction(
-    this.label,
     this.icon, {
     this.text,
     this.key,
     this.entersScrollMode = false,
   });
 
-  final String label;
   final IconData icon;
   final String? text;
   final TerminalKey? key;
   final bool entersScrollMode;
+
+  String labelOf(AppLocalizations l10n) => switch (this) {
+    _TmuxAction.newWindow => l10n.tmuxActionNewWindow,
+    _TmuxAction.previousWindow => l10n.tmuxActionPreviousWindow,
+    _TmuxAction.nextWindow => l10n.tmuxActionNextWindow,
+    _TmuxAction.windowList => l10n.tmuxActionWindowList,
+    _TmuxAction.lastWindow => l10n.tmuxActionLastWindow,
+    _TmuxAction.renameWindow => l10n.tmuxActionRenameWindow,
+    _TmuxAction.splitHorizontal => l10n.tmuxActionSplitHorizontal,
+    _TmuxAction.splitVertical => l10n.tmuxActionSplitVertical,
+    _TmuxAction.paneLeft => l10n.tmuxActionPaneLeft,
+    _TmuxAction.paneRight => l10n.tmuxActionPaneRight,
+    _TmuxAction.paneUp => l10n.tmuxActionPaneUp,
+    _TmuxAction.paneDown => l10n.tmuxActionPaneDown,
+    _TmuxAction.zoomPane => l10n.tmuxActionZoomPane,
+    _TmuxAction.commandPrompt => l10n.tmuxActionCommandPrompt,
+    _TmuxAction.copyMode => l10n.tmuxActionScrollback,
+    _TmuxAction.closePane => l10n.tmuxActionClosePane,
+    _TmuxAction.closeWindow => l10n.tmuxActionCloseWindow,
+    _TmuxAction.detach => l10n.tmuxActionDetach,
+  };
 }
 
 const _functionKeys = [

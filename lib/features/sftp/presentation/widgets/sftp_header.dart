@@ -1,3 +1,4 @@
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/features/sftp/presentation/sftp_browser_controller.dart';
 import 'package:flutter/material.dart';
 
@@ -49,7 +50,7 @@ class SftpHeader extends StatelessWidget {
       child: busy
           ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
           : IconButton(
-              tooltip: 'Refresh',
+              tooltip: context.l10n.actionRefresh,
               icon: const Icon(Icons.refresh_rounded, size: 20),
               onPressed: onRefresh,
             ),
@@ -70,7 +71,10 @@ class SftpHeader extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Files', style: theme.textTheme.headlineSmall),
+                    Text(
+                      context.l10n.labelFiles,
+                      style: theme.textTheme.headlineSmall,
+                    ),
                     Text(
                       hostName,
                       maxLines: 1,
@@ -136,9 +140,10 @@ class _FileToolbar extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final hasQuery = query.trim().isNotEmpty;
+    final l10n = context.l10n;
     final itemLabel = hasQuery
-        ? '$visibleCount of $totalCount'
-        : '$totalCount ${totalCount == 1 ? 'item' : 'items'}';
+        ? l10n.sftpVisibleOfTotal(visibleCount, totalCount)
+        : l10n.sftpItemCount(totalCount);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -150,11 +155,11 @@ class _FileToolbar extends StatelessWidget {
                 onChanged: onSearchChanged,
                 textInputAction: TextInputAction.search,
                 decoration: InputDecoration(
-                  hintText: 'Search folder',
+                  hintText: context.l10n.sftpSearchFolder,
                   prefixIcon: const Icon(Icons.search_rounded),
                   suffixIcon: hasQuery
                       ? IconButton(
-                          tooltip: 'Clear search',
+                          tooltip: context.l10n.sftpClearSearch,
                           icon: const Icon(Icons.close_rounded),
                           onPressed: onClearSearch,
                         )
@@ -164,32 +169,32 @@ class _FileToolbar extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             PopupMenuButton<SftpSortMode>(
-              tooltip: 'Sort files',
+              tooltip: context.l10n.sftpSortFiles,
               initialValue: sortMode,
               onSelected: onSortChanged,
               itemBuilder: (context) => [
                 _sortItem(
                   SftpSortMode.name,
                   sortMode,
-                  'Name',
+                  context.l10n.labelName,
                   Icons.sort_by_alpha,
                 ),
                 _sortItem(
                   SftpSortMode.modified,
                   sortMode,
-                  'Modified',
+                  context.l10n.sftpSortModified,
                   Icons.schedule_rounded,
                 ),
                 _sortItem(
                   SftpSortMode.size,
                   sortMode,
-                  'Size',
+                  context.l10n.sftpSortSize,
                   Icons.sd_storage,
                 ),
                 _sortItem(
                   SftpSortMode.type,
                   sortMode,
-                  'Type',
+                  context.l10n.sftpSortType,
                   Icons.category_outlined,
                 ),
               ],
@@ -209,7 +214,11 @@ class _FileToolbar extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          '$itemLabel  ·  $directoryCount folders  ·  $fileCount files',
+          l10n.sftpCountsSummary(
+            itemLabel,
+            l10n.sftpFolderCount(directoryCount),
+            l10n.sftpFileCount(fileCount),
+          ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: theme.textTheme.labelSmall?.copyWith(

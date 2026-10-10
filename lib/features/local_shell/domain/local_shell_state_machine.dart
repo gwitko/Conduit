@@ -16,11 +16,10 @@ class LocalShellStateMachine {
       case EnvironmentMissing():
         return LocalShellState.notInstalled;
 
-      case InstallRequested(:final distroName):
-        return LocalShellState(
+      case InstallRequested():
+        return const LocalShellState(
           stage: LocalShellStage.downloading,
           progress: 0,
-          message: 'Downloading $distroName…',
         );
 
       case DownloadProgressed(:final progress):
@@ -29,17 +28,11 @@ class LocalShellStateMachine {
 
       case DownloadFinished():
         if (state.stage != LocalShellStage.downloading) return state;
-        return const LocalShellState(
-          stage: LocalShellStage.extracting,
-          message: 'Unpacking root filesystem… (this can take a few minutes)',
-        );
+        return const LocalShellState(stage: LocalShellStage.extracting);
 
       case ExtractFinished():
         if (state.stage != LocalShellStage.extracting) return state;
-        return const LocalShellState(
-          stage: LocalShellStage.configuring,
-          message: 'Running first-time setup…',
-        );
+        return const LocalShellState(stage: LocalShellStage.configuring);
 
       case ConfigureStarted():
         if (state.stage != LocalShellStage.configuring) return state;

@@ -1,3 +1,4 @@
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/core/presentation/conduit_brand.dart';
 import 'package:conduit/core/presentation/system_navigation_insets.dart';
 import 'package:conduit/core/presentation/theme_sheet.dart';
@@ -25,9 +26,17 @@ class _LockPageState extends State<LockPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback(
-      (_) => widget.controller.unlock(),
+      (_) => widget.controller.unlock(context.l10n),
     );
   }
+
+  String? _noticeText(AppLocalizations l10n) =>
+      switch (widget.controller.notice) {
+        AppLockNotice.deviceNotConfigured => l10n.lockNoticeNotConfigured,
+        AppLockNotice.cancelled => l10n.lockNoticeCancelled,
+        AppLockNotice.deviceUnavailable => l10n.lockNoticeUnavailable,
+        null => null,
+      };
 
   @override
   Widget build(BuildContext context) {
@@ -53,7 +62,7 @@ class _LockPageState extends State<LockPage> {
                     child: Padding(
                       padding: const EdgeInsets.all(14),
                       child: IconButton(
-                        tooltip: 'Appearance',
+                        tooltip: context.l10n.appearanceTitle,
                         icon: const Icon(Icons.palette_outlined),
                         color: colorScheme.onSurfaceVariant,
                         onPressed: () => showThemeSheet(
@@ -80,8 +89,8 @@ class _LockPageState extends State<LockPage> {
                             const ConduitWordmark(size: 36),
                             const SizedBox(height: 14),
                             Text(
-                              widget.controller.message ??
-                                  'Private SSH workspaces, protected locally.',
+                              _noticeText(context.l10n) ??
+                                  context.l10n.lockSubtitle,
                               textAlign: TextAlign.center,
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 color: unavailable
@@ -95,7 +104,9 @@ class _LockPageState extends State<LockPage> {
                               child: FilledButton.icon(
                                 onPressed: checking
                                     ? null
-                                    : widget.controller.unlock,
+                                    : () => widget.controller.unlock(
+                                        context.l10n,
+                                      ),
                                 icon: checking
                                     ? SizedBox.square(
                                         dimension: 18,
@@ -105,7 +116,11 @@ class _LockPageState extends State<LockPage> {
                                         ),
                                       )
                                     : const Icon(Icons.lock_open_rounded),
-                                label: Text(unavailable ? 'Retry' : 'Unlock'),
+                                label: Text(
+                                  unavailable
+                                      ? context.l10n.actionRetry
+                                      : context.l10n.actionUnlock,
+                                ),
                               ),
                             ),
                             if (unavailable) ...[
@@ -115,7 +130,9 @@ class _LockPageState extends State<LockPage> {
                                 child: OutlinedButton(
                                   onPressed:
                                       widget.controller.continueWithoutAuth,
-                                  child: const Text('Continue without auth'),
+                                  child: Text(
+                                    context.l10n.lockContinueWithoutAuth,
+                                  ),
                                 ),
                               ),
                             ],
@@ -129,7 +146,7 @@ class _LockPageState extends State<LockPage> {
                     child: Padding(
                       padding: const EdgeInsets.only(bottom: 16),
                       child: Text(
-                        'Encrypted SSH sessions • zero cloud sync',
+                        context.l10n.lockFooter,
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                         ),

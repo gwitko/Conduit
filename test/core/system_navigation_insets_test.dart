@@ -1,3 +1,4 @@
+import 'package:conduit/core/l10n/locale_controller.dart';
 import 'package:conduit/core/presentation/system_navigation_insets.dart';
 import 'package:conduit/core/theme/app_palette.dart';
 import 'package:conduit/core/theme/terminal_appearance.dart';
@@ -12,6 +13,7 @@ import 'package:conduit/features/local_shell/presentation/local_shell_controller
 import 'package:conduit/features/terminal/presentation/host_key_prompt_coordinator.dart';
 import 'package:conduit/features/terminal/presentation/terminal_page.dart';
 import 'package:conduit/features/terminal/presentation/terminal_workspace_controller.dart';
+import 'package:conduit/l10n/app_localizations.dart';
 import 'package:conduit/main.dart';
 import 'package:conduit_vt/conduit_vt.dart';
 import 'package:flutter/material.dart';
@@ -74,6 +76,7 @@ void main() {
       ConduitApp(
         lockController: AppLockController(AlwaysAuthenticates()),
         themeController: themeController,
+        localeController: LocaleController(InMemoryLocalePreferences()),
         hostsController: hostsController,
         terminalRepository: NoNetworkTerminalRepository(),
         workspaceController: TerminalWorkspaceController(
@@ -121,6 +124,7 @@ void main() {
       ConduitApp(
         lockController: AppLockController(AlwaysAuthenticates()),
         themeController: themeController,
+        localeController: LocaleController(InMemoryLocalePreferences()),
         hostsController: hostsController,
         terminalRepository: NoNetworkTerminalRepository(),
         workspaceController: TerminalWorkspaceController(
@@ -209,6 +213,8 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: TerminalPage(
           workspace: workspace,
           themeController: themeController,

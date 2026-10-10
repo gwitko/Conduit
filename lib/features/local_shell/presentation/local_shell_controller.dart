@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:conduit/core/app_failure.dart';
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/features/hosts/domain/saved_host.dart';
 import 'package:conduit/features/local_shell/data/first_boot_runner.dart';
 import 'package:conduit/features/local_shell/data/local_shell_instance_store.dart';
@@ -149,7 +150,7 @@ class LocalShellController extends ChangeNotifier {
     final distro = instance == null ? null : distroById(instance.distroId);
     final paths = _pathsFor(instanceId);
     if (distro == null || paths == null) {
-      throw const AppFailure('The local shell is not installed.');
+      throw AppFailure(AppLocalizationsHolder.current.localShellErrorNotInstalled);
     }
     return LocalShellLaunch(distro: distro, paths: paths);
   }
@@ -211,12 +212,12 @@ class LocalShellController extends ChangeNotifier {
       final env = await platform.load();
       _environment = env;
       if (env == null) {
-        _setUnsupported('The local shell is only available on Android.');
+        _setUnsupported(AppLocalizationsHolder.current.localShellErrorAndroidOnly);
         return;
       }
       if (!env.isUsable) {
         _setUnsupported(
-          'The local shell requires a 64-bit ARM (arm64-v8a) device.',
+          AppLocalizationsHolder.current.localShellErrorArm64Only,
         );
         return;
       }
@@ -332,7 +333,7 @@ class LocalShellController extends ChangeNotifier {
     final instanceStore = _instanceStore;
     if (distro == null || paths == null || instanceStore == null) {
       _setUnsupported(
-        'The local shell requires a 64-bit ARM (arm64-v8a) device.',
+        AppLocalizationsHolder.current.localShellErrorArm64Only,
       );
       return;
     }

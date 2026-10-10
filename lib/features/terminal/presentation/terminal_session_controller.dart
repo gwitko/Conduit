@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:conduit/core/app_failure.dart';
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/core/theme/terminal_appearance.dart';
 import 'package:conduit/features/hosts/domain/saved_host.dart';
 import 'package:conduit/features/terminal/domain/network_connectivity.dart';
@@ -136,8 +137,8 @@ class TerminalSessionController extends ChangeNotifier {
     _status = TerminalConnectionStatus.connecting;
     terminal.write(
       host.isLocal
-          ? 'Starting ${host.name}...\r\n'
-          : 'Connecting to ${host.endpoint}...\r\n',
+          ? '${AppLocalizationsHolder.current.terminalStarting(host.name)}\r\n'
+          : '${AppLocalizationsHolder.current.terminalConnecting(host.endpoint)}\r\n',
     );
     notifyListeners();
 
@@ -188,8 +189,8 @@ class TerminalSessionController extends ChangeNotifier {
           _status = TerminalConnectionStatus.disconnected;
           terminal.write(
             host.isLocal
-                ? '\r\nShell exited.\r\n'
-                : '\r\nConnection closed.\r\n',
+                ? '\r\n${AppLocalizationsHolder.current.terminalShellExited}\r\n'
+                : '\r\n${AppLocalizationsHolder.current.terminalConnectionClosed}\r\n',
           );
           notifyListeners();
         }
@@ -224,7 +225,7 @@ class TerminalSessionController extends ChangeNotifier {
       if (_disposed || generation != _connectionGeneration) {
         return;
       }
-      _fail('Connection failed: $error');
+      _fail(AppLocalizationsHolder.current.terminalConnectionFailed('$error'));
     } finally {
       await securityKeySubscription?.cancel();
     }

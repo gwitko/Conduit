@@ -1,3 +1,5 @@
+
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/features/local_shell/data/proot_runner.dart';
 import 'package:conduit/features/local_shell/domain/local_shell_paths.dart';
 import 'package:conduit/features/local_shell/domain/proot_command.dart';
@@ -39,12 +41,15 @@ class ProotRootfsExtractor implements RootfsExtractor {
     try {
       result = await runProot(command);
     } catch (error) {
-      throw ExtractionException('Could not launch proot/tar: $error');
+      throw ExtractionException(AppLocalizationsHolder.current.localShellErrorProotLaunch('$error'));
     }
 
     if (result.exitCode != 0) {
       throw ExtractionException(
-        'tar exited with ${result.exitCode}: ${result.stderr}',
+        AppLocalizationsHolder.current.localShellErrorTarExit(
+          '${result.exitCode}',
+          result.stderr,
+        ),
       );
     }
   }

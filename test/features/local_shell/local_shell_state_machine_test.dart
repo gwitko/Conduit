@@ -21,7 +21,6 @@ void main() {
       );
       expect(next.stage, LocalShellStage.downloading);
       expect(next.progress, 0);
-      expect(next.message, contains('Arch Linux'));
     });
 
     test('download progress updates only while downloading', () {

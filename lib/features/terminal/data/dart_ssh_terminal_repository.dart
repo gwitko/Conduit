@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:conduit/core/app_failure.dart';
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/features/hosts/domain/saved_host.dart';
 import 'package:conduit/features/terminal/data/ssh_client_factory.dart';
 import 'package:conduit/features/terminal/data/ssh_error_formatter.dart';
@@ -35,7 +36,7 @@ class DartSshTerminalRepository implements SshTerminalRepository {
     } catch (error) {
       client?.close();
       throw AppFailure(
-        'Could not connect to ${host.host}:${host.port}.',
+        AppLocalizationsHolder.current.terminalErrorConnectFailed('${host.host}:${host.port}'),
         describeSshConnectionError(error),
       );
     }
@@ -61,7 +62,7 @@ class DartSshTerminalSession implements SshTerminalSession {
   @override
   Future<void> send(List<int> data) async {
     if (_closed) {
-      throw const AppFailure('The SSH session is closed.');
+      throw AppFailure(AppLocalizationsHolder.current.terminalErrorSessionClosed);
     }
 
     shell.write(Uint8List.fromList(data));

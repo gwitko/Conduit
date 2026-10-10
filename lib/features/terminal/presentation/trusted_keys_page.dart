@@ -1,3 +1,4 @@
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/core/presentation/conduit_brand.dart';
 import 'package:conduit/core/presentation/system_navigation_insets.dart';
 import 'package:conduit/core/theme/theme_controller.dart';
@@ -37,22 +38,21 @@ class _TrustedKeysPageState extends State<TrustedKeysPage> {
     final removed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Forget trusted key?'),
+        title: Text(context.l10n.trustedKeysForgetTitle),
         content: Text(
-          'Conduit will prompt again the next time you connect to '
-          '${record.host}:${record.port}.',
+          context.l10n.trustedKeysForgetBody(record.host, record.port),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.actionCancel),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Forget'),
+            child: Text(context.l10n.actionForget),
           ),
         ],
       ),
@@ -130,9 +130,12 @@ class _Header extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Trusted host keys', style: theme.textTheme.headlineSmall),
                 Text(
-                  'Servers Conduit has connected to before.',
+                  context.l10n.trustedKeysTitle,
+                  style: theme.textTheme.headlineSmall,
+                ),
+                Text(
+                  context.l10n.trustedKeysSubtitle,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -223,7 +226,7 @@ class _TrustedKeyTile extends StatelessWidget {
             ),
           ),
           IconButton(
-            tooltip: 'Forget',
+            tooltip: context.l10n.actionForget,
             icon: const Icon(Icons.delete_outline_rounded),
             color: colorScheme.error,
             onPressed: onRemove,
@@ -265,11 +268,13 @@ class _EmptyState extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            Text('No trusted keys yet', style: theme.textTheme.titleLarge),
+            Text(
+              context.l10n.trustedKeysEmptyTitle,
+              style: theme.textTheme.titleLarge,
+            ),
             const SizedBox(height: 6),
             Text(
-              'Connect to a host and you’ll be asked to trust its key - the '
-              'fingerprint lands here.',
+              context.l10n.trustedKeysEmpty,
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: colorScheme.onSurfaceVariant,

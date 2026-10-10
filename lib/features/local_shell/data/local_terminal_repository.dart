@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:conduit/core/app_failure.dart';
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/features/hosts/domain/saved_host.dart';
 import 'package:conduit/features/local_shell/data/flutter_pty_process.dart';
 import 'package:conduit/features/local_shell/data/local_terminal_session.dart';
@@ -79,7 +80,7 @@ class LocalTerminalRepository implements SshTerminalRepository {
     } on AppFailure {
       rethrow;
     } catch (error) {
-      throw AppFailure('Could not start the local shell.', '$error');
+      throw AppFailure(AppLocalizationsHolder.current.localShellErrorStartFailed, '$error');
     }
   }
 

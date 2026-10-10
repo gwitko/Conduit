@@ -1,3 +1,4 @@
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/features/local_shell/domain/local_shell_distro.dart';
 import 'package:conduit/features/local_shell/presentation/local_shell_controller.dart';
 import 'package:flutter/material.dart';
@@ -74,7 +75,7 @@ class _LocalShellSetupPageState extends State<LocalShellSetupPage> {
     final theme = Theme.of(context);
     final selected = widget.controller.distroById(_distroId);
     return Scaffold(
-      appBar: AppBar(title: const Text('New local shell')),
+      appBar: AppBar(title: Text(context.l10n.localShellNew)),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
@@ -82,17 +83,14 @@ class _LocalShellSetupPageState extends State<LocalShellSetupPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Run Linux on this phone',
+                context.l10n.localShellSetupTitle,
                 style: theme.textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
-                'A full Linux userland running locally through proot - no '
-                'server, no root. Pick a distribution; you can set up as '
-                'many shells as you like, including several of the same '
-                'distribution.',
+                context.l10n.localShellSetupBody,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -111,9 +109,9 @@ class _LocalShellSetupPageState extends State<LocalShellSetupPage> {
                 controller: _nameController,
                 onChanged: (_) => _nameEdited = true,
                 textCapitalization: TextCapitalization.words,
-                decoration: const InputDecoration(
-                  labelText: 'Name',
-                  helperText: 'Shown on the home screen and terminal tabs.',
+                decoration: InputDecoration(
+                  labelText: context.l10n.labelName,
+                  helperText: context.l10n.localShellNameHint,
                 ),
               ),
               const SizedBox(height: 24),
@@ -122,14 +120,17 @@ class _LocalShellSetupPageState extends State<LocalShellSetupPage> {
                 icon: const Icon(Icons.download_rounded),
                 label: Text(
                   selected == null
-                      ? 'Install'
-                      : 'Install · ${formatLocalShellBytes(selected.manifest.downloadSizeBytes)}',
+                      ? context.l10n.actionInstall
+                      : context.l10n.localShellInstallWithSize(
+                          formatLocalShellBytes(
+                            selected.manifest.downloadSizeBytes,
+                          ),
+                        ),
                 ),
               ),
               const SizedBox(height: 12),
               Text(
-                'The image downloads once and unpacks on your device. '
-                'Wi-Fi recommended.',
+                context.l10n.localShellInstallHint,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -190,8 +191,11 @@ class _DistroOption extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Download '
-                      '${formatLocalShellBytes(distro.manifest.downloadSizeBytes)}',
+                      context.l10n.localShellDownloadWithSize(
+                        formatLocalShellBytes(
+                          distro.manifest.downloadSizeBytes,
+                        ),
+                      ),
                       style: TextStyle(
                         color: colorScheme.onSurfaceVariant,
                         fontSize: 12,

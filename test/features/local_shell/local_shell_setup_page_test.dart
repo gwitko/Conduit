@@ -1,5 +1,6 @@
 import 'package:conduit/features/local_shell/presentation/local_shell_controller.dart';
 import 'package:conduit/features/local_shell/presentation/local_shell_setup_page.dart';
+import 'package:conduit/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -13,6 +14,8 @@ void main() {
     result = null;
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(
           builder: (context) => TextButton(
             onPressed: () async {

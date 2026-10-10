@@ -1,3 +1,4 @@
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 
 class ActionsFab extends StatelessWidget {
@@ -18,7 +19,7 @@ class ActionsFab extends StatelessWidget {
       children: [
         FloatingActionButton(
           heroTag: 'sftp-new-folder',
-          tooltip: 'New folder',
+          tooltip: context.l10n.sftpNewFolder,
           backgroundColor: colorScheme.primary,
           foregroundColor: colorScheme.onPrimary,
           elevation: 0,
@@ -36,7 +37,7 @@ class ActionsFab extends StatelessWidget {
           highlightElevation: 0,
           onPressed: onUpload,
           icon: const Icon(Icons.upload_rounded),
-          label: const Text('Upload'),
+          label: Text(context.l10n.actionUpload),
         ),
       ],
     );

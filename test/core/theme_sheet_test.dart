@@ -1,6 +1,7 @@
 import 'package:conduit/core/presentation/theme_sheet.dart';
 import 'package:conduit/core/theme/terminal_appearance.dart';
 import 'package:conduit/core/theme/theme_controller.dart';
+import 'package:conduit/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -15,6 +16,8 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(
           builder: (context) {
             return Scaffold(
@@ -56,6 +59,8 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(
           builder: (context) {
             return Scaffold(
@@ -99,6 +104,8 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(
           builder: (context) {
             return Scaffold(
@@ -141,6 +148,8 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(
           builder: (context) {
             return Scaffold(

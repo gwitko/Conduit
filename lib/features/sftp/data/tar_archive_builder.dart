@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:conduit/core/app_failure.dart';
+import 'package:conduit/core/l10n/l10n.dart';
 
 class TarArchiveBuilder {
   final BytesBuilder _bytes = BytesBuilder(copy: false);
@@ -85,7 +86,7 @@ class TarArchiveBuilder {
         return (name: name, prefix: prefix);
       }
     }
-    throw AppFailure('Path is too long to archive: $path');
+    throw AppFailure(AppLocalizationsHolder.current.sftpErrorPathTooLong(path));
   }
 
   void _writeString(Uint8List header, int offset, int length, String value) {

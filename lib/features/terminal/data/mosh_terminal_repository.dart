@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:conduit/core/app_failure.dart';
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/features/hosts/domain/saved_host.dart';
 import 'package:conduit/features/terminal/data/ssh_client_factory.dart';
 import 'package:conduit/features/terminal/data/tcp_ssh_socket.dart';
@@ -46,7 +47,7 @@ class MoshTerminalRepository implements SshTerminalRepository {
     } catch (error) {
       client?.close();
       throw AppFailure(
-        'Could not start a Mosh session on ${host.host}:${host.port}.',
+        AppLocalizationsHolder.current.terminalErrorMoshStartFailed('${host.host}:${host.port}'),
         error,
       );
     }
@@ -75,7 +76,7 @@ class MoshTerminalRepository implements SshTerminalRepository {
       ]).timeout(Duration(seconds: host.connectionTimeoutSeconds));
     } on TimeoutException {
       session.close();
-      throw const AppFailure('Timed out waiting for mosh-server startup.');
+      throw AppFailure(AppLocalizationsHolder.current.terminalErrorMoshStartupTimeout);
     }
 
     return MoshServerConfig.parse(output.toString(), host: host.host.trim());
@@ -123,7 +124,7 @@ class MoshTerminalSession
   @override
   int sendWithInputState(List<int> data) {
     if (_closed) {
-      throw const AppFailure('The Mosh session is closed.');
+      throw AppFailure(AppLocalizationsHolder.current.terminalErrorMoshSessionClosed);
     }
     return _session.send(data);
   }

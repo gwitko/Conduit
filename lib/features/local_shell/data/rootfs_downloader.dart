@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/features/local_shell/domain/rootfs_manifest.dart';
 import 'package:http/http.dart' as http;
 
@@ -62,9 +63,9 @@ class HttpRootfsDownloader implements RootfsDownloader {
 
     if (!verifier.verify()) {
       await file.delete().catchError((_) => file);
-      throw const DownloadException(
+      throw DownloadException(
         DownloadFailureKind.corrupt,
-        'Downloaded archive failed checksum verification.',
+        AppLocalizationsHolder.current.localShellErrorChecksumFailed,
       );
     }
     onProgress?.call(1);
@@ -93,7 +94,7 @@ class HttpRootfsDownloader implements RootfsDownloader {
     if (response.statusCode != 200 && response.statusCode != 206) {
       throw DownloadException(
         DownloadFailureKind.network,
-        'Unexpected HTTP status ${response.statusCode}',
+        AppLocalizationsHolder.current.localShellErrorHttpStatus('${response.statusCode}'),
       );
     }
 
@@ -123,9 +124,9 @@ class HttpRootfsDownloader implements RootfsDownloader {
     } on FileSystemException catch (error) {
       await sink.close().catchError((_) {});
       if (error.osError?.errorCode == 28) {
-        throw const DownloadException(
+        throw DownloadException(
           DownloadFailureKind.lowDisk,
-          'No space left on device.',
+          AppLocalizationsHolder.current.localShellErrorLowDisk,
         );
       }
       throw DownloadException(DownloadFailureKind.unknown, '$error');

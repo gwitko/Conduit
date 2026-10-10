@@ -1,6 +1,9 @@
 import 'dart:async';
 
+import 'package:conduit/core/l10n/l10n.dart';
+import 'package:conduit/core/l10n/locale_controller.dart';
 import 'package:conduit/core/presentation/conduit_brand.dart';
+import 'package:conduit/core/presentation/language_sheet.dart';
 import 'package:conduit/core/presentation/system_navigation_insets.dart';
 import 'package:conduit/core/presentation/theme_sheet.dart';
 import 'package:conduit/core/theme/theme_controller.dart';
@@ -44,6 +47,7 @@ class HostsPage extends StatefulWidget {
     required this.workspaceController,
     required this.localShellController,
     required this.themeController,
+    required this.localeController,
     required this.hostKeyVerifier,
     required this.promptCoordinator,
     required this.sftpRepository,
@@ -58,6 +62,7 @@ class HostsPage extends StatefulWidget {
   final TerminalWorkspaceController workspaceController;
   final LocalShellController localShellController;
   final ThemeController themeController;
+  final LocaleController localeController;
   final HostKeyVerifier hostKeyVerifier;
   final HostKeyPromptCoordinator promptCoordinator;
   final SftpRepository sftpRepository;
@@ -156,6 +161,10 @@ class _HostsPageState extends State<HostsPage> {
                         hostCount: widget.hostsController.hosts.length,
                         activeSessionCount:
                             widget.workspaceController.sessions.length,
+                        onLanguage: () => showLanguageSheet(
+                          context: context,
+                          controller: widget.localeController,
+                        ),
                         onAppearance: () => showThemeSheet(
                           context: context,
                           controller: widget.themeController,
@@ -228,9 +237,9 @@ class _HostsPageState extends State<HostsPage> {
         hasScrollBody: false,
         child: MessageState(
           icon: Icons.error_outline,
-          title: 'Something went wrong',
+          title: context.l10n.hostsErrorTitle,
           message: controller.errorMessage!,
-          actionLabel: 'Retry',
+          actionLabel: context.l10n.actionRetry,
           onAction: controller.load,
         ),
       );
@@ -245,11 +254,9 @@ class _HostsPageState extends State<HostsPage> {
             const SizedBox(height: 24),
             MessageState(
               icon: Icons.dns_outlined,
-              title: 'No saved machines yet',
-              message:
-                  'Add an SSH or Mosh server and Conduit will keep its '
-                  'credentials in your device’s secure storage.',
-              actionLabel: 'Add machine',
+              title: context.l10n.hostsEmptyTitle,
+              message: context.l10n.hostsEmptyBody,
+              actionLabel: context.l10n.hostFormAdd,
               onAction: _openForm,
             ),
           ]),
@@ -311,9 +318,9 @@ class _HostsPageState extends State<HostsPage> {
             SliverToBoxAdapter(
               child: MessageState(
                 icon: Icons.search_off,
-                title: 'No matches',
-                message: 'Try a different search or clear filters.',
-                actionLabel: 'Clear',
+                title: context.l10n.commonNoMatches,
+                message: context.l10n.commonNoMatchesHint,
+                actionLabel: context.l10n.actionClear,
                 onAction: _clearFilters,
               ),
             )
@@ -486,9 +493,7 @@ class _HostsPageState extends State<HostsPage> {
       if (!widget.localShellController.sharedStorageAccessGranted) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Grant file access, then open the shell again.'),
-          ),
+          SnackBar(content: Text(context.l10n.hostsGrantFileAccess)),
         );
         return;
       }
@@ -584,9 +589,11 @@ class _HostsPageState extends State<HostsPage> {
       case HostAction.copyAddress:
         await Clipboard.setData(ClipboardData(text: host.endpoint));
         if (!mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Copied ${host.endpoint}')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.l10n.hostsCopiedEndpoint(host.endpoint)),
+          ),
+        );
       case HostAction.delete:
         await _confirmDelete(host);
     }
@@ -596,22 +603,20 @@ class _HostsPageState extends State<HostsPage> {
     final keepSecrets = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Duplicate machine'),
-        content: const Text(
-          'Copy the saved password and key material into the new machine?',
-        ),
+        title: Text(context.l10n.hostsDuplicateTitle),
+        content: Text(context.l10n.hostsDuplicateBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.actionCancel),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Without secrets'),
+            child: Text(context.l10n.hostsDuplicateWithoutSecrets),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Copy secrets'),
+            child: Text(context.l10n.hostsDuplicateWithSecrets),
           ),
         ],
       ),
@@ -633,19 +638,19 @@ class _HostsPageState extends State<HostsPage> {
     final shouldDelete = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete machine?'),
-        content: Text('Conduit will forget “${host.name}”.'),
+        title: Text(context.l10n.hostsDeleteTitle),
+        content: Text(context.l10n.hostsDeleteBody(host.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.actionCancel),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete'),
+            child: Text(context.l10n.actionDelete),
           ),
         ],
       ),
@@ -667,14 +672,14 @@ class _MachineSectionHeader extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Saved machines',
+          context.l10n.hostsSavedMachines,
           style: theme.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w800,
           ),
         ),
         const SizedBox(height: 3),
         Text(
-          'SSH and Mosh connections you have saved.',
+          context.l10n.hostsSavedMachinesHint,
           style: theme.textTheme.bodySmall?.copyWith(
             color: colorScheme.onSurfaceVariant,
             height: 1.25,
@@ -694,7 +699,7 @@ class _HostSortMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PopupMenuButton<HostListSortMode>(
-      tooltip: 'Sort machines',
+      tooltip: context.l10n.hostsSortMachines,
       initialValue: value,
       onSelected: onChanged,
       icon: const Icon(Icons.sort_rounded),
@@ -706,7 +711,7 @@ class _HostSortMenu extends StatelessWidget {
               children: [
                 Icon(mode.icon, size: 18),
                 const SizedBox(width: 10),
-                Text(mode.label),
+                Text(mode.labelOf(context.l10n)),
               ],
             ),
           ),
@@ -716,11 +721,11 @@ class _HostSortMenu extends StatelessWidget {
 }
 
 extension on HostListSortMode {
-  String get label => switch (this) {
-    HostListSortMode.lastConnected => 'Last connected',
-    HostListSortMode.name => 'Name',
-    HostListSortMode.added => 'Added',
-    HostListSortMode.manual => 'Manual',
+  String labelOf(AppLocalizations l10n) => switch (this) {
+    HostListSortMode.lastConnected => l10n.hostsSortLastConnected,
+    HostListSortMode.name => l10n.labelName,
+    HostListSortMode.added => l10n.hostsSortAdded,
+    HostListSortMode.manual => l10n.hostsSortManual,
   };
 
   IconData get icon => switch (this) {

@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:conduit/core/app_failure.dart';
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/features/local_shell/domain/pty_process.dart';
 import 'package:conduit/features/terminal/domain/ssh_terminal_session.dart';
 
@@ -22,7 +23,7 @@ class LocalTerminalSession implements SshTerminalSession {
   @override
   Future<void> send(List<int> data) async {
     if (_closed) {
-      throw const AppFailure('The local shell session is closed.');
+      throw AppFailure(AppLocalizationsHolder.current.localShellErrorSessionClosed);
     }
     _process.write(data is Uint8List ? data : Uint8List.fromList(data));
   }

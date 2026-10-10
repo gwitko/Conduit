@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:conduit/core/app_failure.dart';
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/features/hosts/domain/saved_host.dart';
 import 'package:conduit/features/sftp/domain/sftp_entry.dart';
 import 'package:conduit/features/sftp/domain/sftp_repository.dart';
@@ -27,7 +28,7 @@ class DartSshSftpRepository implements SftpRepository {
     } catch (error) {
       client?.close();
       throw AppFailure(
-        'Could not open files on ${host.host}:${host.port}.',
+        AppLocalizationsHolder.current.sftpErrorOpenFailed('${host.host}:${host.port}'),
         describeSshConnectionError(error),
       );
     }

@@ -1,0 +1,174 @@
+name: Android build
+
+# Fork-friendly APK build. Mirrors the geometry of the upstream
+# `.github/workflows/release.yml` (same Flutter/Java versions, same local-shell
+# native payload, same `full` flavor with `--split-per-abi`) but stops at an
+# artifact upload: it never pushes a tag and never creates a release.
+#
+# Trigger it either from the Actions tab (Run workflow) or by pushing a
+# `build/**` branch. Note that GitHub only registers workflows that live on the
+# default branch, so `workflow_dispatch` needs this file on `master`; the push
+# trigger reads the workflow from the pushed branch and works regardless.
+on:
+  workflow_dispatch:
+    inputs:
+      flavor:
+        description: Product flavor to build
+        required: true
+        default: full
+        type: choice
+        options:
+          - full
+          - play
+      skip_native:
+        description: Skip the local-shell native payload (faster; local shell will not work)
+        required: true
+        default: false
+        type: boolean
+      run_checks:
+        description: Run flutter analyze and flutter test before building
+        required: true
+        default: true
+        type: boolean
+  push:
+    branches:
+      - 'build/**'
+
+permissions:
+  contents: read
+
+env:
+  # `github.event.inputs` is always a string for workflow_dispatch and null for
+  # a push event, so this also supplies the defaults for the push trigger.
+  FLAVOR: ${{ github.event.inputs.flavor || 'full' }}
+  SKIP_NATIVE: ${{ github.event.inputs.skip_native || 'false' }}
+  RUN_CHECKS: ${{ github.event.inputs.run_checks || 'true' }}
+
+jobs:
+  build:
+    name: Build signed APKs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.1'
+          channel: stable
+          cache: true
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        if: ${{ env.RUN_CHECKS == 'true' }}
+        run: flutter analyze
+
+      - name: Test
+        if: ${{ env.RUN_CHECKS == 'true' }}
+        run: flutter test
+
+      - name: Build local shell native binaries
+        if: ${{ env.SKIP_NATIVE != 'true' }}
+        run: |
+          docker run --rm \
+            -v "$PWD:/workspace" -w /workspace \
+            debian:trixie \
+            bash -lc '
+              set -euo pipefail
+              apt-get update
+              DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends autoconf autogen automake autopoint bison build-essential curl file flex g++ g++-multilib gawk gettext gnupg gperf git intltool jq libfl-dev libglib2.0-dev libltdl-dev libtool-bin lrzip lzip lz4 lzop m4 openjdk-21-jdk-headless patch patchelf pkg-config python-is-python3 python3-pip python3-setuptools python3-venv python-wheel-common rsync scons sudo tar unzip wget xz-utils zip zstd
+              git config --global --add safe.directory "$(pwd)"
+              git config --global --add safe.directory "$(pwd)/build/local-shell-native/termux-packages"
+              CONDUIT_KEEP_LOCAL_SHELL_BUILD_ARTIFACTS=1 TERMUX_JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 TERMUX_QUIET_BUILD=true tools/build-local-shell-binaries.sh
+              chown -R '"$(id -u):$(id -g)"' android/app/src/main/jniLibs build/local-shell-native third_party/source-offer/bundled-binaries.sha256 || true
+            '
+          android_sdk="$PWD/build/local-shell-native/android-sdk-9123335"
+          android_ndk="$PWD/build/local-shell-native/android-ndk-r29"
+          test -d "$android_sdk"
+          test -d "$android_ndk"
+          {
+            echo "ANDROID_HOME=$android_sdk"
+            echo "ANDROID_SDK_ROOT=$android_sdk"
+            echo "ANDROID_NDK_HOME=$android_ndk"
+            echo "ANDROID_NDK_ROOT=$android_ndk"
+            echo "NDK=$android_ndk"
+          } >> "$GITHUB_ENV"
+          {
+            echo "$android_sdk/platform-tools"
+            echo "$android_sdk/cmdline-tools/bin"
+          } >> "$GITHUB_PATH"
+
+      - name: Configure Android signing
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+        run: |
+          if [[ -z "${ANDROID_KEYSTORE_BASE64}" ]]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 must be set to produce a signed APK."
+            exit 1
+          fi
+
+          required=(ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD ANDROID_STORE_PASSWORD)
+          for name in "${required[@]}"; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::${name} must be set when ANDROID_KEYSTORE_BASE64 is set."
+              exit 1
+            fi
+          done
+
+          printf '%s' "${ANDROID_KEYSTORE_BASE64}" | base64 --decode > android/app/upload-keystore.jks
+          {
+            echo "storeFile=upload-keystore.jks"
+            echo "storePassword=${ANDROID_STORE_PASSWORD}"
+            echo "keyPassword=${ANDROID_KEY_PASSWORD}"
+            echo "keyAlias=${ANDROID_KEY_ALIAS}"
+          } > android/key.properties
+
+      - name: Build Android APKs
+        run: flutter build apk --release --flavor "${FLAVOR}" --split-per-abi
+
+      - name: Report build metadata
+        shell: bash
+        run: |
+          pubspec_version="$(sed -n 's/^version:[[:space:]]*//p' pubspec.yaml | head -n 1)"
+          {
+            echo "### Conduit APK build"
+            echo ""
+            echo "- ref: \`${GITHUB_REF_NAME}\` (${GITHUB_SHA})"
+            echo "- pubspec version: \`${pubspec_version}\`"
+            echo "- flavor: \`${FLAVOR}\`"
+            echo "- native local shell: \`$([[ "${SKIP_NATIVE}" == 'true' ]] && echo skipped || echo built)\`"
+            echo ""
+            echo "| APK | bytes | sha256 |"
+            echo "| --- | --- | --- |"
+            for apk in build/app/outputs/flutter-apk/app-*-release.apk; do
+              [ -f "$apk" ] || continue
+              printf '| %s | %s | `%s` |\n' "$(basename "$apk")" "$(stat -c%s "$apk")" "$(sha256sum "$apk" | cut -d' ' -f1)"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: conduit-${{ env.FLAVOR }}-apks-${{ github.run_number }}
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
+            build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+            build/app/outputs/flutter-apk/app-x86_64-release.apk

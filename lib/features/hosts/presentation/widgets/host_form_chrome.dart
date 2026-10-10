@@ -1,3 +1,4 @@
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/core/presentation/conduit_brand.dart';
 import 'package:flutter/material.dart';
 
@@ -20,7 +21,7 @@ class HostFormHeader extends StatelessWidget {
     return Row(
       children: [
         IconButton(
-          tooltip: 'Back',
+          tooltip: context.l10n.actionBack,
           onPressed: onBack,
           icon: const Icon(Icons.arrow_back_rounded),
         ),

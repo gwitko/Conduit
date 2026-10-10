@@ -1,3 +1,4 @@
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/core/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 
@@ -6,12 +7,12 @@ class ConduitWordmark extends StatelessWidget {
     super.key,
     this.size = 28,
     this.showSubtitle = false,
-    this.subtitle = 'SSH workspaces',
+    this.subtitle,
   });
 
   final double size;
   final bool showSubtitle;
-  final String subtitle;
+  final String? subtitle;
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +38,7 @@ class ConduitWordmark extends StatelessWidget {
             if (showSubtitle) ...[
               SizedBox(height: size * 0.18),
               Text(
-                subtitle,
+                subtitle ?? context.l10n.brandTagline,
                 style: theme.textTheme.labelMedium?.copyWith(
                   fontSize: size * 0.4,
                   color: theme.colorScheme.onSurfaceVariant,

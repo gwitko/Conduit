@@ -1,3 +1,4 @@
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/features/terminal/domain/host_key_prompt.dart';
 import 'package:flutter/material.dart';
 
@@ -16,7 +17,11 @@ Future<HostKeyDecision?> showHostKeyPromptDialog({
           isMismatch ? Icons.warning_amber_rounded : Icons.shield_outlined,
           color: isMismatch ? colorScheme.error : colorScheme.primary,
         ),
-        title: Text(isMismatch ? 'Host key changed' : 'Trust this host?'),
+        title: Text(
+          isMismatch
+              ? context.l10n.hostKeyChangedTitle
+              : context.l10n.hostKeyTrustTitle,
+        ),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -26,10 +31,10 @@ Future<HostKeyDecision?> showHostKeyPromptDialog({
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Text(
-                    'The server at ${request.host}:${request.port} is presenting '
-                    'a different key than the one you previously trusted. This '
-                    'can indicate a man-in-the-middle attack, or the server '
-                    'may have been legitimately rekeyed.',
+                    context.l10n.hostKeyMismatchBody(
+                      request.host,
+                      request.port,
+                    ),
                     style: TextStyle(color: colorScheme.error),
                   ),
                 )
@@ -37,27 +42,34 @@ Future<HostKeyDecision?> showHostKeyPromptDialog({
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Text(
-                    'Conduit has not connected to ${request.host}:${request.port} '
-                    'before. Verify the fingerprint matches the one reported by '
-                    'the server (e.g. `ssh-keygen -E md5 -lf <key>`).',
+                    context.l10n.hostKeyUnknownBody(request.host, request.port),
                   ),
                 ),
               _PromptField(
-                label: 'Host',
+                label: context.l10n.labelHost,
                 value: '${request.host}:${request.port}',
               ),
-              _PromptField(label: 'Algorithm', value: request.type),
-              _PromptField(label: 'Fingerprint', value: request.fingerprint),
+              _PromptField(
+                label: context.l10n.labelAlgorithm,
+                value: request.type,
+              ),
+              _PromptField(
+                label: context.l10n.labelFingerprint,
+                value: request.fingerprint,
+              ),
               if (isMismatch && request.existing != null) ...[
                 const Divider(height: 24),
                 Text(
-                  'Previously trusted:',
+                  context.l10n.hostKeyPreviouslyTrusted,
                   style: Theme.of(context).textTheme.labelLarge,
                 ),
                 const SizedBox(height: 6),
-                _PromptField(label: 'Algorithm', value: request.existing!.type),
                 _PromptField(
-                  label: 'Fingerprint',
+                  label: context.l10n.labelAlgorithm,
+                  value: request.existing!.type,
+                ),
+                _PromptField(
+                  label: context.l10n.labelFingerprint,
                   value: request.existing!.fingerprint,
                 ),
               ],
@@ -67,14 +79,18 @@ Future<HostKeyDecision?> showHostKeyPromptDialog({
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(HostKeyDecision.reject),
-            child: const Text('Reject'),
+            child: Text(context.l10n.actionReject),
           ),
           FilledButton(
             style: isMismatch
                 ? FilledButton.styleFrom(backgroundColor: colorScheme.error)
                 : null,
             onPressed: () => Navigator.of(context).pop(HostKeyDecision.trust),
-            child: Text(isMismatch ? 'Trust new key' : 'Trust'),
+            child: Text(
+              isMismatch
+                  ? context.l10n.hostKeyTrustNew
+                  : context.l10n.actionTrust,
+            ),
           ),
         ],
       );

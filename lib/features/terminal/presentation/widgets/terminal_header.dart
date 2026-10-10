@@ -1,3 +1,4 @@
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/core/theme/app_palette.dart';
 import 'package:conduit/features/terminal/presentation/terminal_session_controller.dart';
 import 'package:flutter/material.dart';
@@ -33,7 +34,7 @@ class TerminalHeader extends StatelessWidget {
       child: Row(
         children: [
           IconButton(
-            tooltip: 'Machines',
+            tooltip: context.l10n.labelMachines,
             color: foreground,
             icon: const Icon(Icons.arrow_back_rounded),
             onPressed: onBack,
@@ -68,7 +69,7 @@ class TerminalHeader extends StatelessWidget {
             ),
           ),
           IconButton(
-            tooltip: 'Reconnect',
+            tooltip: context.l10n.actionReconnect,
             color: foreground,
             icon: const Icon(Icons.refresh_rounded),
             onPressed: onReconnect,

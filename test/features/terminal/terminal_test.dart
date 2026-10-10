@@ -18,6 +18,7 @@ import 'package:conduit/features/terminal/presentation/terminal_keyboard_bar.dar
 import 'package:conduit/features/terminal/presentation/terminal_keyboard_controller.dart';
 import 'package:conduit/features/terminal/presentation/terminal_session_controller.dart';
 import 'package:conduit/features/terminal/presentation/widgets/terminal_surface.dart';
+import 'package:conduit/l10n/app_localizations.dart';
 import 'package:conduit_vt/conduit_vt.dart';
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:dartssh2/dartssh2.dart';
@@ -325,6 +326,8 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: TerminalKeyboardBar(
               controller: controller,
@@ -387,6 +390,8 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: TerminalKeyboardBar(
               controller: controller,
@@ -463,6 +468,8 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: TerminalKeyboardBar(
               controller: controller,
@@ -518,6 +525,8 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: TerminalKeyboardBar(
               controller: controller,
@@ -583,6 +592,8 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: TerminalKeyboardBar(
               controller: controller,
@@ -646,6 +657,8 @@ void main() {
       addTearDown(controller.dispose);
 
       Widget buildBar({required bool tmuxScrollMode}) => MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: TerminalKeyboardBar(
             controller: controller,
@@ -696,6 +709,8 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: TerminalSurface(
               session: controller,

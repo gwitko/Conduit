@@ -7,6 +7,7 @@ import 'package:conduit/features/hosts/domain/ssh_key.dart';
 import 'package:conduit/features/hosts/presentation/host_form_page.dart';
 import 'package:conduit/features/hosts/presentation/hosts_controller.dart';
 import 'package:conduit/features/snippets/domain/terminal_snippet.dart';
+import 'package:conduit/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -419,7 +420,13 @@ void main() {
     testWidgets('private key rejects OpenSSH hardware key stubs', (
       tester,
     ) async {
-      await tester.pumpWidget(const MaterialApp(home: HostFormPage()));
+      await tester.pumpWidget(
+        const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: HostFormPage(),
+        ),
+      );
 
       await tester.enterText(
         find.widgetWithText(TextFormField, 'Display name'),
@@ -469,7 +476,13 @@ void main() {
         comment: 'me@conduit',
       );
 
-      await tester.pumpWidget(const MaterialApp(home: HostFormPage()));
+      await tester.pumpWidget(
+        const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: HostFormPage(),
+        ),
+      );
       await tester.tap(find.text('Private key').first);
       await tester.pumpAndSettle();
 
@@ -492,7 +505,13 @@ void main() {
         passphrase: 'locked',
       );
 
-      await tester.pumpWidget(const MaterialApp(home: HostFormPage()));
+      await tester.pumpWidget(
+        const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: HostFormPage(),
+        ),
+      );
       await tester.enterText(
         find.widgetWithText(TextFormField, 'Display name'),
         'Host',
@@ -545,7 +564,11 @@ void main() {
       );
 
       await tester.pumpWidget(
-        const MaterialApp(home: HostFormPage(keyService: _SyncKeyService())),
+        const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: HostFormPage(keyService: _SyncKeyService()),
+        ),
       );
       await tester.tap(find.text('Private key').first);
       await tester.pumpAndSettle();
@@ -586,7 +609,11 @@ void main() {
           'This key is encrypted. Enter its passphrase below to unlock it.';
 
       await tester.pumpWidget(
-        MaterialApp(home: HostFormPage(keyService: service)),
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: HostFormPage(keyService: service),
+        ),
       );
       await tester.tap(find.text('Private key').first);
       await tester.pumpAndSettle();
@@ -678,7 +705,13 @@ void main() {
     }
 
     testWidgets('requires at least one hardware key to save', (tester) async {
-      await tester.pumpWidget(const MaterialApp(home: HostFormPage()));
+      await tester.pumpWidget(
+        const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: HostFormPage(),
+        ),
+      );
 
       await tester.enterText(
         find.widgetWithText(TextFormField, 'Display name'),
@@ -702,7 +735,13 @@ void main() {
     testWidgets('adopts a pasted stub when switching to hardware key', (
       tester,
     ) async {
-      await tester.pumpWidget(const MaterialApp(home: HostFormPage()));
+      await tester.pumpWidget(
+        const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: HostFormPage(),
+        ),
+      );
 
       await tester.tap(find.text('Private key').first);
       await tester.pumpAndSettle();
@@ -727,7 +766,13 @@ void main() {
       tester,
     ) async {
       mockClipboard(tester, fakeSecurityKeyPem());
-      await tester.pumpWidget(const MaterialApp(home: HostFormPage()));
+      await tester.pumpWidget(
+        const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: HostFormPage(),
+        ),
+      );
 
       await tester.tap(find.text('Hardware key').first);
       await tester.pumpAndSettle();
@@ -768,7 +813,13 @@ void main() {
     });
 
     testWidgets('adds a key typed into the sheet input field', (tester) async {
-      await tester.pumpWidget(const MaterialApp(home: HostFormPage()));
+      await tester.pumpWidget(
+        const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: HostFormPage(),
+        ),
+      );
 
       await tester.tap(find.text('Hardware key').first);
       await tester.pumpAndSettle();
@@ -801,7 +852,13 @@ void main() {
         privateKey: fakeSecurityKeyPem(),
       );
 
-      await tester.pumpWidget(MaterialApp(home: HostFormPage(host: host)));
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: HostFormPage(host: host),
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Hardware keys (1)'), findsOneWidget);

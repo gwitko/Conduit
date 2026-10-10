@@ -2,6 +2,7 @@ import 'package:conduit/features/local_shell/domain/local_shell_instance.dart';
 import 'package:conduit/features/local_shell/domain/local_shell_state.dart';
 import 'package:conduit/features/local_shell/presentation/local_shell_controller.dart';
 import 'package:conduit/features/local_shell/presentation/widgets/local_shell_section.dart';
+import 'package:conduit/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -44,6 +45,8 @@ Widget wrap(
   void Function(LocalShellInstance)? onManage,
 }) {
   return MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
     home: Scaffold(
       body: LocalShellSection(
         controller: controller,

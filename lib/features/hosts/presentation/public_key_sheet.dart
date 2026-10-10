@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/core/presentation/conduit_brand.dart';
 import 'package:conduit/core/presentation/system_navigation_insets.dart';
 import 'package:conduit/core/theme/app_theme.dart';
@@ -54,7 +55,9 @@ class _PublicKeySheet extends StatelessWidget {
               Row(
                 children: [
                   Text(
-                    freshlyGenerated ? 'Key created' : 'Public key',
+                    freshlyGenerated
+                        ? context.l10n.publicKeyCreatedTitle
+                        : context.l10n.publicKeyTitle,
                     style: theme.textTheme.headlineSmall,
                   ),
                   const Spacer(),
@@ -64,11 +67,8 @@ class _PublicKeySheet extends StatelessWidget {
               const SizedBox(height: 6),
               Text(
                 freshlyGenerated
-                    ? 'A new ${details.algorithm.label} key is saved on this '
-                          'device. Add the public key below to the server, then '
-                          'connect.'
-                    : 'Add this line to ~/.ssh/authorized_keys on the host you '
-                          'want to reach.',
+                    ? context.l10n.publicKeyCreatedBody(details.algorithm.label)
+                    : context.l10n.publicKeyInstructions,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: colorScheme.onSurfaceVariant,
                   height: 1.3,
@@ -91,7 +91,7 @@ class _PublicKeySheet extends StatelessWidget {
                     child: FilledButton.icon(
                       onPressed: () => _copy(context),
                       icon: const Icon(Icons.copy_rounded, size: 18),
-                      label: const Text('Copy'),
+                      label: Text(context.l10n.actionCopy),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -99,7 +99,7 @@ class _PublicKeySheet extends StatelessWidget {
                     child: OutlinedButton.icon(
                       onPressed: () => _save(context),
                       icon: const Icon(Icons.save_alt_rounded, size: 18),
-                      label: const Text('Save .pub'),
+                      label: Text(context.l10n.publicKeySave),
                     ),
                   ),
                 ],
@@ -118,13 +118,14 @@ class _PublicKeySheet extends StatelessWidget {
   Future<void> _copy(BuildContext context) async {
     await Clipboard.setData(ClipboardData(text: details.publicKeyOpenSsh));
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Public key copied to clipboard')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(context.l10n.publicKeyCopied)));
   }
 
   Future<void> _save(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = context.l10n;
     final bytes = Uint8List.fromList(
       utf8.encode('${details.publicKeyOpenSsh}\n'),
     );
@@ -134,11 +135,9 @@ class _PublicKeySheet extends StatelessWidget {
         bytes: bytes,
       );
       if (path == null) return;
-      messenger.showSnackBar(const SnackBar(content: Text('Public key saved')));
+      messenger.showSnackBar(SnackBar(content: Text(l10n.publicKeySaved)));
     } catch (_) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Could not save the public key')),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l10n.publicKeySaveFailed)));
     }
   }
 
@@ -203,8 +202,7 @@ class _PrivateKeyNote extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'The private half never leaves this device. It is held in '
-              'platform secure storage with your other credentials.',
+              context.l10n.publicKeyPrivateNote,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: colorScheme.onSurfaceVariant,
                 height: 1.25,

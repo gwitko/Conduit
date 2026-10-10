@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:fido2/fido2_client.dart';
 import 'package:flutter/services.dart';
 
@@ -22,7 +23,7 @@ class FidoUsbCtapDevice extends CtapDevice {
   static Future<FidoUsbCtapDevice> open() async {
     if (!Platform.isAndroid) {
       throw UnsupportedError(
-        'USB security keys are only supported on Android.',
+        AppLocalizationsHolder.current.securityKeyUsbAndroidOnly,
       );
     }
     await _channel.invokeMethod<void>('open');
@@ -38,8 +39,8 @@ class FidoUsbCtapDevice extends CtapDevice {
       Uint8List.fromList(command),
     );
     if (response == null || response.isEmpty) {
-      throw const FormatException(
-        'USB security key returned an empty response.',
+      throw FormatException(
+        AppLocalizationsHolder.current.securityKeyUsbEmptyResponse,
       );
     }
     return CtapResponse(response[0], response.sublist(1));

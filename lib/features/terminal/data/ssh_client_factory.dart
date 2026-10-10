@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:conduit/core/app_failure.dart';
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/features/hosts/domain/saved_host.dart';
 import 'package:conduit/features/terminal/data/fido_hardware_key_ctap_device.dart';
 import 'package:conduit/features/terminal/data/openssh_security_key_signer.dart';
@@ -84,8 +85,8 @@ class SshClientFactory {
         host.passphrase.isEmpty ? null : host.passphrase,
       );
       if (keyPairs.any((keyPair) => keyPair is OpenSSHSecurityKeyPair)) {
-        throw const AppFailure(
-          'This is a hardware-key stub. Choose Hardware key instead.',
+        throw AppFailure(
+          AppLocalizationsHolder.current.hostFormStubUseHardwareKey,
         );
       }
       return _securityKeySigner.attach(keyPairs);
@@ -93,21 +94,21 @@ class SshClientFactory {
       if (error is AppFailure) {
         rethrow;
       }
-      throw AppFailure('Private key could not be loaded.', error);
+      throw AppFailure(AppLocalizationsHolder.current.sshErrorPrivateKeyUnreadable, error);
     }
   }
 
   List<SSHKeyPair> _hardwareKeyIdentitiesFor(SavedHost host) {
     final entries = host.effectiveHardwareKeys;
     if (entries.isEmpty) {
-      throw const AppFailure('Add at least one hardware key to this host.');
+      throw AppFailure(AppLocalizationsHolder.current.sshErrorNoHardwareKeys);
     }
     final keyPairs = <SSHKeyPair>[];
     final labels = <String>[];
     for (var i = 0; i < entries.length; i++) {
       final entry = entries[i];
       final label = entry.label.trim().isEmpty
-          ? 'hardware key ${i + 1}'
+          ? AppLocalizationsHolder.current.hardwareKeyFallbackName('${i + 1}')
           : entry.label.trim();
       final List<SSHKeyPair> parsed;
       try {
@@ -116,15 +117,14 @@ class SshClientFactory {
           entry.passphrase.isEmpty ? null : entry.passphrase,
         );
       } catch (error) {
-        throw AppFailure('Hardware key "$label" could not be loaded.', error);
+        throw AppFailure(AppLocalizationsHolder.current.sshErrorHardwareKeyUnreadable(label), error);
       }
       final securityKeyPairs = parsed
           .whereType<OpenSSHSecurityKeyPair>()
           .toList(growable: false);
       if (securityKeyPairs.isEmpty) {
         throw AppFailure(
-          'Hardware key "$label" requires an OpenSSH security-key stub '
-          '(id_ed25519_sk or id_ecdsa_sk), not a normal private key.',
+          AppLocalizationsHolder.current.sshErrorHardwareKeyNeedsStub(label),
         );
       }
       for (final keyPair in securityKeyPairs) {

@@ -1,3 +1,4 @@
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 
 class TagEditor extends StatelessWidget {
@@ -28,15 +29,15 @@ class TagEditor extends StatelessWidget {
           focusNode: focusNode,
           textInputAction: TextInputAction.done,
           decoration: InputDecoration(
-            labelText: 'Tags',
-            hintText: 'production, edge, eu-west…  press enter to add',
+            labelText: context.l10n.labelTags,
+            hintText: context.l10n.hostFormTagsHint,
             prefixIcon: const Icon(Icons.tag_rounded),
             suffixIcon: ValueListenableBuilder<TextEditingValue>(
               valueListenable: controller,
               builder: (context, value, _) {
                 if (value.text.trim().isEmpty) return const SizedBox.shrink();
                 return IconButton(
-                  tooltip: 'Add tag',
+                  tooltip: context.l10n.hostFormAddTag,
                   icon: Icon(
                     Icons.add_circle_rounded,
                     color: colorScheme.primary,

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:fido2/fido2_client.dart';
 import 'package:flutter_nfc_kit/flutter_nfc_kit.dart';
 
@@ -27,7 +28,7 @@ class FidoNfcCtapDevice extends CtapDevice {
     await FlutterNfcKit.poll(
       timeout: const Duration(seconds: 30),
       androidCheckNDEF: false,
-      iosAlertMessage: 'Hold your security key near the phone.',
+      iosAlertMessage: AppLocalizationsHolder.current.securityKeyHoldNearPhone,
       readIso15693: false,
     );
 
@@ -35,7 +36,7 @@ class FidoNfcCtapDevice extends CtapDevice {
       Uint8List.fromList(_selectFidoApplet),
       timeout: const Duration(seconds: 10),
     );
-    _throwIfBadStatus(response, 'FIDO applet selection failed.');
+    _throwIfBadStatus(response, AppLocalizationsHolder.current.securityKeyAppletSelectFailed);
     return FidoNfcCtapDevice._();
   }
 
@@ -76,9 +77,9 @@ class FidoNfcCtapDevice extends CtapDevice {
       rapdu = [...rapdu, ...chunk];
     } while (rapdu.length >= 2 && rapdu[rapdu.length - 2] == 0x61);
 
-    _throwIfBadStatus(Uint8List.fromList(rapdu), 'FIDO command failed.');
+    _throwIfBadStatus(Uint8List.fromList(rapdu), AppLocalizationsHolder.current.securityKeyCommandFailed);
     if (rapdu.length < 3) {
-      throw const FormatException('FIDO response was too short.');
+      throw FormatException(AppLocalizationsHolder.current.securityKeyResponseTooShort);
     }
     return CtapResponse(rapdu[0], rapdu.sublist(1, rapdu.length - 2));
   }
@@ -92,15 +93,22 @@ class FidoNfcCtapDevice extends CtapDevice {
 
   static void _throwIfBadStatus(Uint8List response, String message) {
     if (response.length < 2) {
-      throw FormatException('$message Empty APDU response.');
+      throw FormatException(AppLocalizationsHolder.current.securityKeyEmptyApdu(message));
     }
     final sw1 = response[response.length - 2];
     final sw2 = response[response.length - 1];
     if (sw1 != 0x90 || sw2 != 0x00) {
       throw FormatException(
-        '$message APDU status ${sw1.toRadixString(16).padLeft(2, '0')}'
-        '${sw2.toRadixString(16).padLeft(2, '0')}.',
+        AppLocalizationsHolder.current.securityKeyApduStatus(
+          message,
+          _apduStatus(sw1, sw2),
+        ),
       );
     }
   }
+}
+
+String _apduStatus(int sw1, int sw2) {
+  String hex(int value) => value.toRadixString(16).padLeft(2, '0');
+  return '${hex(sw1)}${hex(sw2)}';
 }

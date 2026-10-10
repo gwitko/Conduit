@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:conduit/core/app_failure.dart';
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/features/hosts/domain/saved_host.dart';
 import 'package:conduit/features/hosts/domain/saved_hosts_repository.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -24,7 +25,7 @@ class SecureSavedHostsRepository implements SavedHostsRepository {
     try {
       final decoded = jsonDecode(rawHosts);
       if (decoded is! List) {
-        throw const FormatException('Expected a list of hosts.');
+        throw FormatException(AppLocalizationsHolder.current.hostsErrorNotAList);
       }
 
       return decoded
@@ -32,7 +33,7 @@ class SecureSavedHostsRepository implements SavedHostsRepository {
           .map(SavedHost.fromJson)
           .toList(growable: false);
     } catch (error) {
-      throw AppFailure('Saved hosts could not be read.', error);
+      throw AppFailure(AppLocalizationsHolder.current.hostsErrorUnreadable, error);
     }
   }
 

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/core/presentation/conduit_brand.dart';
 import 'package:conduit/core/theme/app_theme.dart';
 import 'package:conduit/features/hosts/domain/saved_host.dart';
@@ -141,19 +142,15 @@ class _AddHardwareKeySheetState extends State<_AddHardwareKeySheet> {
     String? blockingError;
     if (inspection != null) {
       blockingError = switch (inspection.status) {
-        SshKeyStatus.valid =>
-          'This is a normal private key. Use it with the Private key '
-              'method instead.',
-        SshKeyStatus.invalid =>
-          'This is not a recognized OpenSSH security-key stub '
-              '(id_ed25519_sk or id_ecdsa_sk).',
+        SshKeyStatus.valid => context.l10n.addHardwareKeyNormalKey,
+        SshKeyStatus.invalid => context.l10n.addHardwareKeyNotStub,
         _ => null,
       };
       if (inspection.status == SshKeyStatus.securityKeyStub &&
           details != null) {
         if (widget.existingFingerprints.contains(details.fingerprintSha256) ||
             widget.existingStubs.contains(_stub)) {
-          blockingError = 'This key is already added to this host.';
+          blockingError = context.l10n.addHardwareKeyDuplicate;
         } else if (!_labelEdited) {
           _labelController.text = details.comment.trim();
         }
@@ -173,24 +170,25 @@ class _AddHardwareKeySheetState extends State<_AddHardwareKeySheet> {
   }
 
   Future<void> _importFile() async {
+    final l10n = context.l10n;
     final FilePickerResult? result;
     try {
       result = await FilePicker.pickFiles(withData: true);
     } catch (_) {
-      _showSnack('Could not open the file picker.');
+      _showSnack(l10n.commonFilePickerFailed);
       return;
     }
     if (result == null || result.files.isEmpty) return;
     final bytes = result.files.first.bytes;
     if (bytes == null) {
-      _showSnack('That file could not be read.');
+      _showSnack(l10n.commonFileReadFailed);
       return;
     }
     final String text;
     try {
       text = utf8.decode(bytes);
     } catch (_) {
-      _showSnack("That file isn't a text key stub.");
+      _showSnack(l10n.addHardwareKeyNotTextStub);
       return;
     }
     if (!mounted) return;
@@ -239,16 +237,17 @@ class _AddHardwareKeySheetState extends State<_AddHardwareKeySheet> {
         children: [
           Row(
             children: [
-              Text('Add hardware key', style: theme.textTheme.headlineSmall),
+              Text(
+                context.l10n.addHardwareKeyTitle,
+                style: theme.textTheme.headlineSmall,
+              ),
               const Spacer(),
               const ConduitGlyph(size: 24),
             ],
           ),
           const SizedBox(height: 6),
           Text(
-            'Import or paste the OpenSSH *_sk stub that ssh-keygen created '
-            'for this security key. The stub only points to the key; the '
-            'private part never leaves the hardware.',
+            context.l10n.addHardwareKeyBody,
             style: theme.textTheme.bodySmall?.copyWith(
               color: colorScheme.onSurfaceVariant,
               height: 1.3,
@@ -259,13 +258,12 @@ class _AddHardwareKeySheetState extends State<_AddHardwareKeySheet> {
           const SizedBox(height: 14),
           TextField(
             controller: _stubController,
-            decoration: const InputDecoration(
-              labelText: 'OpenSSH hardware key stub',
-              helperText:
-                  'Import or paste the id_ed25519_sk or id_ecdsa_sk file.',
+            decoration: InputDecoration(
+              labelText: context.l10n.addHardwareKeyStubLabel,
+              helperText: context.l10n.addHardwareKeyStubHint,
               helperMaxLines: 2,
               alignLabelWithHint: true,
-              prefixIcon: Padding(
+              prefixIcon: const Padding(
                 padding: EdgeInsets.only(top: 12),
                 child: Icon(Icons.vpn_key_outlined),
               ),
@@ -290,12 +288,14 @@ class _AddHardwareKeySheetState extends State<_AddHardwareKeySheet> {
             TextField(
               controller: _passphraseController,
               decoration: InputDecoration(
-                labelText: 'Stub passphrase',
-                helperText: 'This stub file is encrypted.',
+                labelText: context.l10n.addHardwareKeyPassphrase,
+                helperText: context.l10n.addHardwareKeyPassphraseHint,
                 helperMaxLines: 2,
                 prefixIcon: const Icon(Icons.shield_outlined),
                 suffixIcon: IconButton(
-                  tooltip: _showPassphrase ? 'Hide' : 'Show',
+                  tooltip: _showPassphrase
+                      ? context.l10n.actionHide
+                      : context.l10n.actionShow,
                   icon: Icon(
                     _showPassphrase
                         ? Icons.visibility_off_outlined
@@ -313,13 +313,11 @@ class _AddHardwareKeySheetState extends State<_AddHardwareKeySheet> {
             TextField(
               controller: _labelController,
               onChanged: (_) => _labelEdited = true,
-              decoration: const InputDecoration(
-                labelText: 'Label',
-                helperText:
-                    'Shown when Conduit asks for this key, e.g. "5C work" '
-                    'or "NFC backup".',
+              decoration: InputDecoration(
+                labelText: context.l10n.labelLabel,
+                helperText: context.l10n.addHardwareKeyLabelHint,
                 helperMaxLines: 2,
-                prefixIcon: Icon(Icons.label_outline_rounded),
+                prefixIcon: const Icon(Icons.label_outline_rounded),
               ),
               textInputAction: TextInputAction.done,
             ),
@@ -330,7 +328,7 @@ class _AddHardwareKeySheetState extends State<_AddHardwareKeySheet> {
             child: FilledButton.icon(
               onPressed: _canAdd ? _add : null,
               icon: const Icon(Icons.check_rounded),
-              label: const Text('Add key'),
+              label: Text(context.l10n.addHardwareKeySubmit),
             ),
           ),
         ],

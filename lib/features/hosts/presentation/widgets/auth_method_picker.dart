@@ -1,3 +1,4 @@
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/features/hosts/domain/saved_host.dart';
 import 'package:flutter/material.dart';
 
@@ -20,33 +21,32 @@ class AuthMethodPicker extends StatelessWidget {
           value: SshAuthMethod.password,
           groupValue: value,
           icon: Icons.password_rounded,
-          title: 'Password',
-          subtitle: 'Use the account password for SSH login.',
+          title: context.l10n.labelPassword,
+          subtitle: context.l10n.authPasswordHint,
           onChanged: onChanged,
         ),
         _AuthMethodTile(
           value: SshAuthMethod.privateKey,
           groupValue: value,
           icon: Icons.vpn_key_rounded,
-          title: 'Private key',
-          subtitle: 'Use a PEM or OpenSSH private key.',
+          title: context.l10n.hostFormPrivateKey,
+          subtitle: context.l10n.authPrivateKeyHint,
           onChanged: onChanged,
         ),
         _AuthMethodTile(
           value: SshAuthMethod.hardwareKey,
           groupValue: value,
           icon: Icons.usb_rounded,
-          title: 'Hardware key',
-          subtitle: 'Use one or more security keys over USB or NFC.',
+          title: context.l10n.authHardwareKey,
+          subtitle: context.l10n.authHardwareKeyHint,
           onChanged: onChanged,
         ),
         _AuthMethodTile(
           value: SshAuthMethod.external,
           groupValue: value,
           icon: Icons.link_rounded,
-          title: 'External',
-          subtitle:
-              'Let the SSH server authenticate without saved credentials.',
+          title: context.l10n.authExternal,
+          subtitle: context.l10n.authExternalBody,
           onChanged: onChanged,
         ),
       ],
@@ -191,14 +191,10 @@ class AuthExplainer extends StatelessWidget {
           Expanded(
             child: Text(
               hardwareKey
-                  ? 'Add the OpenSSH *_sk key stub for each security key you '
-                        'own. When you connect, Conduit asks whichever key '
-                        'you present to sign over USB or NFC.'
+                  ? context.l10n.authHardwareKeyDetail
                   : external
-                  ? 'Use this when authentication is handled outside Conduit, '
-                        'without storing a password or private key in the app.'
-                  : 'Use a normal SSH private key. If the key is encrypted, '
-                        'enter its passphrase below.',
+                  ? context.l10n.authExternalHint
+                  : context.l10n.hostFormPrivateKeyHint,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: colorScheme.onSurfaceVariant,
                 height: 1.25,

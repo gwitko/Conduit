@@ -1,3 +1,4 @@
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/features/terminal/domain/security_key_interaction.dart';
 import 'package:flutter/material.dart';
 
@@ -20,7 +21,7 @@ class _SecurityKeyPickerDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Choose security key'),
+      title: Text(context.l10n.securityKeyChooseTitle),
       contentPadding: const EdgeInsets.symmetric(vertical: 12),
       content: SizedBox(
         width: double.minPositive,
@@ -37,7 +38,7 @@ class _SecurityKeyPickerDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(context.l10n.actionCancel),
         ),
       ],
     );

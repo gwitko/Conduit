@@ -1,3 +1,4 @@
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/core/presentation/conduit_brand.dart';
 import 'package:conduit/core/presentation/system_navigation_insets.dart';
 import 'package:conduit/core/theme/app_palette.dart';
@@ -52,40 +53,43 @@ class _ThemeSheet extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Text('Appearance', style: theme.textTheme.headlineSmall),
+                      Text(
+                        context.l10n.appearanceTitle,
+                        style: theme.textTheme.headlineSmall,
+                      ),
                       const Spacer(),
                       const ConduitGlyph(size: 24),
                     ],
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Pick a developer palette. The home screen, editor, and dialogs share the same look.',
+                    context.l10n.appearanceSubtitle,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
                   const SizedBox(height: 18),
-                  const ConduitSectionLabel('Mode'),
+                  ConduitSectionLabel(context.l10n.appearanceSectionMode),
                   const SizedBox(height: 10),
                   _ModeSelector(controller: controller),
                   const SizedBox(height: 22),
-                  const ConduitSectionLabel('Terminal'),
+                  ConduitSectionLabel(context.l10n.appearanceSectionTerminal),
                   const SizedBox(height: 10),
                   _TerminalAppearanceControls(controller: controller),
                   if (defaultTargetPlatform == TargetPlatform.android) ...[
                     const SizedBox(height: 22),
-                    const ConduitSectionLabel('Home'),
+                    ConduitSectionLabel(context.l10n.appearanceSectionHome),
                     const SizedBox(height: 10),
                     _HomeAppearanceControls(controller: controller),
                   ],
                   if (backupService != null) ...[
                     const SizedBox(height: 22),
-                    const ConduitSectionLabel('Backup'),
+                    ConduitSectionLabel(context.l10n.appearanceSectionBackup),
                     const SizedBox(height: 10),
                     _BackupControls(backupService: backupService!),
                   ],
                   const SizedBox(height: 22),
-                  const ConduitSectionLabel('Palette'),
+                  ConduitSectionLabel(context.l10n.appearanceSectionPalette),
                   const SizedBox(height: 10),
                   GridView.builder(
                     shrinkWrap: true,
@@ -135,9 +139,9 @@ class _HomeAppearanceControls extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: SwitchListTile(
         secondary: const Icon(Icons.terminal_rounded),
-        title: const Text('Show local shell'),
+        title: Text(context.l10n.appearanceShowLocalShell),
         subtitle: Text(
-          'Show the local terminal shortcut on the home screen.',
+          context.l10n.appearanceShowLocalShellHint,
           style: theme.textTheme.bodySmall?.copyWith(
             color: colorScheme.onSurfaceVariant,
           ),
@@ -167,9 +171,9 @@ class _BackupControls extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: ListTile(
         leading: const Icon(Icons.backup_rounded),
-        title: const Text('Backup and restore'),
+        title: Text(context.l10n.backupTitle),
         subtitle: Text(
-          'Export settings and machines or import a saved backup.',
+          context.l10n.appearanceBackupRestoreHint,
           style: theme.textTheme.bodySmall?.copyWith(
             color: colorScheme.onSurfaceVariant,
           ),
@@ -190,21 +194,21 @@ class _ModeSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SegmentedButton<ThemeMode>(
-      segments: const [
+      segments: [
         ButtonSegment(
           value: ThemeMode.system,
-          icon: Icon(Icons.brightness_auto),
-          label: Text('System'),
+          icon: const Icon(Icons.brightness_auto),
+          label: Text(context.l10n.appearanceThemeSystem),
         ),
         ButtonSegment(
           value: ThemeMode.dark,
-          icon: Icon(Icons.dark_mode),
-          label: Text('Dark'),
+          icon: const Icon(Icons.dark_mode),
+          label: Text(context.l10n.appearanceThemeDark),
         ),
         ButtonSegment(
           value: ThemeMode.light,
-          icon: Icon(Icons.light_mode),
-          label: Text('Light'),
+          icon: const Icon(Icons.light_mode),
+          label: Text(context.l10n.appearanceThemeLight),
         ),
       ],
       selected: {controller.themeMode},
@@ -236,7 +240,7 @@ class _TerminalAppearanceControls extends StatelessWidget {
                       ? Icons.extension_rounded
                       : Icons.terminal_rounded,
                 ),
-                label: Text(font.label),
+                label: Text(font.labelOf(context.l10n)),
               ),
           ],
           selected: {controller.terminalFont},
@@ -258,7 +262,10 @@ class _TerminalAppearanceControls extends StatelessWidget {
                 children: [
                   const Icon(Icons.format_size_rounded, size: 18),
                   const SizedBox(width: 8),
-                  Text('Font size', style: theme.textTheme.labelLarge),
+                  Text(
+                    context.l10n.appearanceFontSize,
+                    style: theme.textTheme.labelLarge,
+                  ),
                   const Spacer(),
                   Text(
                     controller.terminalFontSize.toStringAsFixed(1),
@@ -313,7 +320,10 @@ class _TerminalAppearanceControls extends StatelessWidget {
               const Icon(Icons.keyboard_command_key_rounded, size: 18),
               const SizedBox(width: 8),
               Expanded(
-                child: Text('Key rows', style: theme.textTheme.labelLarge),
+                child: Text(
+                  context.l10n.appearanceKeyRows,
+                  style: theme.textTheme.labelLarge,
+                ),
               ),
               Text(
                 '${controller.terminalKeyboardRows.length}',
@@ -326,7 +336,7 @@ class _TerminalAppearanceControls extends StatelessWidget {
               TextButton.icon(
                 onPressed: () => _showKeyboardRowsEditor(context, controller),
                 icon: const Icon(Icons.tune_rounded, size: 17),
-                label: const Text('Edit'),
+                label: Text(context.l10n.actionEdit),
               ),
             ],
           ),
@@ -348,12 +358,15 @@ class _TerminalAppearanceControls extends StatelessWidget {
                   children: [
                     const Icon(Icons.keyboard_return_rounded, size: 20),
                     const SizedBox(width: 10),
-                    Text('Enter sends', style: theme.textTheme.titleSmall),
+                    Text(
+                      context.l10n.appearanceEnterSends,
+                      style: theme.textTheme.titleSmall,
+                    ),
                   ],
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  controller.terminalEnterSequence.description,
+                  controller.terminalEnterSequence.descriptionOf(context.l10n),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -389,9 +402,9 @@ class _TerminalAppearanceControls extends StatelessWidget {
           clipBehavior: Clip.antiAlias,
           child: SwitchListTile(
             secondary: const Icon(Icons.mouse_rounded),
-            title: const Text('Send mouse taps'),
+            title: Text(context.l10n.appearanceSendMouseTaps),
             subtitle: Text(
-              'Forward terminal taps as mouse clicks when apps enable mouse tracking.',
+              context.l10n.appearanceSendMouseTapsHint,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),
@@ -409,8 +422,8 @@ class _TerminalAppearanceControls extends StatelessWidget {
             border: Border.all(color: colorScheme.outlineVariant),
           ),
           child: SnippetListEditor(
-            title: 'Global snippets',
-            caption: 'Shown from the Snip key-row menu on every machine.',
+            title: context.l10n.appearanceGlobalSnippets,
+            caption: context.l10n.appearanceGlobalSnippetsHint,
             snippets: controller.terminalSnippets,
             onChanged: controller.setTerminalSnippets,
           ),
@@ -470,13 +483,16 @@ class _KeyboardRowsEditorState extends State<_KeyboardRowsEditor> {
               child: Row(
                 children: [
                   Text(
-                    'Key Rows (${_rows.length})',
+                    context.l10n.appearanceKeyRowsCount(_rows.length),
                     style: theme.textTheme.titleLarge,
                   ),
                   const Spacer(),
-                  TextButton(onPressed: _reset, child: const Text('Reset')),
+                  TextButton(
+                    onPressed: _reset,
+                    child: Text(context.l10n.actionReset),
+                  ),
                   IconButton(
-                    tooltip: 'Close',
+                    tooltip: context.l10n.actionClose,
                     onPressed: () => Navigator.of(context).pop(),
                     icon: const Icon(Icons.close_rounded),
                   ),
@@ -500,7 +516,7 @@ class _KeyboardRowsEditorState extends State<_KeyboardRowsEditor> {
                     child: OutlinedButton.icon(
                       onPressed: _addRow,
                       icon: const Icon(Icons.add_rounded, size: 17),
-                      label: const Text('Add row'),
+                      label: Text(context.l10n.appearanceAddRow),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -508,7 +524,7 @@ class _KeyboardRowsEditorState extends State<_KeyboardRowsEditor> {
                     child: FilledButton.icon(
                       onPressed: () => Navigator.of(context).pop(),
                       icon: const Icon(Icons.check_rounded),
-                      label: const Text('Done'),
+                      label: Text(context.l10n.actionDone),
                     ),
                   ),
                 ],
@@ -539,13 +555,11 @@ class _KeyboardRowsEditorState extends State<_KeyboardRowsEditor> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Row ${index + 1}',
+                        context.l10n.appearanceRowLabel(index + 1),
                         style: theme.textTheme.labelLarge,
                       ),
                       Text(
-                        row.items.length == 1
-                            ? '1 key'
-                            : '${row.items.length} keys',
+                        context.l10n.appearanceKeyCount(row.items.length),
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                         ),
@@ -554,12 +568,12 @@ class _KeyboardRowsEditorState extends State<_KeyboardRowsEditor> {
                   ),
                 ),
                 IconButton(
-                  tooltip: 'Edit keys',
+                  tooltip: context.l10n.appearanceEditKeys,
                   onPressed: () => _editRowKeys(index),
                   icon: const Icon(Icons.tune_rounded),
                 ),
                 IconButton(
-                  tooltip: 'Remove row',
+                  tooltip: context.l10n.appearanceRemoveRow,
                   onPressed: _rows.length == 1 ? null : () => _removeRow(index),
                   icon: const Icon(Icons.remove_circle_outline),
                 ),
@@ -614,7 +628,7 @@ class _KeyboardRowsEditorState extends State<_KeyboardRowsEditor> {
       context: context,
       isScrollControlled: true,
       builder: (context) => _KeyboardActionsEditor(
-        title: 'Row ${index + 1} Keys',
+        title: context.l10n.appearanceRowKeysTitle(index + 1),
         initialItems: _rows[index].items,
         onChanged: (items) {
           setState(() => _rows[index] = _rows[index].copyWith(items: items));
@@ -734,7 +748,7 @@ class _KeyboardActionsEditorState extends State<_KeyboardActionsEditor> {
                   const Spacer(),
                   TextButton(onPressed: _addTmux, child: const Text('Tmux')),
                   IconButton(
-                    tooltip: 'Close',
+                    tooltip: context.l10n.actionClose,
                     onPressed: () => Navigator.of(context).pop(),
                     icon: const Icon(Icons.close_rounded),
                   ),
@@ -765,7 +779,7 @@ class _KeyboardActionsEditorState extends State<_KeyboardActionsEditor> {
                     ),
                   ActionChip(
                     avatar: const Icon(Icons.add_rounded, size: 16),
-                    label: const Text('Custom'),
+                    label: Text(context.l10n.appearanceCustom),
                     onPressed: _addCustom,
                   ),
                 ],
@@ -776,7 +790,7 @@ class _KeyboardActionsEditorState extends State<_KeyboardActionsEditor> {
               child: FilledButton.icon(
                 onPressed: () => Navigator.of(context).pop(),
                 icon: const Icon(Icons.check_rounded),
-                label: const Text('Done'),
+                label: Text(context.l10n.actionDone),
               ),
             ),
             Container(height: 1, color: colorScheme.outlineVariant),
@@ -799,7 +813,7 @@ class _KeyboardActionsEditorState extends State<_KeyboardActionsEditor> {
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
-              tooltip: 'Remove',
+              tooltip: context.l10n.actionRemove,
               onPressed: _selected.length == 1 ? null : () => _remove(index),
               icon: const Icon(Icons.remove_circle_outline),
             ),
@@ -925,18 +939,18 @@ class _CustomKeyboardItemDialogState extends State<_CustomKeyboardItemDialog> {
     final textMode = _kind == TerminalKeyboardItemKind.customText;
     final controlMode = _kind == TerminalKeyboardItemKind.customControl;
     return AlertDialog(
-      title: const Text('Custom key'),
+      title: Text(context.l10n.appearanceCustomKey),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             SegmentedButton<TerminalKeyboardItemKind>(
-              segments: const [
+              segments: [
                 ButtonSegment(
                   value: TerminalKeyboardItemKind.customText,
-                  label: Text('Text'),
+                  label: Text(context.l10n.labelText),
                 ),
-                ButtonSegment(
+                const ButtonSegment(
                   value: TerminalKeyboardItemKind.customControl,
                   label: Text('Ctrl'),
                 ),
@@ -949,9 +963,9 @@ class _CustomKeyboardItemDialogState extends State<_CustomKeyboardItemDialog> {
             const SizedBox(height: 14),
             TextField(
               controller: _labelController,
-              decoration: const InputDecoration(
-                labelText: 'Label',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: context.l10n.labelLabel,
+                border: const OutlineInputBorder(),
               ),
               textInputAction: TextInputAction.next,
             ),
@@ -959,9 +973,9 @@ class _CustomKeyboardItemDialogState extends State<_CustomKeyboardItemDialog> {
             if (textMode) ...[
               TextField(
                 controller: _textController,
-                decoration: const InputDecoration(
-                  labelText: 'Text',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: context.l10n.labelText,
+                  border: const OutlineInputBorder(),
                 ),
                 minLines: 1,
                 maxLines: 3,
@@ -972,14 +986,14 @@ class _CustomKeyboardItemDialogState extends State<_CustomKeyboardItemDialog> {
                 onChanged: (value) {
                   setState(() => _submit = value ?? false);
                 },
-                title: const Text('Send Enter after text'),
+                title: Text(context.l10n.appearanceSendEnterAfterText),
               ),
             ] else if (controlMode)
               DropdownButtonFormField<String>(
                 initialValue: _controlKey,
-                decoration: const InputDecoration(
-                  labelText: 'Control key',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: context.l10n.appearanceControlKey,
+                  border: const OutlineInputBorder(),
                 ),
                 items: [
                   for (final key in terminalKeyboardControlKeys)
@@ -997,9 +1011,12 @@ class _CustomKeyboardItemDialogState extends State<_CustomKeyboardItemDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(context.l10n.actionCancel),
         ),
-        FilledButton(onPressed: _submitItem, child: const Text('Add')),
+        FilledButton(
+          onPressed: _submitItem,
+          child: Text(context.l10n.actionAdd),
+        ),
       ],
     );
   }
@@ -1199,7 +1216,7 @@ class _PaletteCard extends StatelessWidget {
                             ),
                             const SizedBox(height: 1),
                             Text(
-                              palette.caption,
+                              palette.captionOf(context.l10n),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(

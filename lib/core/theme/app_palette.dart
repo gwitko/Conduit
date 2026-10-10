@@ -1,3 +1,4 @@
+import 'package:conduit/l10n/app_localizations.dart';
 import 'package:conduit_vt/conduit_vt.dart';
 import 'package:flutter/material.dart';
 
@@ -28,7 +29,6 @@ enum AppPalette {
 class PaletteSpec {
   const PaletteSpec({
     required this.label,
-    required this.caption,
     required this.accent,
     required this.accentSecondary,
     required this.canvas,
@@ -49,7 +49,6 @@ class PaletteSpec {
   });
 
   final String label;
-  final String caption;
   final Color accent;
   final Color accentSecondary;
   final Color canvas;
@@ -98,7 +97,26 @@ const TerminalTheme _lightFallbackTerminal = TerminalTheme(
 
 extension AppPaletteDetails on AppPalette {
   String get label => _spec.label;
-  String get caption => _spec.caption;
+
+  /// Localized one-line description of the palette.
+  String captionOf(AppLocalizations l10n) => switch (this) {
+    AppPalette.catppuccin => l10n.paletteCaptionCatppuccin,
+    AppPalette.tokyoNight => l10n.paletteCaptionTokyoNight,
+    AppPalette.dracula => l10n.paletteCaptionDracula,
+    AppPalette.nord => l10n.paletteCaptionNord,
+    AppPalette.gruvbox => l10n.paletteCaptionGruvbox,
+    AppPalette.solarized => l10n.paletteCaptionSolarized,
+    AppPalette.oneDark => l10n.paletteCaptionOneDark,
+    AppPalette.rosePine => l10n.paletteCaptionRosePine,
+    AppPalette.everforest => l10n.paletteCaptionEverforest,
+    AppPalette.monokai => l10n.paletteCaptionMonokai,
+    AppPalette.ayuDark => l10n.paletteCaptionAyuDark,
+    AppPalette.kanagawa => l10n.paletteCaptionKanagawa,
+    AppPalette.nightOwl => l10n.paletteCaptionNightOwl,
+    AppPalette.palenight => l10n.paletteCaptionPalenight,
+    AppPalette.synthwave => l10n.paletteCaptionSynthwave,
+    AppPalette.githubDark => l10n.paletteCaptionGithubDark,
+  };
 
   Color get seed => accent;
 
@@ -160,7 +178,6 @@ extension AppPaletteDetails on AppPalette {
   PaletteSpec get _spec => switch (this) {
     AppPalette.catppuccin => const PaletteSpec(
       label: 'Catppuccin',
-      caption: 'Mocha, calm and polished',
       accent: Color(0xFFCBA6F7),
       accentSecondary: Color(0xFFF5C2E7),
       canvas: Color(0xFF0F0F18),
@@ -229,7 +246,6 @@ extension AppPaletteDetails on AppPalette {
     ),
     AppPalette.tokyoNight => const PaletteSpec(
       label: 'Tokyo Night',
-      caption: 'Deep blue IDE focus',
       accent: Color(0xFF7AA2F7),
       accentSecondary: Color(0xFFBB9AF7),
       canvas: Color(0xFF0A0E1A),
@@ -298,7 +314,6 @@ extension AppPaletteDetails on AppPalette {
     ),
     AppPalette.dracula => const PaletteSpec(
       label: 'Dracula',
-      caption: 'High-contrast neon classic',
       accent: Color(0xFFBD93F9),
       accentSecondary: Color(0xFFFF79C6),
       canvas: Color(0xFF15161E),
@@ -367,7 +382,6 @@ extension AppPaletteDetails on AppPalette {
     ),
     AppPalette.nord => const PaletteSpec(
       label: 'Nord',
-      caption: 'Arctic, restrained, cool',
       accent: Color(0xFF88C0D0),
       accentSecondary: Color(0xFF81A1C1),
       canvas: Color(0xFF1E222B),
@@ -436,7 +450,6 @@ extension AppPaletteDetails on AppPalette {
     ),
     AppPalette.gruvbox => const PaletteSpec(
       label: 'Gruvbox',
-      caption: 'Warm retro terminal energy',
       accent: Color(0xFFD79921),
       accentSecondary: Color(0xFFB16286),
       canvas: Color(0xFF1A1B1B),
@@ -505,7 +518,6 @@ extension AppPaletteDetails on AppPalette {
     ),
     AppPalette.solarized => const PaletteSpec(
       label: 'Solarized',
-      caption: 'Balanced low-glare contrast',
       accent: Color(0xFF268BD2),
       accentSecondary: Color(0xFFD33682),
       canvas: Color(0xFF002731),
@@ -574,7 +586,6 @@ extension AppPaletteDetails on AppPalette {
     ),
     AppPalette.oneDark => const PaletteSpec(
       label: 'One Dark',
-      caption: 'Atom-inspired editor calm',
       accent: Color(0xFF61AFEF),
       accentSecondary: Color(0xFFC678DD),
       canvas: Color(0xFF181A20),
@@ -619,7 +630,6 @@ extension AppPaletteDetails on AppPalette {
     ),
     AppPalette.rosePine => const PaletteSpec(
       label: 'Rosé Pine',
-      caption: 'Muted dusk, soft contrast',
       accent: Color(0xFFC4A7E7),
       accentSecondary: Color(0xFFEBBCBA),
       canvas: Color(0xFF191724),
@@ -688,7 +698,6 @@ extension AppPaletteDetails on AppPalette {
     ),
     AppPalette.everforest => const PaletteSpec(
       label: 'Everforest',
-      caption: 'Green low-glare woodland',
       accent: Color(0xFFA7C080),
       accentSecondary: Color(0xFFE67E80),
       canvas: Color(0xFF1E2326),
@@ -757,7 +766,6 @@ extension AppPaletteDetails on AppPalette {
     ),
     AppPalette.monokai => const PaletteSpec(
       label: 'Monokai',
-      caption: 'Punchy classic code color',
       accent: Color(0xFFA6E22E),
       accentSecondary: Color(0xFFF92672),
       canvas: Color(0xFF1B1C1A),
@@ -826,7 +834,6 @@ extension AppPaletteDetails on AppPalette {
     ),
     AppPalette.ayuDark => const PaletteSpec(
       label: 'Ayu Dark',
-      caption: 'Warm amber night coding',
       accent: Color(0xFFFFB454),
       accentSecondary: Color(0xFFFF8F40),
       canvas: Color(0xFF0B0E14),
@@ -871,7 +878,6 @@ extension AppPaletteDetails on AppPalette {
     ),
     AppPalette.kanagawa => const PaletteSpec(
       label: 'Kanagawa',
-      caption: 'Muted ink and wave tones',
       accent: Color(0xFF7E9CD8),
       accentSecondary: Color(0xFFC8C093),
       canvas: Color(0xFF16161D),
@@ -916,7 +922,6 @@ extension AppPaletteDetails on AppPalette {
     ),
     AppPalette.nightOwl => const PaletteSpec(
       label: 'Night Owl',
-      caption: 'Crisp blue late-night focus',
       accent: Color(0xFF82AAFF),
       accentSecondary: Color(0xFFC792EA),
       canvas: Color(0xFF011627),
@@ -961,7 +966,6 @@ extension AppPaletteDetails on AppPalette {
     ),
     AppPalette.palenight => const PaletteSpec(
       label: 'Palenight',
-      caption: 'Soft violet editor glow',
       accent: Color(0xFFC792EA),
       accentSecondary: Color(0xFF89DDFF),
       canvas: Color(0xFF202331),
@@ -1006,7 +1010,6 @@ extension AppPaletteDetails on AppPalette {
     ),
     AppPalette.synthwave => const PaletteSpec(
       label: 'Synthwave',
-      caption: 'Electric retro terminal pop',
       accent: Color(0xFFFF7EDB),
       accentSecondary: Color(0xFF36F9F6),
       canvas: Color(0xFF191528),
@@ -1051,7 +1054,6 @@ extension AppPaletteDetails on AppPalette {
     ),
     AppPalette.githubDark => const PaletteSpec(
       label: 'GitHub Dark',
-      caption: 'Quiet modern code contrast',
       accent: Color(0xFF58A6FF),
       accentSecondary: Color(0xFFBC8CFF),
       canvas: Color(0xFF0D1117),

@@ -1,3 +1,5 @@
+
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/features/local_shell/data/proot_runner.dart';
 import 'package:conduit/features/local_shell/domain/first_boot_script.dart';
 import 'package:conduit/features/local_shell/domain/local_shell_distro.dart';
@@ -48,13 +50,15 @@ class ProotFirstBootRunner implements FirstBootRunner {
     try {
       result = await runProot(command);
     } catch (error) {
-      throw FirstBootException('Could not launch first-boot shell: $error');
+      throw FirstBootException(AppLocalizationsHolder.current.localShellErrorFirstBootLaunch('$error'));
     }
 
     if (result.exitCode != 0) {
       throw FirstBootException(
-        'First-boot configuration exited with ${result.exitCode}: '
-        '${result.stderr}',
+        AppLocalizationsHolder.current.localShellErrorFirstBootExit(
+          '${result.exitCode}',
+          result.stderr,
+        ),
       );
     }
   }

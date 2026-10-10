@@ -1,3 +1,4 @@
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/features/hosts/domain/saved_host.dart';
 import 'package:conduit/features/hosts/domain/ssh_key.dart';
 import 'package:flutter/material.dart';
@@ -34,8 +35,8 @@ class HardwareKeyList extends StatelessWidget {
             Expanded(
               child: Text(
                 entries.isEmpty
-                    ? 'Hardware keys'
-                    : 'Hardware keys (${entries.length})',
+                    ? context.l10n.hardwareKeysTitle
+                    : context.l10n.hardwareKeysCount(entries.length),
                 style: theme.textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
@@ -73,7 +74,7 @@ class HardwareKeyList extends StatelessWidget {
           child: OutlinedButton.icon(
             onPressed: onAdd,
             icon: const Icon(Icons.add_rounded, size: 18),
-            label: const Text('Add hardware key'),
+            label: Text(context.l10n.addHardwareKeyTitle),
           ),
         ),
       ],
@@ -82,6 +83,7 @@ class HardwareKeyList extends StatelessWidget {
 }
 
 String displayLabelForHardwareKey(
+  AppLocalizations l10n,
   HardwareKeyEntry entry,
   int index,
   SshKeyInspection? inspection,
@@ -93,7 +95,7 @@ String displayLabelForHardwareKey(
   if (comment.isNotEmpty) {
     return comment;
   }
-  return 'Hardware key ${index + 1}';
+  return l10n.hardwareKeyItemTitle(index + 1);
 }
 
 class _HardwareKeyCard extends StatelessWidget {
@@ -137,7 +139,12 @@ class _HardwareKeyCard extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  displayLabelForHardwareKey(entry, index, inspection),
+                  displayLabelForHardwareKey(
+                    context.l10n,
+                    entry,
+                    index,
+                    inspection,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodyMedium?.copyWith(
@@ -160,7 +167,7 @@ class _HardwareKeyCard extends StatelessWidget {
                 width: 32,
                 height: 32,
                 child: PopupMenuButton<_HardwareKeyAction>(
-                  tooltip: 'Key options',
+                  tooltip: context.l10n.hardwareKeysOptions,
                   padding: EdgeInsets.zero,
                   icon: Icon(
                     Icons.more_vert_rounded,
@@ -172,13 +179,13 @@ class _HardwareKeyCard extends StatelessWidget {
                     _HardwareKeyAction.remove => onRemove(),
                   },
                   itemBuilder: (context) => [
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: _HardwareKeyAction.rename,
-                      child: Text('Rename'),
+                      child: Text(context.l10n.actionRename),
                     ),
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: _HardwareKeyAction.remove,
-                      child: Text('Remove'),
+                      child: Text(context.l10n.actionRemove),
                     ),
                   ],
                 ),
@@ -189,7 +196,7 @@ class _HardwareKeyCard extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(right: 6),
             child: Text(
-              details?.fingerprintSha256 ?? 'Checking key…',
+              details?.fingerprintSha256 ?? context.l10n.keyChecking,
               style: theme.textTheme.bodySmall?.copyWith(
                 fontFamily: 'monospace',
                 color: colorScheme.onSurfaceVariant,
@@ -206,7 +213,7 @@ class _HardwareKeyCard extends StatelessWidget {
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
               icon: const Icon(Icons.key_rounded, size: 16),
-              label: const Text('View public key'),
+              label: Text(context.l10n.hostCardViewPublicKey),
             ),
           ),
         ],
@@ -241,9 +248,7 @@ class _EmptyState extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'No hardware keys yet. Add the OpenSSH *_sk stub for each '
-              'security key you want to use with this host. Any of them '
-              'will unlock the connection.',
+              context.l10n.hardwareKeysEmpty,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: colorScheme.onSurfaceVariant,
                 height: 1.25,

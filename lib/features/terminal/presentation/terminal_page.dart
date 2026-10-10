@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/core/presentation/conduit_brand.dart';
 import 'package:conduit/core/presentation/system_navigation_insets.dart';
 import 'package:conduit/core/theme/app_palette.dart';
@@ -369,7 +370,7 @@ class _ComposeInputBarState extends State<_ComposeInputBar> {
           children: [
             PopupMenuButton<String>(
               icon: const Icon(Icons.history_rounded),
-              tooltip: 'Recall a sent line',
+              tooltip: context.l10n.terminalRecallLine,
               color: widget.palette.panelFor(widget.brightness),
               enabled: widget.history.isNotEmpty,
               onSelected: _recall,
@@ -423,11 +424,11 @@ class _ComposeInputBarState extends State<_ComposeInputBar> {
                     return newValue;
                   }),
                 ],
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   isDense: true,
-                  hintText: 'Compose a line, Enter to send …',
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(
+                  hintText: context.l10n.terminalComposeHint,
+                  border: const OutlineInputBorder(),
+                  contentPadding: const EdgeInsets.symmetric(
                     horizontal: 10,
                     vertical: 8,
                   ),
@@ -436,7 +437,7 @@ class _ComposeInputBarState extends State<_ComposeInputBar> {
             ),
             IconButton(
               icon: const Icon(Icons.close_rounded),
-              tooltip: 'Close compose',
+              tooltip: context.l10n.terminalCloseCompose,
               onPressed: () => widget.onClose(_controller.text),
             ),
           ],

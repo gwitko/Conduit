@@ -1,3 +1,4 @@
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/features/terminal/domain/security_key_interaction.dart';
 import 'package:flutter/material.dart';
 
@@ -34,7 +35,7 @@ class _SecurityKeyPinDialogState extends State<_SecurityKeyPinDialog> {
   Widget build(BuildContext context) {
     final retriesRemaining = widget.request.retriesRemaining;
     return AlertDialog(
-      title: const Text('Security key PIN'),
+      title: Text(context.l10n.securityKeyPinTitle),
       content: TextField(
         controller: _controller,
         autofocus: true,
@@ -43,10 +44,10 @@ class _SecurityKeyPinDialogState extends State<_SecurityKeyPinDialog> {
         autocorrect: false,
         keyboardType: TextInputType.visiblePassword,
         decoration: InputDecoration(
-          labelText: 'FIDO2 PIN',
+          labelText: context.l10n.securityKeyPinLabel,
           helperText: retriesRemaining == null
-              ? 'Enter the PIN for your hardware security key.'
-              : '$retriesRemaining attempts remaining.',
+              ? context.l10n.securityKeyPinBody
+              : context.l10n.securityKeyPinAttemptsRemaining(retriesRemaining),
           helperMaxLines: 2,
         ),
         onSubmitted: (value) => Navigator.of(context).pop(value),
@@ -54,11 +55,11 @@ class _SecurityKeyPinDialogState extends State<_SecurityKeyPinDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(context.l10n.actionCancel),
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(_controller.text),
-          child: const Text('Continue'),
+          child: Text(context.l10n.actionContinue),
         ),
       ],
     );

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:conduit/core/app_failure.dart';
+import 'package:conduit/core/l10n/l10n.dart';
 import 'package:conduit/features/hosts/domain/saved_host.dart';
 import 'package:conduit/features/sftp/data/tar_archive_builder.dart';
 import 'package:conduit/features/sftp/domain/file_export.dart';
@@ -204,7 +205,7 @@ class SftpBrowserController extends ChangeNotifier {
   Future<String?> download(SftpEntry entry) async {
     final session = _session;
     if (session == null) {
-      throw const AppFailure('Not connected.');
+      throw AppFailure(AppLocalizationsHolder.current.sftpErrorNotConnected);
     }
     if (entry.isDirectory) {
       return _downloadDirectory(session, entry);
@@ -315,10 +316,10 @@ class SftpBrowserController extends ChangeNotifier {
     }
     final session = _session;
     if (session == null) {
-      throw const AppFailure('Not connected.');
+      throw AppFailure(AppLocalizationsHolder.current.sftpErrorNotConnected);
     }
     if (_busy) {
-      throw const AppFailure('A transfer is already in progress.');
+      throw AppFailure(AppLocalizationsHolder.current.sftpErrorTransferInProgress);
     }
     _busy = true;
     _safeNotify();
@@ -366,7 +367,7 @@ class SftpBrowserController extends ChangeNotifier {
         },
       );
     } catch (error) {
-      throw AppFailure('Could not upload ${file.name}.', error);
+      throw AppFailure(AppLocalizationsHolder.current.sftpErrorUploadFailed(file.name), error);
     }
   }
 
