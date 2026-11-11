@@ -122,6 +122,131 @@ extension TmuxPrefixKeyDetails on TmuxPrefixKey {
   };
 }
 
+/// An optional SSH jump host (bastion) for a saved machine.
+///
+/// This is the mobile equivalent of `ssh -J user@bastion:port`: Conduit opens
+/// an SSH connection to the bastion and forwards a `direct-tcpip` channel to
+/// the target host through it.
+class SshBastion {
+  const SshBastion({
+    this.host = '',
+    this.port = 22,
+    this.username = '',
+    this.authMethod = SshAuthMethod.password,
+    this.password = '',
+    this.privateKey = '',
+    this.passphrase = '',
+    this.externalAuthOfferKey = true,
+  });
+
+  final String host;
+  final int port;
+  final String username;
+  final SshAuthMethod authMethod;
+  final String password;
+  final String privateKey;
+  final String passphrase;
+  final bool externalAuthOfferKey;
+
+  bool get isConfigured => host.trim().isNotEmpty;
+
+  bool get isValid {
+    if (!isConfigured || port < 1 || port > 65535) {
+      return false;
+    }
+    return switch (authMethod) {
+      SshAuthMethod.password => password.isNotEmpty,
+      SshAuthMethod.privateKey => privateKey.trim().isNotEmpty,
+      SshAuthMethod.hardwareKey => privateKey.trim().isNotEmpty,
+      SshAuthMethod.external => true,
+    };
+  }
+
+  String get endpoint {
+    final trimmedUsername = username.trim();
+    final trimmedHost = host.trim();
+    if (trimmedUsername.isEmpty) {
+      return '$trimmedHost:$port';
+    }
+    return '$trimmedUsername@$trimmedHost:$port';
+  }
+
+  /// Builds the throwaway host profile used to authenticate to the bastion.
+  SavedHost toSavedHost({int connectionTimeoutSeconds = 12}) {
+    return SavedHost(
+      id: 'bastion',
+      name: 'Bastion',
+      host: host.trim(),
+      port: port,
+      username: username.trim(),
+      authMethod: authMethod,
+      password: password,
+      privateKey: privateKey,
+      passphrase: passphrase,
+      externalAuthOfferKey: externalAuthOfferKey,
+      connectionTimeoutSeconds: connectionTimeoutSeconds,
+    );
+  }
+
+  SshBastion copyWith({
+    String? host,
+    int? port,
+    String? username,
+    SshAuthMethod? authMethod,
+    String? password,
+    String? privateKey,
+    String? passphrase,
+    bool? externalAuthOfferKey,
+  }) {
+    return SshBastion(
+      host: host ?? this.host,
+      port: port ?? this.port,
+      username: username ?? this.username,
+      authMethod: authMethod ?? this.authMethod,
+      password: password ?? this.password,
+      privateKey: privateKey ?? this.privateKey,
+      passphrase: passphrase ?? this.passphrase,
+      externalAuthOfferKey: externalAuthOfferKey ?? this.externalAuthOfferKey,
+    );
+  }
+
+  Map<String, Object?> toJson() {
+    return {
+      'host': host,
+      'port': port,
+      'username': username,
+      'authMethod': authMethod.name,
+      'password': password,
+      'privateKey': privateKey,
+      'passphrase': passphrase,
+      'externalAuthOfferKey': externalAuthOfferKey,
+    };
+  }
+
+  static SshBastion? fromJson(Object? json) {
+    if (json is! Map) {
+      return null;
+    }
+    final host = json['host'];
+    if (host is! String || host.trim().isEmpty) {
+      return null;
+    }
+    return SshBastion(
+      host: host,
+      port: json['port'] as int? ?? 22,
+      username: json['username'] as String? ?? '',
+      authMethod: SshAuthMethod.values.firstWhere(
+        (method) => method.name == json['authMethod'],
+        orElse: () => SshAuthMethod.password,
+      ),
+      password: json['password'] as String? ?? '',
+      privateKey: json['privateKey'] as String? ?? '',
+      passphrase: json['passphrase'] as String? ?? '',
+      externalAuthOfferKey: json['externalAuthOfferKey'] as bool? ?? true,
+    );
+  }
+}
+
 class SavedHost {
   const SavedHost({
     required this.id,
@@ -152,6 +277,8 @@ class SavedHost {
     this.uploadCleanupDays,
     this.lastConnectedAt,
     this.isLocal = false,
+    this.bastion,
+    this.bastionHostId = '',
   });
 
   factory SavedHost.localShell({required String id, required String name}) {
@@ -201,6 +328,11 @@ class SavedHost {
 
   final DateTime? lastConnectedAt;
   final bool isLocal;
+  final SshBastion? bastion;
+  final String bastionHostId;
+
+  bool get hasBastion =>
+      bastionHostId.trim().isNotEmpty || (bastion?.isConfigured ?? false);
 
   bool get isValid =>
       id.isNotEmpty &&
@@ -210,7 +342,7 @@ class SavedHost {
       port <= 65535 &&
       connectionTimeoutSeconds >= 3 &&
       connectionTimeoutSeconds <= 120 &&
-      switch (authMethod) {
+      (switch (authMethod) {
         SshAuthMethod.password => password.isNotEmpty,
         SshAuthMethod.privateKey => privateKey.trim().isNotEmpty,
         SshAuthMethod.hardwareKey =>
@@ -218,7 +350,11 @@ class SavedHost {
               ? hardwareKeys.every((key) => key.isValid)
               : privateKey.trim().isNotEmpty,
         SshAuthMethod.external => true,
-      };
+      }) &&
+      (bastionHostId.trim().isNotEmpty ||
+          bastion == null ||
+          !bastion!.isConfigured ||
+          bastion!.isValid);
 
   /// Hardware-key stubs to authenticate with, tolerating hosts created
   /// before multi-key support that only carry the legacy single-stub fields.
@@ -278,6 +414,9 @@ class SavedHost {
     DateTime? lastConnectedAt,
     bool clearLastConnectedAt = false,
     bool? isLocal,
+    SshBastion? bastion,
+    bool clearBastion = false,
+    String? bastionHostId,
   }) {
     return SavedHost(
       id: id ?? this.id,
@@ -314,6 +453,8 @@ class SavedHost {
           ? null
           : lastConnectedAt ?? this.lastConnectedAt,
       isLocal: isLocal ?? this.isLocal,
+      bastion: clearBastion ? null : bastion ?? this.bastion,
+      bastionHostId: bastionHostId ?? this.bastionHostId,
     );
   }
 
@@ -354,6 +495,8 @@ class SavedHost {
       'uploadCleanupDays': uploadCleanupDays,
       'lastConnectedAt': lastConnectedAt?.toIso8601String(),
       'isLocal': isLocal,
+      if (bastion != null) 'bastion': bastion!.toJson(),
+      'bastionHostId': bastionHostId,
     };
   }
 
@@ -415,6 +558,8 @@ class SavedHost {
           ? null
           : DateTime.tryParse(lastConnectedAtRaw),
       isLocal: json['isLocal'] as bool? ?? false,
+      bastion: SshBastion.fromJson(json['bastion']),
+      bastionHostId: json['bastionHostId'] as String? ?? '',
     );
   }
 }

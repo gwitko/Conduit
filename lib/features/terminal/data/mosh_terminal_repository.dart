@@ -14,11 +14,18 @@ import 'package:dart_mosh/dart_mosh.dart';
 import 'package:dartssh2/dartssh2.dart';
 
 class MoshTerminalRepository implements SshTerminalRepository {
-  const MoshTerminalRepository(this._hostKeyVerifier);
+  const MoshTerminalRepository(
+    this._hostKeyVerifier, {
+    this.resolveBastionHost,
+  });
 
   final HostKeyVerifier _hostKeyVerifier;
+  final BastionHostResolver? resolveBastionHost;
 
-  SshClientFactory get _clientFactory => SshClientFactory(_hostKeyVerifier);
+  SshClientFactory get _clientFactory => SshClientFactory(
+    _hostKeyVerifier,
+    resolveBastionHost: resolveBastionHost,
+  );
 
   @override
   Future<SshTerminalSession> connect(
@@ -26,6 +33,13 @@ class MoshTerminalRepository implements SshTerminalRepository {
     required int columns,
     required int rows,
   }) async {
+    if (host.hasBastion) {
+      throw const AppFailure(
+        'Mosh cannot run through an SSH bastion because its UDP session '
+        'bypasses the SSH tunnel. Disable Mosh or remove the bastion for this '
+        'machine.',
+      );
+    }
     SSHClient? client;
     try {
       client = await _clientFactory.connect(host);

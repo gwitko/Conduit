@@ -117,6 +117,11 @@ class AppBackupService {
       snippets: [
         for (final snippet in host.snippets) _snippetForBackup(snippet),
       ],
+      bastion: host.bastion?.copyWith(
+        password: '',
+        privateKey: '',
+        passphrase: '',
+      ),
     );
   }
 

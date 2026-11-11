@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:conduit/core/app_failure.dart';
 import 'package:conduit/features/hosts/domain/saved_host.dart';
+import 'package:conduit/features/terminal/data/bastion_ssh_socket.dart';
 import 'package:conduit/features/terminal/data/fido_hardware_key_ctap_device.dart';
 import 'package:conduit/features/terminal/data/openssh_security_key_signer.dart';
 import 'package:conduit/features/terminal/data/tcp_ssh_socket.dart';
@@ -15,9 +16,13 @@ import 'package:pinenacl/ed25519.dart' as ed25519;
 typedef SshKeyPairParser =
     List<SSHKeyPair> Function(String pemText, String? passphrase);
 
+/// Looks up a saved machine by id so it can be used as a bastion.
+typedef BastionHostResolver = SavedHost? Function(String id);
+
 class SshClientFactory {
   SshClientFactory(
     this._hostKeyVerifier, {
+    this.resolveBastionHost,
     OpenSshSecurityKeySigner? securityKeySigner,
     SshKeyPairParser? keyPairParser,
   }) : _securityKeySigner =
@@ -32,6 +37,7 @@ class SshClientFactory {
        _keyPairParser = keyPairParser ?? SSHKeyPair.fromPem;
 
   final HostKeyVerifier _hostKeyVerifier;
+  final BastionHostResolver? resolveBastionHost;
   final OpenSshSecurityKeySigner _securityKeySigner;
   final SshKeyPairParser _keyPairParser;
   SSHKeyPair? _externalAuthIdentity;
@@ -39,11 +45,7 @@ class SshClientFactory {
   Future<SSHClient> connect(SavedHost host) async {
     SSHSocket? socket;
     try {
-      socket = await TcpSshSocket.connect(
-        host.host.trim(),
-        host.port,
-        timeout: Duration(seconds: host.connectionTimeoutSeconds),
-      );
+      socket = await _socketFor(host);
       final identities = _identitiesFor(host);
       return SSHClient(
         socket,
@@ -64,6 +66,84 @@ class SshClientFactory {
     } catch (_) {
       unawaited(socket?.close() ?? Future<void>.value());
       rethrow;
+    }
+  }
+
+  Future<SSHSocket> _socketFor(SavedHost host) async {
+    final referencedBastion = _referencedBastionProfile(host);
+    if (referencedBastion != null) {
+      return _socketThroughBastion(host, referencedBastion);
+    }
+    final bastion = host.bastion;
+    if (bastion == null || !bastion.isConfigured) {
+      return TcpSshSocket.connect(
+        host.host.trim(),
+        host.port,
+        timeout: Duration(seconds: host.connectionTimeoutSeconds),
+      );
+    }
+    return _socketThroughBastion(
+      host,
+      bastion.toSavedHost(
+        connectionTimeoutSeconds: host.connectionTimeoutSeconds,
+      ),
+    );
+  }
+
+  /// Resolves [SavedHost.bastionHostId] to a direct connection profile.
+  ///
+  /// The returned host has its own bastion cleared so hopping stays single
+  /// level, and its Mosh/tmux settings are ignored because only its SSH
+  /// transport is used.
+  SavedHost? _referencedBastionProfile(SavedHost host) {
+    final id = host.bastionHostId.trim();
+    if (id.isEmpty) {
+      return null;
+    }
+    final resolver = resolveBastionHost;
+    final resolved = resolver?.call(id);
+    if (resolved == null) {
+      throw const AppFailure(
+        'The bastion machine for this host is no longer available.',
+      );
+    }
+    if (resolved.id == host.id) {
+      throw const AppFailure('A machine cannot use itself as its own bastion.');
+    }
+    if (resolved.isLocal) {
+      throw const AppFailure('A local shell cannot be used as an SSH bastion.');
+    }
+    return resolved.copyWith(bastionHostId: '', clearBastion: true);
+  }
+
+  @visibleForTesting
+  SavedHost? referencedBastionProfileForTesting(SavedHost host) =>
+      _referencedBastionProfile(host);
+
+  Future<SSHSocket> _socketThroughBastion(
+    SavedHost host,
+    SavedHost bastion,
+  ) async {
+    SSHClient? bastionClient;
+    try {
+      bastionClient = await connect(bastion);
+      final tunnel = await bastionClient.forwardLocal(
+        host.host.trim(),
+        host.port,
+      );
+      final client = bastionClient;
+      bastionClient = null;
+      return BastionSshSocket(tunnel: tunnel, closeBastion: client.close);
+    } catch (error) {
+      bastionClient?.close();
+      if (error is AppFailure) {
+        rethrow;
+      }
+      throw AppFailure(
+        'Could not reach ${host.host.trim()}:${host.port} through the bastion '
+        '${bastion.endpoint}.',
+        error,
+      );
     }
   }
 

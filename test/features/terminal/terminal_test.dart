@@ -1460,6 +1460,85 @@ void main() {
     });
   });
 
+  group('SshClientFactory bastion references', () {
+    const jump = SavedHost(
+      id: 'jump',
+      name: 'Jump',
+      host: 'jump.example.com',
+      port: 2222,
+      username: 'jumper',
+      authMethod: SshAuthMethod.password,
+      password: 'pw',
+    );
+
+    test('resolves a saved machine and clears its own bastion', () {
+      final factory = SshClientFactory(
+        NoopVerifier(),
+        resolveBastionHost: (id) => id == 'jump' ? jump : null,
+      );
+      final target = buildHost('target').copyWith(bastionHostId: 'jump');
+
+      final profile = factory.referencedBastionProfileForTesting(target);
+
+      expect(profile?.host, 'jump.example.com');
+      expect(profile?.port, 2222);
+      expect(profile?.username, 'jumper');
+      expect(profile?.bastionHostId, isEmpty);
+      expect(profile?.hasBastion, isFalse);
+    });
+
+    test('throws when the referenced machine is missing', () {
+      final factory = SshClientFactory(NoopVerifier());
+      final target = buildHost('target').copyWith(bastionHostId: 'missing');
+
+      expect(
+        () => factory.referencedBastionProfileForTesting(target),
+        throwsA(
+          isA<AppFailure>().having(
+            (failure) => failure.message,
+            'message',
+            contains('no longer available'),
+          ),
+        ),
+      );
+    });
+
+    test('rejects self references and local shells', () {
+      final selfFactory = SshClientFactory(
+        NoopVerifier(),
+        resolveBastionHost: (id) => id == 'target' ? buildHost('target') : null,
+      );
+      final localFactory = SshClientFactory(
+        NoopVerifier(),
+        resolveBastionHost: (id) => id == 'local'
+            ? SavedHost.localShell(id: 'local', name: 'Local')
+            : null,
+      );
+
+      expect(
+        () => selfFactory.referencedBastionProfileForTesting(
+          buildHost('target').copyWith(bastionHostId: 'target'),
+        ),
+        throwsA(isA<AppFailure>()),
+      );
+      expect(
+        () => localFactory.referencedBastionProfileForTesting(
+          buildHost('target').copyWith(bastionHostId: 'local'),
+        ),
+        throwsA(isA<AppFailure>()),
+      );
+    });
+
+    test('returns null when no bastion machine is referenced', () {
+      final factory = SshClientFactory(NoopVerifier());
+
+      expect(
+        factory.referencedBastionProfileForTesting(buildHost('target')),
+        isNull,
+      );
+    });
+  });
+
   group('SshClientFactory host key fingerprints', () {
     test('formats raw MD5 digest bytes as OpenSSH MD5 text', () {
       final factory = SshClientFactory(NoopVerifier());
