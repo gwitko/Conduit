@@ -35,6 +35,7 @@ void main() {
       final host = hosts.single as Map<String, Object?>;
       final hardwareKeys = host['hardwareKeys'] as List<Object?>;
       final hardwareKey = hardwareKeys.single as Map<String, Object?>;
+      final bastion = host['bastion'] as Map<String, Object?>;
 
       expect(decoded['encrypted'], isFalse);
       expect(host['password'], isEmpty);
@@ -42,6 +43,9 @@ void main() {
       expect(host['passphrase'], isEmpty);
       expect(hardwareKey['privateKey'], isEmpty);
       expect(hardwareKey['passphrase'], isEmpty);
+      expect(bastion['password'], isEmpty);
+      expect(bastion['privateKey'], isEmpty);
+      expect(bastion['passphrase'], isEmpty);
       expect(payload['trustedHostKeys'], isNotEmpty);
     });
 
@@ -58,6 +62,7 @@ void main() {
 
         expect(exported, isNot(contains('secret-password')));
         expect(exported, isNot(contains('hardware-stub')));
+        expect(exported, isNot(contains('bastion-password')));
 
         final target = await _Fixture.create(empty: true);
         final result = await target.service.importBackup(
@@ -74,6 +79,10 @@ void main() {
         expect(
           target.hostsRepository.persisted.single.privateKey,
           'hardware-stub',
+        );
+        expect(
+          target.hostsRepository.persisted.single.bastion?.password,
+          'bastion-password',
         );
         expect(target.verifier.records, hasLength(1));
         expect(target.themeController.palette, AppPalette.catppuccin);
@@ -160,6 +169,11 @@ class _Fixture {
             ),
           ],
           tags: ['prod'],
+          bastion: SshBastion(
+            host: 'jump.example.com',
+            username: 'jumper',
+            password: 'bastion-password',
+          ),
         ),
       ];
       hostsRepository.persistedSortMode = HostListSortMode.manual;

@@ -52,6 +52,21 @@ void main() {
     expect(bastionClosed, isTrue);
   });
 
+  test('close times out and destroys a stuck tunnel', () async {
+    final tunnel = _FakeSocket()..completeClose = false;
+    var bastionClosed = false;
+    final bastion = BastionSshSocket(
+      tunnel: tunnel,
+      closeBastion: () => bastionClosed = true,
+      closeTimeout: const Duration(milliseconds: 20),
+    );
+
+    await bastion.close();
+
+    expect(tunnel.destroyed, isTrue);
+    expect(bastionClosed, isTrue);
+  });
+
   test('close and destroy are idempotent', () async {
     final tunnel = _FakeSocket();
     var bastionCloseCount = 0;
@@ -76,6 +91,7 @@ class _FakeSocket implements SSHSocket {
 
   bool closed = false;
   bool destroyed = false;
+  bool completeClose = true;
 
   _FakeSocket() {
     _sink.stream.listen(written.add);
@@ -95,6 +111,9 @@ class _FakeSocket implements SSHSocket {
   @override
   Future<void> close() async {
     closed = true;
+    if (!completeClose) {
+      return Completer<void>().future;
+    }
     if (!_done.isCompleted) {
       _done.complete();
     }

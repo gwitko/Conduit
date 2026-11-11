@@ -198,6 +198,60 @@ void main() {
       expect(host.copyWith(clearBastion: true).bastion, isNull);
     });
 
+    test('copyWithoutSecrets strips host and bastion credentials', () {
+      const host = SavedHost(
+        id: 'id',
+        name: 'Host',
+        host: 'example.com',
+        port: 22,
+        username: 'root',
+        authMethod: SshAuthMethod.hardwareKey,
+        password: 'target-password',
+        privateKey: 'legacy-key',
+        passphrase: 'legacy-passphrase',
+        hardwareKeys: [
+          HardwareKeyEntry(
+            id: 'key',
+            label: 'YubiKey',
+            privateKey: 'stub',
+            passphrase: 'key-passphrase',
+          ),
+        ],
+        snippets: [
+          TerminalSnippet(
+            id: 'secret',
+            label: 'Secret',
+            text: 'hidden-value',
+            hidden: true,
+          ),
+          TerminalSnippet(id: 'plain', label: 'Plain', text: 'visible'),
+        ],
+        bastion: SshBastion(
+          host: 'jump.example.com',
+          username: 'jumper',
+          password: 'bastion-password',
+          privateKey: 'bastion-key',
+          passphrase: 'bastion-passphrase',
+        ),
+      );
+
+      final stripped = host.copyWithoutSecrets();
+
+      expect(stripped.password, isEmpty);
+      expect(stripped.privateKey, isEmpty);
+      expect(stripped.passphrase, isEmpty);
+      expect(stripped.hardwareKeys.single.privateKey, isEmpty);
+      expect(stripped.hardwareKeys.single.label, 'YubiKey');
+      expect(stripped.bastion?.password, isEmpty);
+      expect(stripped.bastion?.privateKey, isEmpty);
+      expect(stripped.bastion?.passphrase, isEmpty);
+      expect(stripped.bastion?.host, 'jump.example.com');
+      expect(stripped.snippets.first.text, isEmpty);
+      expect(stripped.snippets.last.text, 'visible');
+      expect(host.password, 'target-password');
+      expect(host.bastion?.password, 'bastion-password');
+    });
+
     test('a referenced bastion marks the host as tunnelled', () {
       final host = base.copyWith(bastionHostId: 'jump-id');
 

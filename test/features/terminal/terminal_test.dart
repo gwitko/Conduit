@@ -1469,6 +1469,7 @@ void main() {
       username: 'jumper',
       authMethod: SshAuthMethod.password,
       password: 'pw',
+      forwardAgent: true,
     );
 
     test('resolves a saved machine and clears its own bastion', () {
@@ -1485,6 +1486,7 @@ void main() {
       expect(profile?.username, 'jumper');
       expect(profile?.bastionHostId, isEmpty);
       expect(profile?.hasBastion, isFalse);
+      expect(profile?.forwardAgent, isFalse);
     });
 
     test('throws when the referenced machine is missing', () {

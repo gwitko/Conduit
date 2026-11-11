@@ -64,7 +64,7 @@ class SshClientFactory {
         },
       );
     } catch (_) {
-      unawaited(socket?.close() ?? Future<void>.value());
+      socket?.destroy();
       rethrow;
     }
   }
@@ -113,7 +113,11 @@ class SshClientFactory {
     if (resolved.isLocal) {
       throw const AppFailure('A local shell cannot be used as an SSH bastion.');
     }
-    return resolved.copyWith(bastionHostId: '', clearBastion: true);
+    return resolved.copyWith(
+      bastionHostId: '',
+      clearBastion: true,
+      forwardAgent: false,
+    );
   }
 
   @visibleForTesting
@@ -127,10 +131,15 @@ class SshClientFactory {
     SSHClient? bastionClient;
     try {
       bastionClient = await connect(bastion);
-      final tunnel = await bastionClient.forwardLocal(
-        host.host.trim(),
-        host.port,
-      );
+      final tunnel = await bastionClient
+          .forwardLocal(host.host.trim(), host.port)
+          .timeout(
+            Duration(seconds: host.connectionTimeoutSeconds),
+            onTimeout: () => throw TimeoutException(
+              'Timed out opening the SSH tunnel through '
+              '${bastion.endpoint}.',
+            ),
+          );
       final client = bastionClient;
       bastionClient = null;
       return BastionSshSocket(tunnel: tunnel, closeBastion: client.close);

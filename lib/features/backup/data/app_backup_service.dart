@@ -106,23 +106,7 @@ class AppBackupService {
     if (includeSecrets) {
       return host;
     }
-    return host.copyWith(
-      password: '',
-      privateKey: '',
-      passphrase: '',
-      hardwareKeys: [
-        for (final key in host.hardwareKeys)
-          HardwareKeyEntry(id: key.id, label: key.label, privateKey: ''),
-      ],
-      snippets: [
-        for (final snippet in host.snippets) _snippetForBackup(snippet),
-      ],
-      bastion: host.bastion?.copyWith(
-        password: '',
-        privateKey: '',
-        passphrase: '',
-      ),
-    );
+    return host.copyWithoutSecrets();
   }
 
   TerminalSnippet _snippetForBackup(TerminalSnippet snippet) {

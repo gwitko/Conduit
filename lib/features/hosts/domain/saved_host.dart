@@ -383,6 +383,27 @@ class SavedHost {
     return '$trimmedUsername@$trimmedHost:$port';
   }
 
+  /// Returns a copy with all credential material removed.
+  ///
+  /// Used by secret-less backups and by "duplicate without secrets" so inline
+  /// bastion credentials and hidden snippet text cannot leak into the copy.
+  SavedHost copyWithoutSecrets() {
+    return copyWith(
+      password: '',
+      privateKey: '',
+      passphrase: '',
+      hardwareKeys: [
+        for (final key in hardwareKeys)
+          HardwareKeyEntry(id: key.id, label: key.label, privateKey: ''),
+      ],
+      snippets: [
+        for (final snippet in snippets)
+          snippet.hidden ? snippet.copyWith(text: '') : snippet,
+      ],
+      bastion: bastion?.copyWith(password: '', privateKey: '', passphrase: ''),
+    );
+  }
+
   SavedHost copyWith({
     String? id,
     String? name,
