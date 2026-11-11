@@ -567,10 +567,16 @@ class _HostsPageState extends State<HostsPage> {
   }
 
   Future<void> _openForm([SavedHost? host]) async {
+    final bastionCandidates = widget.hostsController.hosts
+        .where((candidate) => !candidate.isLocal && candidate.id != host?.id)
+        .toList(growable: false);
     final savedHost = await Navigator.of(context).push<SavedHost>(
       MaterialPageRoute(
-        builder: (_) =>
-            HostFormPage(host: host, themeController: widget.themeController),
+        builder: (_) => HostFormPage(
+          host: host,
+          themeController: widget.themeController,
+          bastionCandidates: bastionCandidates,
+        ),
       ),
     );
     if (savedHost != null) {

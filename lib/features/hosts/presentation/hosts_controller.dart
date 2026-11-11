@@ -151,7 +151,14 @@ class HostsController extends ChangeNotifier {
 
   Future<void> remove(SavedHost host) async {
     await _save(
-      _hosts.where((currentHost) => currentHost.id != host.id).toList(),
+      _hosts
+          .where((currentHost) => currentHost.id != host.id)
+          .map(
+            (currentHost) => currentHost.bastionHostId.trim() == host.id
+                ? currentHost.copyWith(bastionHostId: '')
+                : currentHost,
+          )
+          .toList(),
     );
   }
 

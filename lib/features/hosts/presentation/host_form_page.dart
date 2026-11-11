@@ -23,12 +23,14 @@ class HostFormPage extends StatefulWidget {
     this.host,
     this.themeController,
     this.keyService = const Dartssh2SshKeyService(),
+    this.bastionCandidates = const [],
     super.key,
   });
 
   final SavedHost? host;
   final ThemeController? themeController;
   final SshKeyService keyService;
+  final List<SavedHost> bastionCandidates;
 
   @override
   State<HostFormPage> createState() => _HostFormPageState();
@@ -44,6 +46,12 @@ class _HostFormPageState extends State<HostFormPage> {
   final _privateKeyController = TextEditingController();
   final _passphraseController = TextEditingController();
   final _tagController = TextEditingController();
+  final _bastionHostController = TextEditingController();
+  final _bastionPortController = TextEditingController(text: '22');
+  final _bastionUsernameController = TextEditingController();
+  final _bastionPasswordController = TextEditingController();
+  final _bastionPrivateKeyController = TextEditingController();
+  final _bastionPassphraseController = TextEditingController();
   final _timeoutController = TextEditingController(text: '12');
   final _moshLocaleController = TextEditingController(text: 'C.UTF-8');
   final _moshPortsController = TextEditingController();
@@ -61,6 +69,11 @@ class _HostFormPageState extends State<HostFormPage> {
   bool _predictiveEchoEnabled = false;
   bool _externalAuthOfferKey = true;
   bool _forwardAgent = false;
+  bool _bastionEnabled = false;
+  bool _showBastionPassword = false;
+  bool _showBastionPassphrase = false;
+  String _bastionHostId = '';
+  SshAuthMethod _bastionAuthMethod = SshAuthMethod.password;
   bool _startTmuxOnConnect = false;
   TmuxPrefixKey _tmuxPrefixKey = defaultTmuxPrefixKey;
   List<String> _tags = const [];
@@ -103,6 +116,23 @@ class _HostFormPageState extends State<HostFormPage> {
       );
       for (final entry in _hardwareKeys) {
         _inspectHardwareKey(entry);
+      }
+      final bastion = host.bastion;
+      if (host.bastionHostId.trim().isNotEmpty) {
+        _bastionEnabled = true;
+        _bastionHostId = host.bastionHostId.trim();
+      } else if (bastion != null && bastion.isConfigured) {
+        _bastionEnabled = true;
+        _bastionHostController.text = bastion.host;
+        _bastionPortController.text = bastion.port.toString();
+        _bastionUsernameController.text = bastion.username;
+        _bastionAuthMethod =
+            HostBastionSection.authMethods.contains(bastion.authMethod)
+            ? bastion.authMethod
+            : SshAuthMethod.password;
+        _bastionPasswordController.text = bastion.password;
+        _bastionPrivateKeyController.text = bastion.privateKey;
+        _bastionPassphraseController.text = bastion.passphrase;
       }
       _timeoutController.text = host.connectionTimeoutSeconds.toString();
       _authMethod = host.authMethod;
@@ -195,6 +225,12 @@ class _HostFormPageState extends State<HostFormPage> {
     _passphraseController.dispose();
     _tagController.dispose();
     _tagFocusNode.dispose();
+    _bastionHostController.dispose();
+    _bastionPortController.dispose();
+    _bastionUsernameController.dispose();
+    _bastionPasswordController.dispose();
+    _bastionPrivateKeyController.dispose();
+    _bastionPassphraseController.dispose();
     _timeoutController.dispose();
     _moshLocaleController.dispose();
     _moshPortsController.dispose();
@@ -284,6 +320,34 @@ class _HostFormPageState extends State<HostFormPage> {
                   setState(() => _forwardAgent = value),
               onExternalAuthOfferKeyChanged: (value) =>
                   setState(() => _externalAuthOfferKey = value),
+            ),
+            const SizedBox(height: 14),
+            HostBastionSection(
+              enabled: _bastionEnabled,
+              hostController: _bastionHostController,
+              portController: _bastionPortController,
+              usernameController: _bastionUsernameController,
+              passwordController: _bastionPasswordController,
+              privateKeyController: _bastionPrivateKeyController,
+              passphraseController: _bastionPassphraseController,
+              authMethod: _bastionAuthMethod,
+              bastionHostId: _bastionHostId,
+              candidates: widget.bastionCandidates,
+              showPassword: _showBastionPassword,
+              showPassphrase: _showBastionPassphrase,
+              requiredValidator: _required,
+              portValidator: _validatePort,
+              onEnabledChanged: (value) =>
+                  setState(() => _bastionEnabled = value),
+              onBastionHostChanged: (value) =>
+                  setState(() => _bastionHostId = value),
+              onAuthMethodChanged: (value) =>
+                  setState(() => _bastionAuthMethod = value),
+              onTogglePasswordVisibility: () =>
+                  setState(() => _showBastionPassword = !_showBastionPassword),
+              onTogglePassphraseVisibility: () => setState(
+                () => _showBastionPassphrase = !_showBastionPassphrase,
+              ),
             ),
             const SizedBox(height: 14),
             HostAdvancedSection(
@@ -691,6 +755,24 @@ class _HostFormPageState extends State<HostFormPage> {
     }
 
     final currentHost = widget.host;
+    final bastionHostId = _bastionEnabled ? _bastionHostId.trim() : '';
+    final bastion = _bastionEnabled && bastionHostId.isEmpty
+        ? SshBastion(
+            host: _bastionHostController.text.trim(),
+            port: int.tryParse(_bastionPortController.text) ?? 22,
+            username: _bastionUsernameController.text.trim(),
+            authMethod: _bastionAuthMethod,
+            password: _bastionAuthMethod == SshAuthMethod.password
+                ? _bastionPasswordController.text
+                : '',
+            privateKey: _bastionAuthMethod == SshAuthMethod.privateKey
+                ? _bastionPrivateKeyController.text
+                : '',
+            passphrase: _bastionAuthMethod == SshAuthMethod.privateKey
+                ? _bastionPassphraseController.text
+                : '',
+          )
+        : null;
     final savedHost = SavedHost(
       id: currentHost?.id ?? const Uuid().v4(),
       name: _nameController.text.trim(),
@@ -734,6 +816,8 @@ class _HostFormPageState extends State<HostFormPage> {
           ? _connectSnippetId
           : '',
       lastConnectedAt: currentHost?.lastConnectedAt,
+      bastion: bastion,
+      bastionHostId: bastionHostId,
     );
 
     Navigator.of(context).pop(savedHost);
