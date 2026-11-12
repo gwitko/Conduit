@@ -16,6 +16,8 @@
 >
 
 
+Added a feature which let's add machine without saving password. Password will be asked every time. which is not present in original build.
+
 Conduit's own source code is Apache-2.0. Android builds that include the local
 shell also redistribute third-party binaries under their own licenses; see
 [Acknowledgements](#acknowledgements) and
