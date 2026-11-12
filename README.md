@@ -14,7 +14,7 @@
 > [!CAUTION]
 > Android is on track to become a locked-down platform. [Help keep it open](https://keepandroidopen.org).
 >
-> > Fork of [gwitko/Conduit](https://github.com/gwitko/Conduit) that adds an "Ask for password when logging in" option for SSH password hosts. All other features are unchanged.
+
 
 Conduit's own source code is Apache-2.0. Android builds that include the local
 shell also redistribute third-party binaries under their own licenses; see
@@ -118,6 +118,8 @@ Conduit. Mosh runs on
 
 Conduit is improved by community contributions. See [CONTRIBUTORS.md](CONTRIBUTORS.md)
 for acknowledgements.
+
+> > Fork of [gwitko/Conduit](https://github.com/gwitko/Conduit) that adds an "Ask for password when logging in" option for SSH password hosts. All other features are unchanged.
 
 ## Screenshots
 
