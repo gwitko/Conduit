@@ -269,6 +269,29 @@ class HostAuthenticationSection extends StatelessWidget {
         ],
         if (authMethod == SshAuthMethod.privateKey ||
             authMethod == SshAuthMethod.hardwareKey) ...[
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: passwordController,
+            decoration: InputDecoration(
+              labelText: 'Password after key (optional)',
+              helperText:
+                  'Only sent if the server also requires a password after '
+                  'the key, e.g. AuthenticationMethods publickey,password. '
+                  'Leave empty to be asked when connecting.',
+              helperMaxLines: 3,
+              prefixIcon: const Icon(Icons.password_rounded),
+              suffixIcon: IconButton(
+                tooltip: showPassword ? 'Hide' : 'Show',
+                icon: Icon(
+                  showPassword
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                ),
+                onPressed: onTogglePasswordVisibility,
+              ),
+            ),
+            obscureText: !showPassword,
+          ),
           const SizedBox(height: 10),
           Material(
             color: Colors.transparent,

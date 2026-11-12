@@ -12,8 +12,10 @@ import 'package:conduit/features/sftp/presentation/widgets/entry_tile.dart';
 import 'package:conduit/features/sftp/presentation/widgets/sftp_header.dart';
 import 'package:conduit/features/sftp/presentation/widgets/transfer_bar.dart';
 import 'package:conduit/features/terminal/domain/security_key_interaction.dart';
+import 'package:conduit/features/terminal/domain/ssh_password_interaction.dart';
 import 'package:conduit/features/terminal/presentation/security_key_picker_dialog.dart';
 import 'package:conduit/features/terminal/presentation/security_key_pin_dialog.dart';
+import 'package:conduit/features/terminal/presentation/ssh_password_dialog.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -44,6 +46,7 @@ class _SftpBrowserPageState extends State<SftpBrowserPage> {
   void initState() {
     super.initState();
     SecurityKeyInteraction.instance.registerPinPrompt(_promptSecurityKeyPin);
+    SshPasswordInteraction.instance.registerPrompt(_promptSshPassword);
     SecurityKeyInteraction.instance.registerSelectionPrompt(
       _promptSecurityKeySelection,
     );
@@ -58,12 +61,20 @@ class _SftpBrowserPageState extends State<SftpBrowserPage> {
   @override
   void dispose() {
     SecurityKeyInteraction.instance.unregisterPinPrompt(_promptSecurityKeyPin);
+    SshPasswordInteraction.instance.unregisterPrompt(_promptSshPassword);
     SecurityKeyInteraction.instance.unregisterSelectionPrompt(
       _promptSecurityKeySelection,
     );
     _searchController.dispose();
     _controller.dispose();
     super.dispose();
+  }
+
+  Future<String?> _promptSshPassword(SshPasswordPromptRequest request) {
+    if (!mounted) {
+      return Future<String?>.value();
+    }
+    return showSshPasswordDialog(context, request);
   }
 
   Future<String?> _promptSecurityKeyPin(SecurityKeyPinRequest request) {
