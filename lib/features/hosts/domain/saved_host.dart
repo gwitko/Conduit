@@ -131,6 +131,7 @@ class SavedHost {
     required this.username,
     required this.authMethod,
     this.password = '',
+    this.askPasswordEachTime = false,
     this.privateKey = '',
     this.passphrase = '',
     this.hardwareKeys = const [],
@@ -171,6 +172,7 @@ class SavedHost {
   final String username;
   final SshAuthMethod authMethod;
   final String password;
+  final bool askPasswordEachTime;
   final String privateKey;
   final String passphrase;
   final List<HardwareKeyEntry> hardwareKeys;
@@ -200,7 +202,7 @@ class SavedHost {
       connectionTimeoutSeconds >= 3 &&
       connectionTimeoutSeconds <= 120 &&
       switch (authMethod) {
-        SshAuthMethod.password => password.isNotEmpty,
+        SshAuthMethod.password => askPasswordEachTime || password.isNotEmpty,
         SshAuthMethod.privateKey => privateKey.trim().isNotEmpty,
         SshAuthMethod.hardwareKey =>
           hardwareKeys.isNotEmpty
@@ -244,6 +246,7 @@ class SavedHost {
     String? username,
     SshAuthMethod? authMethod,
     String? password,
+    bool? askPasswordEachTime,
     String? privateKey,
     String? passphrase,
     List<HardwareKeyEntry>? hardwareKeys,
@@ -273,6 +276,7 @@ class SavedHost {
       username: username ?? this.username,
       authMethod: authMethod ?? this.authMethod,
       password: password ?? this.password,
+      askPasswordEachTime: askPasswordEachTime ?? this.askPasswordEachTime,
       privateKey: privateKey ?? this.privateKey,
       passphrase: passphrase ?? this.passphrase,
       hardwareKeys: hardwareKeys ?? this.hardwareKeys,
@@ -310,7 +314,9 @@ class SavedHost {
       'port': port,
       'username': username,
       'authMethod': authMethod.name,
-      'password': password,
+      // When asking every time, the password is never persisted.
+      'password': askPasswordEachTime ? '' : password,
+      'askPasswordEachTime': askPasswordEachTime,
       'privateKey': effectiveKeys.isNotEmpty
           ? effectiveKeys.first.privateKey
           : privateKey,
@@ -357,7 +363,10 @@ class SavedHost {
       port: json['port'] as int? ?? 22,
       username: json['username'] as String? ?? '',
       authMethod: authMethod,
-      password: json['password'] as String? ?? '',
+      password: (json['askPasswordEachTime'] as bool? ?? false)
+          ? ''
+          : json['password'] as String? ?? '',
+      askPasswordEachTime: json['askPasswordEachTime'] as bool? ?? false,
       privateKey: json['privateKey'] as String? ?? '',
       passphrase: json['passphrase'] as String? ?? '',
       hardwareKeys: _parseHardwareKeys(json),

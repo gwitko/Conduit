@@ -98,6 +98,7 @@ class HostAuthenticationSection extends StatelessWidget {
     required this.privateKeyController,
     required this.passphraseController,
     required this.showPassword,
+    required this.askPasswordEachTime,
     required this.showPassphrase,
     required this.forwardAgent,
     required this.externalAuthOfferKey,
@@ -109,6 +110,7 @@ class HostAuthenticationSection extends StatelessWidget {
     required this.keyMaterialValidator,
     required this.onAuthMethodChanged,
     required this.onTogglePasswordVisibility,
+    required this.onAskPasswordEachTimeChanged,
     required this.onTogglePassphraseVisibility,
     required this.onPasteKey,
     required this.onImportKeyFile,
@@ -128,6 +130,7 @@ class HostAuthenticationSection extends StatelessWidget {
   final TextEditingController privateKeyController;
   final TextEditingController passphraseController;
   final bool showPassword;
+  final bool askPasswordEachTime;
   final bool showPassphrase;
   final bool forwardAgent;
   final bool externalAuthOfferKey;
@@ -139,6 +142,7 @@ class HostAuthenticationSection extends StatelessWidget {
   final FormFieldValidator<String> keyMaterialValidator;
   final ValueChanged<SshAuthMethod> onAuthMethodChanged;
   final VoidCallback onTogglePasswordVisibility;
+  final ValueChanged<bool> onAskPasswordEachTimeChanged;
   final VoidCallback onTogglePassphraseVisibility;
   final VoidCallback onPasteKey;
   final VoidCallback onImportKeyFile;
@@ -177,7 +181,18 @@ class HostAuthenticationSection extends StatelessWidget {
             ),
           ),
         ],
-        if (authMethod == SshAuthMethod.password)
+        if (authMethod == SshAuthMethod.password) ...[
+          CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            controlAffinity: ListTileControlAffinity.leading,
+            title: const Text('Ask for password when logging in'),
+            subtitle: const Text(
+              'The password is not saved. You type it each time you connect.',
+            ),
+            value: askPasswordEachTime,
+            onChanged: (value) => onAskPasswordEachTimeChanged(value ?? false),
+          ),
+          if (!askPasswordEachTime)
           TextFormField(
             controller: passwordController,
             decoration: InputDecoration(
@@ -200,6 +215,7 @@ class HostAuthenticationSection extends StatelessWidget {
                 ? requiredValidator
                 : null,
           ),
+        ],
         if (authMethod == SshAuthMethod.hardwareKey) ...[
           AuthExplainer(method: authMethod),
           const SizedBox(height: 16),

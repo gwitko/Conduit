@@ -8,6 +8,7 @@ import 'package:conduit/features/terminal/data/openssh_security_key_signer.dart'
 import 'package:conduit/features/terminal/data/tcp_ssh_socket.dart';
 import 'package:conduit/features/terminal/domain/host_key_verifier.dart';
 import 'package:conduit/features/terminal/domain/security_key_interaction.dart';
+import 'package:conduit/features/terminal/domain/ssh_password_interaction.dart';
 import 'package:dartssh2/dartssh2.dart';
 import 'package:flutter/foundation.dart' show Uint8List, visibleForTesting;
 import 'package:pinenacl/ed25519.dart' as ed25519;
@@ -20,7 +21,10 @@ class SshClientFactory {
     this._hostKeyVerifier, {
     OpenSshSecurityKeySigner? securityKeySigner,
     SshKeyPairParser? keyPairParser,
-  }) : _securityKeySigner =
+    SshPasswordPrompt? passwordPrompt,
+  }) : _passwordPrompt =
+           passwordPrompt ?? SshPasswordInteraction.instance.requestPassword,
+       _securityKeySigner =
            securityKeySigner ??
            OpenSshSecurityKeySigner(
              openDevice: FidoHardwareKeyCtapDevice.open,
@@ -34,24 +38,40 @@ class SshClientFactory {
   final HostKeyVerifier _hostKeyVerifier;
   final OpenSshSecurityKeySigner _securityKeySigner;
   final SshKeyPairParser _keyPairParser;
+  final SshPasswordPrompt _passwordPrompt;
   SSHKeyPair? _externalAuthIdentity;
 
   Future<SSHClient> connect(SavedHost host) async {
     SSHSocket? socket;
+    final password = _SessionPassword();
     try {
+      // Password auth: ask the user every time. The password lives only in
+      // this in-memory holder and is never read from or written to storage.
+      if (host.authMethod == SshAuthMethod.password &&
+          host.askPasswordEachTime) {
+        final entered = await _passwordPrompt(
+          SshPasswordRequest(endpoint: host.endpoint, hostName: host.name),
+        );
+        if (entered == null || entered.isEmpty) {
+          throw const AppFailure('Password entry was cancelled.');
+        }
+        password.value = entered;
+      } else {
+        password.value = host.password;
+      }
       socket = await TcpSshSocket.connect(
         host.host.trim(),
         host.port,
         timeout: Duration(seconds: host.connectionTimeoutSeconds),
       );
       final identities = _identitiesFor(host);
-      return SSHClient(
+      final client = SSHClient(
         socket,
         username: host.username.trim(),
         identities: identities,
         agentHandler: _agentHandlerFor(host, identities),
-        onPasswordRequest: _passwordRequestFor(host),
-        onUserInfoRequest: _userInfoRequestFor(host),
+        onPasswordRequest: _passwordRequestFor(host, password),
+        onUserInfoRequest: _userInfoRequestFor(host, password),
         onVerifyHostKey: (type, fingerprint) {
           return _hostKeyVerifier.verify(
             host: host.host.trim(),
@@ -61,7 +81,18 @@ class SshClientFactory {
           );
         },
       );
+      if (host.authMethod == SshAuthMethod.password &&
+          host.askPasswordEachTime) {
+        // Drop our reference as soon as authentication succeeds or fails.
+        unawaited(
+          client.authenticated
+              .catchError((Object _) {})
+              .whenComplete(password.clear),
+        );
+      }
+      return client;
     } catch (_) {
+      if (host.askPasswordEachTime) password.clear();
       unawaited(socket?.close() ?? Future<void>.value());
       rethrow;
     }
@@ -161,20 +192,30 @@ class SshClientFactory {
       _formatFingerprint(bytes);
 
   @visibleForTesting
-  String Function()? passwordRequestForTesting(SavedHost host) =>
-      _passwordRequestFor(host);
+  String Function()? passwordRequestForTesting(
+    SavedHost host, {
+    String? password,
+  }) => _passwordRequestFor(host, _SessionPassword()..value = password ?? host.password);
 
   @visibleForTesting
-  SSHUserInfoRequestHandler? userInfoRequestForTesting(SavedHost host) =>
-      _userInfoRequestFor(host);
+  SSHUserInfoRequestHandler? userInfoRequestForTesting(
+    SavedHost host, {
+    String? password,
+  }) => _userInfoRequestFor(host, _SessionPassword()..value = password ?? host.password);
 
-  String Function()? _passwordRequestFor(SavedHost host) {
+  String Function()? _passwordRequestFor(
+    SavedHost host,
+    _SessionPassword password,
+  ) {
     return host.authMethod == SshAuthMethod.password
-        ? () => host.password
+        ? () => password.value ?? ''
         : null;
   }
 
-  SSHUserInfoRequestHandler? _userInfoRequestFor(SavedHost host) {
+  SSHUserInfoRequestHandler? _userInfoRequestFor(
+    SavedHost host,
+    _SessionPassword password,
+  ) {
     if (host.authMethod != SshAuthMethod.password) {
       return null;
     }
@@ -185,7 +226,7 @@ class SshClientFactory {
           if (!prompt.echo && !answered)
             (() {
               answered = true;
-              return host.password;
+              return password.value ?? '';
             })()
           else
             '',
@@ -210,4 +251,11 @@ class SshClientFactory {
     final parts = bytes.map((byte) => byte.toRadixString(16).padLeft(2, '0'));
     return 'MD5:${parts.join(':')}';
   }
+}
+
+/// Holds the typed password in memory only, for one connection attempt.
+class _SessionPassword {
+  String? value;
+
+  void clear() => value = null;
 }
