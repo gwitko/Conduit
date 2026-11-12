@@ -464,12 +464,13 @@ void main() {
                   as ScrollableState)
               .position;
       final addButton = find.text('Add machine');
-      for (var i = 0; i < 40 && addButton.evaluate().isEmpty; i++) {
-        listPosition.jumpTo(
-          (listPosition.pixels + 200).clamp(0.0, listPosition.maxScrollExtent),
-        );
-        await tester.pump();
-      }
+      // The form is a lazy ListView: widgets are built a little beyond the
+      // viewport, so "found" is not "tappable". Scroll until really visible.
+      await tester.scrollUntilVisible(
+        addButton,
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.tap(addButton);
       await tester.pumpAndSettle();
       listPosition.jumpTo(0);

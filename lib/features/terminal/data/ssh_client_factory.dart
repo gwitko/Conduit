@@ -8,6 +8,7 @@ import 'package:conduit/features/terminal/data/openssh_security_key_signer.dart'
 import 'package:conduit/features/terminal/data/tcp_ssh_socket.dart';
 import 'package:conduit/features/terminal/domain/host_key_verifier.dart';
 import 'package:conduit/features/terminal/domain/security_key_interaction.dart';
+import 'package:conduit/features/terminal/domain/ssh_password_interaction.dart';
 import 'package:dartssh2/dartssh2.dart';
 import 'package:flutter/foundation.dart' show Uint8List, visibleForTesting;
 import 'package:pinenacl/ed25519.dart' as ed25519;
@@ -20,7 +21,10 @@ class SshClientFactory {
     this._hostKeyVerifier, {
     OpenSshSecurityKeySigner? securityKeySigner,
     SshKeyPairParser? keyPairParser,
-  }) : _securityKeySigner =
+    SshPasswordPrompt? passwordPrompt,
+  }) : _passwordPrompt =
+           passwordPrompt ?? SshPasswordInteraction.instance.requestPassword,
+       _securityKeySigner =
            securityKeySigner ??
            OpenSshSecurityKeySigner(
              openDevice: FidoHardwareKeyCtapDevice.open,
@@ -34,6 +38,7 @@ class SshClientFactory {
   final HostKeyVerifier _hostKeyVerifier;
   final OpenSshSecurityKeySigner _securityKeySigner;
   final SshKeyPairParser _keyPairParser;
+  final SshPasswordPrompt _passwordPrompt;
   SSHKeyPair? _externalAuthIdentity;
 
   Future<SSHClient> connect(SavedHost host) async {
@@ -45,13 +50,14 @@ class SshClientFactory {
         timeout: Duration(seconds: host.connectionTimeoutSeconds),
       );
       final identities = _identitiesFor(host);
+      final promptState = _PasswordPromptState();
       return SSHClient(
         socket,
         username: host.username.trim(),
         identities: identities,
         agentHandler: _agentHandlerFor(host, identities),
-        onPasswordRequest: _passwordRequestFor(host),
-        onUserInfoRequest: _userInfoRequestFor(host),
+        onPasswordRequest: _passwordRequestFor(host, promptState),
+        onUserInfoRequest: _userInfoRequestFor(host, promptState),
         onVerifyHostKey: (type, fingerprint) {
           return _hostKeyVerifier.verify(
             host: host.host.trim(),
@@ -161,36 +167,131 @@ class SshClientFactory {
       _formatFingerprint(bytes);
 
   @visibleForTesting
-  String Function()? passwordRequestForTesting(SavedHost host) =>
+  SSHPasswordRequestHandler? passwordRequestForTesting(SavedHost host) =>
       _passwordRequestFor(host);
 
   @visibleForTesting
   SSHUserInfoRequestHandler? userInfoRequestForTesting(SavedHost host) =>
       _userInfoRequestFor(host);
 
-  String Function()? _passwordRequestFor(SavedHost host) {
-    return host.authMethod == SshAuthMethod.password
-        ? () => host.password
-        : null;
+  /// Both handlers of one connection, sharing its prompt-cancel state.
+  @visibleForTesting
+  ({
+    SSHPasswordRequestHandler? password,
+    SSHUserInfoRequestHandler? userInfo,
+  })
+  authHandlersForTesting(SavedHost host) {
+    final state = _PasswordPromptState();
+    return (
+      password: _passwordRequestFor(host, state),
+      userInfo: _userInfoRequestFor(host, state),
+    );
   }
 
-  SSHUserInfoRequestHandler? _userInfoRequestFor(SavedHost host) {
-    if (host.authMethod != SshAuthMethod.password) {
+  /// Key-based hosts can still be asked for a password: OpenSSH servers with
+  /// `AuthenticationMethods publickey,password` (or `…,keyboard-interactive`)
+  /// accept the key with partial success and then require a second method.
+  /// dartssh2 only continues if these handlers exist, so key hosts get them
+  /// too. A password saved on the host is used as-is; otherwise the user is
+  /// prompted, like OpenSSH does.
+  static bool _mayAskForPassword(SavedHost host) =>
+      host.authMethod == SshAuthMethod.privateKey ||
+      host.authMethod == SshAuthMethod.hardwareKey;
+
+  SSHPasswordRequestHandler? _passwordRequestFor(
+    SavedHost host, [
+    _PasswordPromptState? state,
+  ]) {
+    if (host.authMethod == SshAuthMethod.password) {
+      return () => host.password;
+    }
+    if (!_mayAskForPassword(host)) {
       return null;
     }
-    return (request) {
-      var answered = false;
-      return [
-        for (final prompt in request.prompts)
-          if (!prompt.echo && !answered)
-            (() {
-              answered = true;
-              return host.password;
-            })()
-          else
-            '',
-      ];
+    final promptState = state ?? _PasswordPromptState();
+    return () {
+      if (host.password.isNotEmpty) {
+        return host.password;
+      }
+      return _prompt(
+        promptState,
+        SshPasswordPromptRequest(
+          username: host.username.trim(),
+          host: host.host.trim(),
+        ),
+      );
     };
+  }
+
+  SSHUserInfoRequestHandler? _userInfoRequestFor(
+    SavedHost host, [
+    _PasswordPromptState? state,
+  ]) {
+    if (host.authMethod == SshAuthMethod.password ||
+        (_mayAskForPassword(host) && host.password.isNotEmpty)) {
+      return (request) => _answerWithPassword(
+        request.prompts.map((prompt) => prompt.echo),
+        host.password,
+      );
+    }
+    if (!_mayAskForPassword(host)) {
+      return null;
+    }
+    final promptState = state ?? _PasswordPromptState();
+    return (request) async {
+      final answers = <String>[];
+      for (final prompt in request.prompts) {
+        final answer = await _prompt(
+          promptState,
+          SshPasswordPromptRequest(
+            username: host.username.trim(),
+            host: host.host.trim(),
+            prompt: prompt.promptText,
+            instruction: request.instruction,
+            echo: prompt.echo,
+          ),
+        );
+        if (answer == null) {
+          return null;
+        }
+        answers.add(answer);
+      }
+      return answers;
+    };
+  }
+
+  /// Once the user cancels a prompt, later methods of the same connection
+  /// (password, then keyboard-interactive) fail silently instead of asking
+  /// again.
+  Future<String?> _prompt(
+    _PasswordPromptState state,
+    SshPasswordPromptRequest request,
+  ) async {
+    if (state.cancelled) {
+      return null;
+    }
+    final answer = await _passwordPrompt(request);
+    if (answer == null) {
+      state.cancelled = true;
+    }
+    return answer;
+  }
+
+  static List<String> _answerWithPassword(
+    Iterable<bool> echoes,
+    String password,
+  ) {
+    var answered = false;
+    return [
+      for (final echo in echoes)
+        if (!echo && !answered)
+          (() {
+            answered = true;
+            return password;
+          })()
+        else
+          '',
+    ];
   }
 
   SSHKeyPair _generateExternalAuthIdentity() {
@@ -210,4 +311,8 @@ class SshClientFactory {
     final parts = bytes.map((byte) => byte.toRadixString(16).padLeft(2, '0'));
     return 'MD5:${parts.join(':')}';
   }
+}
+
+class _PasswordPromptState {
+  bool cancelled = false;
 }

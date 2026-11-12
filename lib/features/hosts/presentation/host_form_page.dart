@@ -698,7 +698,9 @@ class _HostFormPageState extends State<HostFormPage> {
       port: int.parse(_portController.text),
       username: _usernameController.text.trim(),
       authMethod: _authMethod,
-      password: _authMethod == SshAuthMethod.password
+      // Key hosts may keep an optional password for servers that demand
+      // one after the key (AuthenticationMethods publickey,password).
+      password: _authMethod == SshAuthMethod.password || _usesKeyAuth
           ? _passwordController.text
           : '',
       privateKey: _authMethod == SshAuthMethod.privateKey
