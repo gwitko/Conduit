@@ -550,3 +550,378 @@ class HostAdvancedSection extends StatelessWidget {
     );
   }
 }
+
+class HostBastionSection extends StatelessWidget {
+  const HostBastionSection({
+    required this.enabled,
+    required this.hostController,
+    required this.portController,
+    required this.usernameController,
+    required this.passwordController,
+    required this.privateKeyController,
+    required this.passphraseController,
+    required this.authMethod,
+    required this.bastionHostId,
+    required this.candidates,
+    required this.showPassword,
+    required this.showPassphrase,
+    required this.requiredValidator,
+    required this.portValidator,
+    required this.onEnabledChanged,
+    required this.onBastionHostChanged,
+    required this.onAuthMethodChanged,
+    required this.onTogglePasswordVisibility,
+    required this.onTogglePassphraseVisibility,
+    super.key,
+  });
+
+  static const authMethods = [
+    SshAuthMethod.password,
+    SshAuthMethod.privateKey,
+    SshAuthMethod.external,
+  ];
+
+  final bool enabled;
+  final TextEditingController hostController;
+  final TextEditingController portController;
+  final TextEditingController usernameController;
+  final TextEditingController passwordController;
+  final TextEditingController privateKeyController;
+  final TextEditingController passphraseController;
+  final SshAuthMethod authMethod;
+  final String bastionHostId;
+  final List<SavedHost> candidates;
+  final bool showPassword;
+  final bool showPassphrase;
+  final FormFieldValidator<String> requiredValidator;
+  final FormFieldValidator<String> portValidator;
+  final ValueChanged<bool> onEnabledChanged;
+  final ValueChanged<String> onBastionHostChanged;
+  final ValueChanged<SshAuthMethod> onAuthMethodChanged;
+  final VoidCallback onTogglePasswordVisibility;
+  final VoidCallback onTogglePassphraseVisibility;
+
+  String _authMethodLabel(SshAuthMethod method) => switch (method) {
+    SshAuthMethod.password => 'Password',
+    SshAuthMethod.privateKey => 'Private key',
+    SshAuthMethod.hardwareKey => 'Hardware key',
+    SshAuthMethod.external => 'External / no credentials',
+  };
+
+  SavedHost? get _selectedBastion {
+    for (final host in candidates) {
+      if (host.id == bastionHostId) {
+        return host;
+      }
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    return HostFormSectionCard(
+      icon: Icons.hub_outlined,
+      title: 'SSH bastion',
+      caption: 'Optional jump host for this machine, like ssh -J.',
+      children: [
+        Material(
+          color: Colors.transparent,
+          child: SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Connect through a bastion'),
+            subtitle: const Text(
+              'Reach machines that are only available behind a jump host.',
+            ),
+            value: enabled,
+            onChanged: onEnabledChanged,
+          ),
+        ),
+        if (enabled) ...[
+          const SizedBox(height: 16),
+          DropdownButtonFormField<String>(
+            initialValue: bastionHostId,
+            decoration: const InputDecoration(
+              labelText: 'Bastion source',
+              helperText:
+                  'Reuse a saved machine, or enter a one-off bastion below.',
+              helperMaxLines: 2,
+              prefixIcon: Icon(Icons.alt_route_rounded),
+            ),
+            items: [
+              const DropdownMenuItem(
+                value: '',
+                child: Text('Manual configuration'),
+              ),
+              for (final host in candidates)
+                DropdownMenuItem(
+                  value: host.id,
+                  child: Text(
+                    host.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              if (bastionHostId.isNotEmpty && _selectedBastion == null)
+                DropdownMenuItem(
+                  value: bastionHostId,
+                  child: const Text('Missing machine'),
+                ),
+            ],
+            onChanged: (value) {
+              if (value != null) {
+                onBastionHostChanged(value);
+              }
+            },
+          ),
+          const SizedBox(height: 12),
+          if (bastionHostId.isNotEmpty)
+            _BastionSourceSummary(
+              host: _selectedBastion,
+              authMethodLabel: _authMethodLabel,
+            )
+          else ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: TextFormField(
+                    controller: hostController,
+                    decoration: const InputDecoration(
+                      labelText: 'Bastion host or IP',
+                      hintText: 'jump.example.com',
+                      prefixIcon: Icon(Icons.public_rounded),
+                    ),
+                    keyboardType: TextInputType.url,
+                    textInputAction: TextInputAction.next,
+                    validator: requiredValidator,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextFormField(
+                    controller: portController,
+                    decoration: const InputDecoration(labelText: 'Port'),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    textInputAction: TextInputAction.next,
+                    validator: portValidator,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: usernameController,
+              decoration: const InputDecoration(
+                labelText: 'Bastion username',
+                prefixIcon: Icon(Icons.person_outline_rounded),
+              ),
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<SshAuthMethod>(
+              initialValue: authMethod,
+              decoration: const InputDecoration(
+                labelText: 'Bastion authentication',
+                prefixIcon: Icon(Icons.lock_outline_rounded),
+              ),
+              items: [
+                for (final method in authMethods)
+                  DropdownMenuItem(
+                    value: method,
+                    child: Text(_authMethodLabel(method)),
+                  ),
+              ],
+              onChanged: (value) {
+                if (value != null) {
+                  onAuthMethodChanged(value);
+                }
+              },
+            ),
+            if (authMethod == SshAuthMethod.password) ...[
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: passwordController,
+                decoration: InputDecoration(
+                  labelText: 'Bastion password',
+                  prefixIcon: const Icon(Icons.key_outlined),
+                  suffixIcon: IconButton(
+                    tooltip: showPassword ? 'Hide' : 'Show',
+                    icon: Icon(
+                      showPassword
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                    ),
+                    onPressed: onTogglePasswordVisibility,
+                  ),
+                ),
+                obscureText: !showPassword,
+                validator: requiredValidator,
+              ),
+            ],
+            if (authMethod == SshAuthMethod.privateKey) ...[
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: privateKeyController,
+                decoration: const InputDecoration(
+                  labelText: 'Bastion private key',
+                  hintText: '-----BEGIN OPENSSH PRIVATE KEY-----',
+                  prefixIcon: Icon(Icons.vpn_key_outlined),
+                  alignLabelWithHint: true,
+                ),
+                minLines: 3,
+                maxLines: 6,
+                autocorrect: false,
+                enableSuggestions: false,
+                validator: requiredValidator,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: passphraseController,
+                decoration: InputDecoration(
+                  labelText: 'Bastion key passphrase',
+                  helperText: 'Optional. Leave empty for unencrypted keys.',
+                  prefixIcon: const Icon(Icons.password_rounded),
+                  suffixIcon: IconButton(
+                    tooltip: showPassphrase ? 'Hide' : 'Show',
+                    icon: Icon(
+                      showPassphrase
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                    ),
+                    onPressed: onTogglePassphraseVisibility,
+                  ),
+                ),
+                obscureText: !showPassphrase,
+                autocorrect: false,
+                enableSuggestions: false,
+              ),
+            ],
+            if (authMethod == SshAuthMethod.external) ...[
+              const SizedBox(height: 12),
+              Text(
+                'The bastion authenticates externally, without a password or '
+                'key stored in Conduit.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ],
+          const SizedBox(height: 12),
+          Text(
+            'Mosh cannot tunnel through a bastion; it needs a direct UDP '
+            'path to the host.',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _BastionSourceSummary extends StatelessWidget {
+  const _BastionSourceSummary({
+    required this.host,
+    required this.authMethodLabel,
+  });
+
+  final SavedHost? host;
+  final String Function(SshAuthMethod) authMethodLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final selected = host;
+    if (selected == null) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Color.alphaBlend(
+            colorScheme.error.withValues(alpha: 0.08),
+            colorScheme.surface,
+          ),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: colorScheme.error),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.error_outline_rounded,
+              size: 18,
+              color: colorScheme.error,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'The selected bastion machine is no longer available. Pick '
+                'another machine or switch to manual configuration.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                  height: 1.25,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Color.alphaBlend(
+          colorScheme.primary.withValues(alpha: 0.08),
+          colorScheme.surface,
+        ),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: colorScheme.outlineVariant),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.dns_rounded, size: 18, color: colorScheme.primary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  selected.name,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  selected.endpoint,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Uses this machine\'s saved connection and '
+                  '${authMethodLabel(selected.authMethod).toLowerCase()} '
+                  'settings. Its own bastion, Mosh and tmux options are '
+                  'ignored.',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                    height: 1.25,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

@@ -114,6 +114,179 @@ void main() {
     });
   });
 
+  group('SshBastion', () {
+    const base = SavedHost(
+      id: 'id',
+      name: 'name',
+      host: '192.168.1.1',
+      port: 22,
+      username: 'user',
+      authMethod: SshAuthMethod.password,
+      password: 'p',
+    );
+
+    test('treats an unconfigured bastion as absent', () {
+      expect(base.hasBastion, isFalse);
+      expect(base.copyWith(bastion: const SshBastion()).isValid, isTrue);
+    });
+
+    test('validates the configured bastion credentials', () {
+      const good = SshBastion(
+        host: 'jump.example.com',
+        username: 'jumper',
+        password: 'secret',
+      );
+      expect(base.copyWith(bastion: good).isValid, isTrue);
+
+      expect(
+        base.copyWith(bastion: good.copyWith(password: '')).isValid,
+        isFalse,
+      );
+      expect(
+        base
+            .copyWith(
+              bastion: good.copyWith(
+                authMethod: SshAuthMethod.privateKey,
+                password: '',
+                privateKey: '',
+              ),
+            )
+            .isValid,
+        isFalse,
+      );
+      expect(
+        base
+            .copyWith(
+              bastion: good.copyWith(
+                authMethod: SshAuthMethod.privateKey,
+                password: '',
+                privateKey: 'pem',
+              ),
+            )
+            .isValid,
+        isTrue,
+      );
+      expect(
+        base
+            .copyWith(
+              bastion: good.copyWith(
+                authMethod: SshAuthMethod.external,
+                password: '',
+              ),
+            )
+            .isValid,
+        isTrue,
+      );
+    });
+
+    test('rejects out-of-range bastion ports', () {
+      const bastion = SshBastion(host: 'jump', password: 'p');
+      expect(
+        base.copyWith(bastion: bastion.copyWith(port: 0)).isValid,
+        isFalse,
+      );
+      expect(
+        base.copyWith(bastion: bastion.copyWith(port: 65536)).isValid,
+        isFalse,
+      );
+    });
+
+    test('copyWith can clear the bastion', () {
+      const bastion = SshBastion(host: 'jump', password: 'p');
+      final host = base.copyWith(bastion: bastion);
+      expect(host.hasBastion, isTrue);
+      expect(host.copyWith(clearBastion: true).bastion, isNull);
+    });
+
+    test('copyWithoutSecrets strips host and bastion credentials', () {
+      const host = SavedHost(
+        id: 'id',
+        name: 'Host',
+        host: 'example.com',
+        port: 22,
+        username: 'root',
+        authMethod: SshAuthMethod.hardwareKey,
+        password: 'target-password',
+        privateKey: 'legacy-key',
+        passphrase: 'legacy-passphrase',
+        hardwareKeys: [
+          HardwareKeyEntry(
+            id: 'key',
+            label: 'YubiKey',
+            privateKey: 'stub',
+            passphrase: 'key-passphrase',
+          ),
+        ],
+        snippets: [
+          TerminalSnippet(
+            id: 'secret',
+            label: 'Secret',
+            text: 'hidden-value',
+            hidden: true,
+          ),
+          TerminalSnippet(id: 'plain', label: 'Plain', text: 'visible'),
+        ],
+        bastion: SshBastion(
+          host: 'jump.example.com',
+          username: 'jumper',
+          password: 'bastion-password',
+          privateKey: 'bastion-key',
+          passphrase: 'bastion-passphrase',
+        ),
+      );
+
+      final stripped = host.copyWithoutSecrets();
+
+      expect(stripped.password, isEmpty);
+      expect(stripped.privateKey, isEmpty);
+      expect(stripped.passphrase, isEmpty);
+      expect(stripped.hardwareKeys.single.privateKey, isEmpty);
+      expect(stripped.hardwareKeys.single.label, 'YubiKey');
+      expect(stripped.bastion?.password, isEmpty);
+      expect(stripped.bastion?.privateKey, isEmpty);
+      expect(stripped.bastion?.passphrase, isEmpty);
+      expect(stripped.bastion?.host, 'jump.example.com');
+      expect(stripped.snippets.first.text, isEmpty);
+      expect(stripped.snippets.last.text, 'visible');
+      expect(host.password, 'target-password');
+      expect(host.bastion?.password, 'bastion-password');
+    });
+
+    test('a referenced bastion marks the host as tunnelled', () {
+      final host = base.copyWith(bastionHostId: 'jump-id');
+
+      expect(host.hasBastion, isTrue);
+      expect(host.isValid, isTrue);
+      expect(host.copyWith(bastionHostId: '').hasBastion, isFalse);
+
+      final decoded = SavedHost.fromJson(host.toJson());
+      expect(decoded.bastionHostId, 'jump-id');
+      expect(decoded.hasBastion, isTrue);
+    });
+
+    test('builds the throwaway bastion host profile', () {
+      const bastion = SshBastion(
+        host: ' jump.example.com ',
+        port: 2222,
+        username: ' jumper ',
+        authMethod: SshAuthMethod.privateKey,
+        privateKey: 'pem',
+        passphrase: 'pp',
+      );
+
+      final host = bastion.toSavedHost(connectionTimeoutSeconds: 30);
+
+      expect(host.host, 'jump.example.com');
+      expect(host.port, 2222);
+      expect(host.username, 'jumper');
+      expect(host.authMethod, SshAuthMethod.privateKey);
+      expect(host.privateKey, 'pem');
+      expect(host.passphrase, 'pp');
+      expect(host.connectionTimeoutSeconds, 30);
+      expect(host.bastion, isNull);
+    });
+  });
+
   group('MoshPortRange', () {
     test('parses a single port', () {
       final range = MoshPortRange.tryParse('60001');
@@ -172,6 +345,12 @@ void main() {
         uploadDirectory: '~/drops',
         uploadCleanupDays: 30,
         lastConnectedAt: DateTime.parse('2025-01-02T03:04:05Z'),
+        bastion: const SshBastion(
+          host: 'jump.example.com',
+          port: 2222,
+          username: 'jumper',
+          password: 'jump-secret',
+        ),
       );
 
       final decoded = SavedHost.fromJson(original.toJson());
@@ -203,6 +382,26 @@ void main() {
       expect(decoded.uploadDirectory, original.uploadDirectory);
       expect(decoded.uploadCleanupDays, original.uploadCleanupDays);
       expect(decoded.lastConnectedAt, original.lastConnectedAt);
+      expect(decoded.bastion?.host, original.bastion?.host);
+      expect(decoded.bastion?.port, original.bastion?.port);
+      expect(decoded.bastion?.username, original.bastion?.username);
+      expect(decoded.bastion?.authMethod, original.bastion?.authMethod);
+      expect(decoded.bastion?.password, original.bastion?.password);
+    });
+
+    test('hosts without a bastion decode to null', () {
+      final decoded = SavedHost.fromJson(const {
+        'id': 'id',
+        'name': 'Host',
+        'host': 'example.com',
+        'port': 22,
+        'username': 'root',
+        'authMethod': 'password',
+        'password': 'secret',
+      });
+
+      expect(decoded.bastion, isNull);
+      expect(decoded.hasBastion, isFalse);
     });
 
     test('missing or corrupt upload settings load as defaults', () {
@@ -639,6 +838,56 @@ void main() {
         findsNothing,
       );
     });
+
+    testWidgets('selects a saved machine as the bastion', (tester) async {
+      Future<void> tapAfterScroll(Finder finder) async {
+        final position =
+            ((find.byType(Scrollable).evaluate().first as StatefulElement).state
+                    as ScrollableState)
+                .position;
+        position.jumpTo(0);
+        await tester.pump();
+        for (var i = 0; i < 40 && finder.evaluate().isEmpty; i++) {
+          position.jumpTo(
+            (position.pixels + 200).clamp(0.0, position.maxScrollExtent),
+          );
+          await tester.pump();
+        }
+        await tester.ensureVisible(finder);
+        await tester.pumpAndSettle();
+        await tester.tap(finder);
+        await tester.pumpAndSettle();
+      }
+
+      final jump = buildHost('jump').copyWith(name: 'Jump Box');
+      await tester.pumpWidget(
+        MaterialApp(home: HostFormPage(bastionCandidates: [jump])),
+      );
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Display name'),
+        'Host',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Host or IP'),
+        'example.com',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Username'),
+        'root',
+      );
+
+      await tapAfterScroll(find.text('Connect through a bastion'));
+      expect(find.text('Bastion source'), findsOneWidget);
+
+      await tapAfterScroll(find.text('Manual configuration'));
+      await tester.tap(find.text('Jump Box').last);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Jump Box'), findsWidgets);
+      expect(find.text('Bastion host or IP'), findsNothing);
+      expect(find.textContaining('Uses this machine'), findsOneWidget);
+    });
   });
 
   group('HostFormPage hardware keys', () {
@@ -855,6 +1104,31 @@ void main() {
       final saved = repository.persisted.single;
       expect(saved.username, 'new');
       expect(saved.lastConnectedAt, isNotNull);
+    });
+
+    test('deleting a machine clears references from other hosts', () async {
+      final repository = FakeHostsRepository()
+        ..persisted = [
+          buildHost('jump'),
+          buildHost('target').copyWith(bastionHostId: 'jump'),
+          buildHost('other').copyWith(bastionHostId: 'leave-me'),
+        ];
+      final controller = HostsController(repository);
+      await controller.load();
+
+      await controller.remove(buildHost('jump'));
+
+      expect(controller.hosts.map((host) => host.id), ['target', 'other']);
+      expect(
+        controller.hosts
+            .firstWhere((host) => host.id == 'target')
+            .bastionHostId,
+        isEmpty,
+      );
+      expect(
+        controller.hosts.firstWhere((host) => host.id == 'other').bastionHostId,
+        'leave-me',
+      );
     });
 
     test('sorts by last connected by default', () async {

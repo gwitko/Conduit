@@ -9,6 +9,7 @@ import 'package:conduit/features/app_lock/presentation/app_lock_controller.dart'
 import 'package:conduit/features/app_lock/presentation/lock_page.dart';
 import 'package:conduit/features/backup/data/app_backup_service.dart';
 import 'package:conduit/features/hosts/data/secure_saved_hosts_repository.dart';
+import 'package:conduit/features/hosts/domain/saved_host.dart';
 import 'package:conduit/features/hosts/presentation/hosts_controller.dart';
 import 'package:conduit/features/hosts/presentation/hosts_page.dart';
 import 'package:conduit/features/local_shell/data/local_terminal_repository.dart';
@@ -48,6 +49,15 @@ void main() {
   final hostsController = HostsController(
     const SecureSavedHostsRepository(secureStorage),
   );
+  SavedHost? resolveBastionHost(String id) {
+    for (final host in hostsController.hosts) {
+      if (host.id == id) {
+        return host;
+      }
+    }
+    return null;
+  }
+
   final promptCoordinator = HostKeyPromptCoordinator();
   final hostKeyVerifier = SecureHostKeyVerifier(
     secureStorage,
@@ -55,8 +65,14 @@ void main() {
   );
   final localShellController = LocalShellController();
   final terminalRepository = RoutingTerminalRepository(
-    ssh: DartSshTerminalRepository(hostKeyVerifier),
-    mosh: MoshTerminalRepository(hostKeyVerifier),
+    ssh: DartSshTerminalRepository(
+      hostKeyVerifier,
+      resolveBastionHost: resolveBastionHost,
+    ),
+    mosh: MoshTerminalRepository(
+      hostKeyVerifier,
+      resolveBastionHost: resolveBastionHost,
+    ),
     local: LocalTerminalRepository(
       resolveLaunch: localShellController.requireLaunch,
     ),
@@ -65,7 +81,10 @@ void main() {
     terminalRepository,
     ConnectivityPlusNetwork(),
   );
-  final sftpRepository = DartSshSftpRepository(hostKeyVerifier);
+  final sftpRepository = DartSshSftpRepository(
+    hostKeyVerifier,
+    resolveBastionHost: resolveBastionHost,
+  );
   const uploadManifestRepository = SecureUploadManifestRepository(
     secureStorage,
   );

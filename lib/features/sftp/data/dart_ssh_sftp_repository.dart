@@ -11,10 +11,14 @@ import 'package:conduit/features/terminal/domain/host_key_verifier.dart';
 import 'package:dartssh2/dartssh2.dart';
 
 class DartSshSftpRepository implements SftpRepository {
-  const DartSshSftpRepository(this._hostKeyVerifier);
+  const DartSshSftpRepository(this._hostKeyVerifier, {this.resolveBastionHost});
 
   final HostKeyVerifier _hostKeyVerifier;
-  SshClientFactory get _clientFactory => SshClientFactory(_hostKeyVerifier);
+  final BastionHostResolver? resolveBastionHost;
+  SshClientFactory get _clientFactory => SshClientFactory(
+    _hostKeyVerifier,
+    resolveBastionHost: resolveBastionHost,
+  );
 
   @override
   Future<SftpSession> connect(SavedHost host) async {
