@@ -1,6 +1,6 @@
 # Conduit: Terminal, SSH, Mosh & SFTP
 
-[![Latest release](https://img.shields.io/github/v/release/gwitko/Conduit)](https://github.com/gwitko/Conduit/releases/latest)
+[![Latest v1.4.14-ask password release](https://img.shields.io/github/v/release/gwitko/Conduit)](https://github.com/Maheshluke/Conduit/releases/tag/v1.4.14-askpw)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 ![Flutter](https://img.shields.io/badge/Flutter-3.44.1-02569B?logo=flutter)
 ![Platforms](https://img.shields.io/badge/platforms-Android%20%7C%20iOS-2ea44f)
@@ -13,6 +13,10 @@
 
 > [!CAUTION]
 > Android is on track to become a locked-down platform. [Help keep it open](https://keepandroidopen.org).
+>
+
+
+Added a feature which let's add machine without saving password. Password will be asked every time. which is not present in original build.
 
 Conduit's own source code is Apache-2.0. Android builds that include the local
 shell also redistribute third-party binaries under their own licenses; see
@@ -116,6 +120,8 @@ Conduit. Mosh runs on
 
 Conduit is improved by community contributions. See [CONTRIBUTORS.md](CONTRIBUTORS.md)
 for acknowledgements.
+
+> > Fork of [gwitko/Conduit](https://github.com/gwitko/Conduit) that adds an "Ask for password when logging in" option for SSH password hosts. All other features are unchanged.
 
 ## Screenshots
 

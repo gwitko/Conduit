@@ -54,6 +54,7 @@ class _HostFormPageState extends State<HostFormPage> {
   final FocusNode _tagFocusNode = FocusNode();
   SshAuthMethod _authMethod = SshAuthMethod.password;
   bool _showPassword = false;
+  bool _askPasswordEachTime = false;
   bool _showPassphrase = false;
   bool _useMosh = false;
   bool _predictiveEchoEnabled = false;
@@ -91,6 +92,7 @@ class _HostFormPageState extends State<HostFormPage> {
       _portController.text = host.port.toString();
       _usernameController.text = host.username;
       _passwordController.text = host.password;
+      _askPasswordEachTime = host.askPasswordEachTime;
       _privateKeyController.text = host.privateKey;
       _passphraseController.text = host.passphrase;
       _tags = List<String>.from(host.tags);
@@ -253,6 +255,7 @@ class _HostFormPageState extends State<HostFormPage> {
               privateKeyController: _privateKeyController,
               passphraseController: _passphraseController,
               showPassword: _showPassword,
+              askPasswordEachTime: _askPasswordEachTime,
               showPassphrase: _showPassphrase,
               forwardAgent: _forwardAgent,
               externalAuthOfferKey: _externalAuthOfferKey,
@@ -265,6 +268,8 @@ class _HostFormPageState extends State<HostFormPage> {
               onAuthMethodChanged: _changeAuthMethod,
               onTogglePasswordVisibility: () =>
                   setState(() => _showPassword = !_showPassword),
+              onAskPasswordEachTimeChanged: (value) =>
+                  setState(() => _askPasswordEachTime = value),
               onTogglePassphraseVisibility: () =>
                   setState(() => _showPassphrase = !_showPassphrase),
               onPasteKey: _pasteKey,
@@ -689,9 +694,12 @@ class _HostFormPageState extends State<HostFormPage> {
       port: int.parse(_portController.text),
       username: _usernameController.text.trim(),
       authMethod: _authMethod,
-      password: _authMethod == SshAuthMethod.password
+      password:
+          _authMethod == SshAuthMethod.password && !_askPasswordEachTime
           ? _passwordController.text
           : '',
+      askPasswordEachTime:
+          _authMethod == SshAuthMethod.password && _askPasswordEachTime,
       privateKey: _authMethod == SshAuthMethod.privateKey
           ? _privateKeyController.text
           : '',

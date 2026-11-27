@@ -140,7 +140,9 @@ class _HostsPageState extends State<HostsPage> {
         palette: palette,
         child: SafeArea(
           bottom: shouldApplyBottomSafeArea(context),
-          child: RefreshIndicator(
+          child: Stack(
+          children: [
+            RefreshIndicator(
             color: Theme.of(context).colorScheme.primary,
             onRefresh: widget.hostsController.load,
             child: CustomScrollView(
@@ -170,6 +172,23 @@ class _HostsPageState extends State<HostsPage> {
                     },
                   ),
                 ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 8,
+              child: IgnorePointer(
+                child: Text(
+                  'powered by phyluke',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
                 SliverToBoxAdapter(
                   child: ListenableBuilder(
                     listenable: Listenable.merge([
@@ -248,7 +267,7 @@ class _HostsPageState extends State<HostsPage> {
               title: 'No saved machines yet',
               message:
                   'Add an SSH or Mosh server and Conduit will keep its '
-                  'credentials in your device’s secure storage.',
+                  'credentials in your deviceâ€™s secure storage.',
               actionLabel: 'Add machine',
               onAction: _openForm,
             ),
@@ -634,7 +653,7 @@ class _HostsPageState extends State<HostsPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete machine?'),
-        content: Text('Conduit will forget “${host.name}”.'),
+        content: Text('Conduit will forget â€œ${host.name}â€.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),

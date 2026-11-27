@@ -6,8 +6,10 @@ import 'package:conduit/core/theme/app_palette.dart';
 import 'package:conduit/core/theme/terminal_appearance.dart';
 import 'package:conduit/core/theme/theme_controller.dart';
 import 'package:conduit/features/terminal/domain/security_key_interaction.dart';
+import 'package:conduit/features/terminal/domain/ssh_password_interaction.dart';
 import 'package:conduit/features/terminal/presentation/security_key_picker_dialog.dart';
 import 'package:conduit/features/terminal/presentation/security_key_pin_dialog.dart';
+import 'package:conduit/features/terminal/presentation/ssh_password_dialog.dart';
 import 'package:conduit/features/terminal/presentation/terminal_keyboard_bar.dart';
 import 'package:conduit/features/terminal/presentation/terminal_session_controller.dart';
 import 'package:conduit/features/terminal/presentation/terminal_workspace_controller.dart';
@@ -52,6 +54,7 @@ class _TerminalPageState extends State<TerminalPage> {
     super.initState();
     unawaited(WakelockPlus.enable());
     SecurityKeyInteraction.instance.registerPinPrompt(_promptSecurityKeyPin);
+    SshPasswordInteraction.instance.registerPrompt(_promptSshPassword);
     SecurityKeyInteraction.instance.registerSelectionPrompt(
       _promptSecurityKeySelection,
     );
@@ -67,12 +70,20 @@ class _TerminalPageState extends State<TerminalPage> {
     unawaited(WakelockPlus.disable());
     _setSystemUiFullscreen(false);
     SecurityKeyInteraction.instance.unregisterPinPrompt(_promptSecurityKeyPin);
+    SshPasswordInteraction.instance.unregisterPrompt(_promptSshPassword);
     SecurityKeyInteraction.instance.unregisterSelectionPrompt(
       _promptSecurityKeySelection,
     );
     widget.workspace.removeListener(_handleWorkspaceChanged);
     _focusNode.dispose();
     super.dispose();
+  }
+
+  Future<String?> _promptSshPassword(SshPasswordRequest request) {
+    if (!mounted) {
+      return Future<String?>.value();
+    }
+    return showSshPasswordDialog(context, request);
   }
 
   Future<String?> _promptSecurityKeyPin(SecurityKeyPinRequest request) {

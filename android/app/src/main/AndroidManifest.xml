@@ -14,7 +14,7 @@
         android:required="false" />
 
     <application
-        android:label="Conduit"
+        android:label="Nexus"
         android:name="${applicationName}"
         android:extractNativeLibs="true"
         android:icon="@mipmap/ic_launcher">
