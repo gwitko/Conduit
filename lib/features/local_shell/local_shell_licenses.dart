@@ -59,7 +59,7 @@ upstream source archives, package checksums, pinned Termux package recipes and
 patches, license texts, component notices, and binary rewrite notes with the
 Conduit source repository:
 
-  https://github.com/gwitko/Conduit
+  https://github.com/phyluke/Conduit
 
 This is a written offer, valid for at least three years from distribution, to
 give any third party a complete machine-readable copy of the corresponding

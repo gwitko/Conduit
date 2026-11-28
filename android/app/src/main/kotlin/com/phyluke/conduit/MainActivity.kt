@@ -1,4 +1,4 @@
-package com.gwitko.conduit
+package com.phyluke.conduit
 
 import android.Manifest
 import android.app.Notification
@@ -17,14 +17,17 @@ import android.os.IBinder
 import android.provider.Settings
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
+import com.phyluke.conduit.adb.NexusAdbBridge
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterFragmentActivity() {
     private lateinit var fidoUsbCtapTransport: FidoUsbCtapTransport
+    private lateinit var nexusAdbBridge: NexusAdbBridge
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         fidoUsbCtapTransport = FidoUsbCtapTransport(this)
+        nexusAdbBridge = NexusAdbBridge(this)
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             BACKGROUND_KEEPALIVE_CHANNEL,
@@ -74,6 +77,12 @@ class MainActivity : FlutterFragmentActivity() {
                 else -> result.notImplemented()
             }
         }
+    MethodChannel(
+        flutterEngine.dartExecutor.binaryMessenger,
+        NEXUS_ADB_CHANNEL,
+    ).setMethodCallHandler { call, result ->
+        nexusAdbBridge.handle(call, result)
+    }
     }
 
     private fun hasSharedStorageAccess(): Boolean {
@@ -119,10 +128,12 @@ class MainActivity : FlutterFragmentActivity() {
         )
     }
 
+
     companion object {
         const val BACKGROUND_KEEPALIVE_CHANNEL = "conduit/background_keepalive"
         const val FIDO_USB_CHANNEL = "conduit/fido_usb"
         const val LOCAL_SHELL_CHANNEL = "conduit/local_shell"
+        const val NEXUS_ADB_CHANNEL = "nexus/adb"
         private const val NOTIFICATION_PERMISSION_REQUEST_CODE = 2001
         private const val SHARED_STORAGE_PERMISSION_REQUEST_CODE = 2002
     }
@@ -192,6 +203,7 @@ class BackgroundConnectionService : Service() {
             .setOngoing(true)
             .build()
     }
+
 
     companion object {
         private const val CHANNEL_ID = "ssh_sessions"

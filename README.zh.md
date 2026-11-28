@@ -1,14 +1,14 @@
 # Conduit：终端、SSH、Mosh 与 SFTP
 
-[![Latest release](https://img.shields.io/github/v/release/gwitko/Conduit)](https://github.com/gwitko/Conduit/releases/latest)
+[![Latest release](https://img.shields.io/github/v/release/phyluke/Conduit)](https://github.com/phyluke/Conduit/releases/latest)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 ![Flutter](https://img.shields.io/badge/Flutter-3.44.1-02569B?logo=flutter)
 ![Platforms](https://img.shields.io/badge/platforms-Android%20%7C%20iOS-2ea44f)
 [![App Store](https://img.shields.io/badge/App%20Store-Conduit-0D96F6?logo=appstore&logoColor=white)](https://apps.apple.com/app/id6780054869)
-[![F-Droid](https://img.shields.io/f-droid/v/com.gwitko.conduit?label=F-Droid&logo=fdroid)](https://f-droid.org/packages/com.gwitko.conduit/)
-[![Obtainium](https://img.shields.io/badge/Obtainium-GitHub%20releases-6f42c1)](https://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/gwitko/Conduit)
-[![Ko-fi](https://img.shields.io/badge/Ko--fi-Support%20Conduit-ff5f5f?logo=kofi&logoColor=white)](https://ko-fi.com/gwitko)
-[![Stars](https://img.shields.io/github/stars/gwitko/Conduit)](https://github.com/gwitko/Conduit/stargazers)
+[![F-Droid](https://img.shields.io/f-droid/v/com.phyluke.conduit?label=F-Droid&logo=fdroid)](https://f-droid.org/packages/com.phyluke.conduit/)
+[![Obtainium](https://img.shields.io/badge/Obtainium-GitHub%20releases-6f42c1)](https://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/phyluke/Conduit)
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-Support%20Conduit-ff5f5f?logo=kofi&logoColor=white)](https://ko-fi.com/phyluke)
+[![Stars](https://img.shields.io/github/stars/phyluke/Conduit)](https://github.com/phyluke/Conduit/stargazers)
 
 > [!CAUTION]
 > Android 正逐渐走向封闭。[请伸出援手，共同维护它的开放性](https://keepandroidopen.org)。
@@ -21,7 +21,7 @@ Conduit 旨在让你直接从手机连接远程主机，无需登录任何账号
 
 此外，项目还提供用于文件传输的 SFTP 浏览器、自主管理的主机密钥信任机制、可选的设备认证应用锁，以及多款内置终端主题（Catppuccin、Tokyo Night、Gruvbox、Nord 等），后续还将加入对电子墨水屏设备的支持！
 
-Mosh 功能基于 [dart_mosh](https://github.com/gwitko/dart_mosh) 运行（这是用 Dart 从头实现的 Mosh 协议栈），终端模拟器采用 fork 自 xterm.dart 的 [conduit_vt](https://github.com/gwitko/conduit_vt)。
+Mosh 功能基于 [dart_mosh](https://github.com/phyluke/dart_mosh) 运行（这是用 Dart 从头实现的 Mosh 协议栈），终端模拟器采用 fork 自 xterm.dart 的 [conduit_vt](https://github.com/phyluke/conduit_vt)。
 
 ## 功能列表
 
@@ -53,7 +53,7 @@ Mosh 功能基于 [dart_mosh](https://github.com/gwitko/dart_mosh) 运行（这�
 
 Conduit 根据这些组件各自的许可协议进行分发，并为 GPL/LGPL 组件提供相应的源码提供声明。详细的组件列表、许可证文本、上游源码归档、确切的包校验和以及构建配方快照均可在 **[第三方声明](THIRD_PARTY_NOTICES.md)** 中查看。GPL/LGPL 源码提供声明的细节请参阅 **[开源合规与源码归档](third_party/source-offer)**。
 
-Conduit 的源代码采用 [Apache-2.0](LICENSE) 协议开源，但不会改变内置的第三方二进制文件及下载的 rootfs 软件包的原有许可协议。此外，Mosh 功能基于 [dart_mosh](https://github.com/gwitko/dart_mosh) 运行，终端模拟器采用 fork 自 xterm.dart 的 [conduit_vt](https://github.com/gwitko/conduit_vt)。
+Conduit 的源代码采用 [Apache-2.0](LICENSE) 协议开源，但不会改变内置的第三方二进制文件及下载的 rootfs 软件包的原有许可协议。此外，Mosh 功能基于 [dart_mosh](https://github.com/phyluke/dart_mosh) 运行，终端模拟器采用 fork 自 xterm.dart 的 [conduit_vt](https://github.com/phyluke/conduit_vt)。
 
 ## 贡献者
 

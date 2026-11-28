@@ -1,6 +1,6 @@
 import tailwindcss from '@tailwindcss/vite'
 
-const siteUrl = 'https://conduit.gwitko.dev'
+const siteUrl = 'https://conduit.phyluke.dev'
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-01-01',

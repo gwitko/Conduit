@@ -1,4 +1,4 @@
-package com.gwitko.conduit
+package com.phyluke.conduit
 
 import android.app.PendingIntent
 import android.content.BroadcastReceiver

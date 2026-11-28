@@ -141,92 +141,91 @@ class _HostsPageState extends State<HostsPage> {
         child: SafeArea(
           bottom: shouldApplyBottomSafeArea(context),
           child: Stack(
-          children: [
-            RefreshIndicator(
-            color: Theme.of(context).colorScheme.primary,
-            onRefresh: widget.hostsController.load,
-            child: CustomScrollView(
-              slivers: [
-                SliverToBoxAdapter(
-                  child: ListenableBuilder(
-                    listenable: Listenable.merge([
-                      widget.hostsController,
-                      widget.workspaceController,
-                    ]),
-                    builder: (context, _) {
-                      return HostsHero(
-                        hostCount: widget.hostsController.hosts.length,
-                        activeSessionCount:
-                            widget.workspaceController.sessions.length,
-                        onAppearance: () => showThemeSheet(
-                          context: context,
-                          controller: widget.themeController,
-                          backupService: widget.backupService,
-                        ),
-                        onTrustedKeys: _openTrustedKeys,
-                        onLock: _lock,
-                        onOpenSessions: widget.workspaceController.hasSessions
-                            ? _openTerminalWorkspace
-                            : null,
-                      );
-                    },
-                  ),
+            children: [
+              RefreshIndicator(
+                color: Theme.of(context).colorScheme.primary,
+                onRefresh: widget.hostsController.load,
+                child: CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: ListenableBuilder(
+                        listenable: Listenable.merge([
+                          widget.hostsController,
+                          widget.workspaceController,
+                        ]),
+                        builder: (context, _) {
+                          return HostsHero(
+                            hostCount: widget.hostsController.hosts.length,
+                            activeSessionCount:
+                                widget.workspaceController.sessions.length,
+                            onAppearance: () => showThemeSheet(
+                              context: context,
+                              controller: widget.themeController,
+                              backupService: widget.backupService,
+                            ),
+                            onTrustedKeys: _openTrustedKeys,
+                            onLock: _lock,
+                            onOpenSessions: widget.workspaceController.hasSessions
+                                ? _openTerminalWorkspace
+                                : null,
+                          );
+                        },
+                      ),
+                    ),
+                    SliverToBoxAdapter(
+                      child: ListenableBuilder(
+                        listenable: Listenable.merge([
+                          widget.workspaceController,
+                          widget.themeController,
+                        ]),
+                        builder: (context, _) {
+                          if (!widget.themeController.showLocalShell) {
+                            return const SizedBox.shrink();
+                          }
+                          final activeInstanceIds = widget
+                              .workspaceController
+                              .sessions
+                              .map(
+                                (session) =>
+                                    localShellInstanceIdFromHostId(session.host.id),
+                              )
+                              .whereType<String>()
+                              .toSet();
+                          return LocalShellSection(
+                            controller: widget.localShellController,
+                            activeInstanceIds: activeInstanceIds,
+                            onAdd: _openLocalShellSetup,
+                            onOpenInstance: _openLocalSession,
+                            onManageInstance: _openLocalShellInstance,
+                          );
+                        },
+                      ),
+                    ),
+                    ListenableBuilder(
+                      listenable: Listenable.merge([
+                        widget.hostsController,
+                        widget.workspaceController,
+                      ]),
+                      builder: (context, _) => _buildBody(context),
+                    ),
+                  ],
                 ),
-            ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 8,
-              child: IgnorePointer(
-                child: Text(
-                  'powered by phyluke',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 8,
+                child: IgnorePointer(
+                  child: Text(
+                    'powered by phyluke',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
-        ),
-                SliverToBoxAdapter(
-                  child: ListenableBuilder(
-                    listenable: Listenable.merge([
-                      widget.workspaceController,
-                      widget.themeController,
-                    ]),
-                    builder: (context, _) {
-                      if (!widget.themeController.showLocalShell) {
-                        return const SizedBox.shrink();
-                      }
-                      final activeInstanceIds = widget
-                          .workspaceController
-                          .sessions
-                          .map(
-                            (session) =>
-                                localShellInstanceIdFromHostId(session.host.id),
-                          )
-                          .whereType<String>()
-                          .toSet();
-                      return LocalShellSection(
-                        controller: widget.localShellController,
-                        activeInstanceIds: activeInstanceIds,
-                        onAdd: _openLocalShellSetup,
-                        onOpenInstance: _openLocalSession,
-                        onManageInstance: _openLocalShellInstance,
-                      );
-                    },
-                  ),
-                ),
-                ListenableBuilder(
-                  listenable: Listenable.merge([
-                    widget.hostsController,
-                    widget.workspaceController,
-                  ]),
-                  builder: (context, _) => _buildBody(context),
-                ),
-              ],
-            ),
+            ],
           ),
         ),
       ),
@@ -267,7 +266,7 @@ class _HostsPageState extends State<HostsPage> {
               title: 'No saved machines yet',
               message:
                   'Add an SSH or Mosh server and Conduit will keep its '
-                  'credentials in your deviceâ€™s secure storage.',
+                  'credentials in your deviceÃ¢â‚¬â„¢s secure storage.',
               actionLabel: 'Add machine',
               onAction: _openForm,
             ),
@@ -653,7 +652,7 @@ class _HostsPageState extends State<HostsPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete machine?'),
-        content: Text('Conduit will forget â€œ${host.name}â€.'),
+        content: Text('Conduit will forget Ã¢â‚¬Å“${host.name}Ã¢â‚¬Â.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),

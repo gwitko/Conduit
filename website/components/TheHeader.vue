@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const { t } = useI18n()
-const repoUrl = 'https://github.com/gwitko/Conduit'
+const repoUrl = 'https://github.com/phyluke/Conduit'
 const stores = useStores()
 
 const links = [

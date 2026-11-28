@@ -2,6 +2,7 @@ import com.android.build.gradle.LibraryExtension
 
 allprojects {
     repositories {
+        maven { url = uri("https://jitpack.io") }
         google()
         mavenCentral()
     }

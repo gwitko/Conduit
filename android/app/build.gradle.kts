@@ -14,7 +14,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.gwitko.conduit"
+    namespace = "com.phyluke.conduit"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -28,7 +28,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.gwitko.conduit"
+        applicationId = "com.phyluke.conduit"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -123,4 +123,9 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    implementation("io.github.muntashirakon:libadb-android:3.1.1")
+    implementation("org.conscrypt:conscrypt-android:2.5.3")
 }

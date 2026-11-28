@@ -17,11 +17,11 @@ dependencies:
   cupertino_icons: ^1.0.8
   dartssh2:
     git:
-      url: https://github.com/gwitko/dartssh2_conduit.git
+      url: https://github.com/phyluke/dartssh2_conduit.git
       ref: c39f316a853e6d6a21db698503450a39d9e96d68
   conduit_vt:
     git:
-      url: https://github.com/gwitko/conduit_vt.git
+      url: https://github.com/phyluke/conduit_vt.git
       ref: b486b894ea12b18b2ad76339ccd8c6ae3c12416f
   dart_mosh: ^0.0.4
   flutter_pty: ^0.4.2

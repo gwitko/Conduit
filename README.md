@@ -1,15 +1,15 @@
 # Conduit: Terminal, SSH, Mosh & SFTP
 
-[![Latest v1.4.14-ask password release](https://img.shields.io/github/v/release/gwitko/Conduit)](https://github.com/Maheshluke/Conduit/releases/tag/v1.4.14-askpw)
+[![Latest v1.4.14-ask password release](https://img.shields.io/github/v/release/phyluke/Conduit)](https://github.com/Maheshluke/Conduit/releases/tag/v1.4.14-askpw)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 ![Flutter](https://img.shields.io/badge/Flutter-3.44.1-02569B?logo=flutter)
 ![Platforms](https://img.shields.io/badge/platforms-Android%20%7C%20iOS-2ea44f)
 [![App Store](https://img.shields.io/badge/App%20Store-Conduit-0D96F6?logo=appstore&logoColor=white)](https://apps.apple.com/app/id6780054869)
-[![Google Play](https://img.shields.io/badge/Google%20Play-Conduit-3DDC84?logo=googleplay&logoColor=white)](https://play.google.com/store/apps/details?id=com.gwitko.conduit&pcampaignid=web_share)
-[![F-Droid](https://img.shields.io/f-droid/v/com.gwitko.conduit?label=F-Droid&logo=fdroid)](https://f-droid.org/packages/com.gwitko.conduit/)
-[![Obtainium](https://img.shields.io/badge/Obtainium-GitHub%20releases-6f42c1)](https://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/gwitko/Conduit)
-[![Ko-fi](https://img.shields.io/badge/Ko--fi-Support%20Conduit-ff5f5f?logo=kofi&logoColor=white)](https://ko-fi.com/gwitko)
-[![Stars](https://img.shields.io/github/stars/gwitko/Conduit)](https://github.com/gwitko/Conduit/stargazers)
+[![Google Play](https://img.shields.io/badge/Google%20Play-Conduit-3DDC84?logo=googleplay&logoColor=white)](https://play.google.com/store/apps/details?id=com.phyluke.conduit&pcampaignid=web_share)
+[![F-Droid](https://img.shields.io/f-droid/v/com.phyluke.conduit?label=F-Droid&logo=fdroid)](https://f-droid.org/packages/com.phyluke.conduit/)
+[![Obtainium](https://img.shields.io/badge/Obtainium-GitHub%20releases-6f42c1)](https://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/phyluke/Conduit)
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-Support%20Conduit-ff5f5f?logo=kofi&logoColor=white)](https://ko-fi.com/phyluke)
+[![Stars](https://img.shields.io/github/stars/phyluke/Conduit)](https://github.com/phyluke/Conduit/stargazers)
 
 > [!CAUTION]
 > Android is on track to become a locked-down platform. [Help keep it open](https://keepandroidopen.org).
@@ -44,9 +44,9 @@ coming! You can also export and import local backups of app settings, saved
 machines, and trusted host keys, either without secrets or encrypted with a
 backup password.
 
-Mosh runs on [dart_mosh](https://github.com/gwitko/dart_mosh), a clean-room
+Mosh runs on [dart_mosh](https://github.com/phyluke/dart_mosh), a clean-room
 Dart implementation of the protocol, and the terminal is
-[conduit_vt](https://github.com/gwitko/conduit_vt), a fork of xterm.dart.
+[conduit_vt](https://github.com/phyluke/conduit_vt), a fork of xterm.dart.
 
 ## Features
 
@@ -113,15 +113,15 @@ details live in
 Conduit's own source code is licensed [Apache-2.0](LICENSE). Bundled
 third-party binaries and downloaded rootfs packages are not relicensed by
 Conduit. Mosh runs on
-[dart_mosh](https://github.com/gwitko/dart_mosh) and the terminal is
-[conduit_vt](https://github.com/gwitko/conduit_vt), a fork of xterm.dart.
+[dart_mosh](https://github.com/phyluke/dart_mosh) and the terminal is
+[conduit_vt](https://github.com/phyluke/conduit_vt), a fork of xterm.dart.
 
 ## Contributors
 
 Conduit is improved by community contributions. See [CONTRIBUTORS.md](CONTRIBUTORS.md)
 for acknowledgements.
 
-> > Fork of [gwitko/Conduit](https://github.com/gwitko/Conduit) that adds an "Ask for password when logging in" option for SSH password hosts. All other features are unchanged.
+> > Fork of [phyluke/Conduit](https://github.com/phyluke/Conduit) that adds an "Ask for password when logging in" option for SSH password hosts. All other features are unchanged.
 
 ## Screenshots
 

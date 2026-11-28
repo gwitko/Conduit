@@ -3,9 +3,9 @@ const { t, tm, rt } = useI18n()
 const localePath = useLocalePath()
 const { public: { siteUrl } } = useRuntimeConfig()
 
-const repoUrl = 'https://github.com/gwitko/Conduit'
-const kofiUrl = 'https://ko-fi.com/gwitko'
-const starsUrl = 'https://github.com/gwitko/Conduit/stargazers'
+const repoUrl = 'https://github.com/phyluke/Conduit'
+const kofiUrl = 'https://ko-fi.com/phyluke'
+const starsUrl = 'https://github.com/phyluke/Conduit/stargazers'
 const heroCommand = '$ ssh you@anywhere'
 
 useSeoMeta({
@@ -34,7 +34,7 @@ useHead(() => ({
         description: t('meta.description'),
         url: `${siteUrl}/`,
         offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
-        author: { '@type': 'Person', name: 'gwitko' },
+        author: { '@type': 'Person', name: 'phyluke' },
       }),
     },
   ],

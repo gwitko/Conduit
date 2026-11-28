@@ -54,7 +54,7 @@ the date Conduit distributes these binaries, to give any third party — for a
 charge no more than the cost of physically performing source distribution — a
 complete machine-readable copy of the corresponding source for the GPL- and
 LGPL-licensed binaries listed above, for the exact versions shipped. The
-corresponding source is published at <https://github.com/gwitko/Conduit> under
+corresponding source is published at <https://github.com/phyluke/Conduit> under
 [`third_party/source-offer`](third_party/source-offer); requests may also be
 sent to the repository maintainer there. For the GPL-3.0 component (GNU `tar`)
 this offer is additionally satisfied by access to the same Corresponding Source

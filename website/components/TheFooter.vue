@@ -2,8 +2,8 @@
 const { t } = useI18n()
 const stores = useStores()
 
-const repoUrl = 'https://github.com/gwitko/Conduit'
-const kofiUrl = 'https://ko-fi.com/gwitko'
+const repoUrl = 'https://github.com/phyluke/Conduit'
+const kofiUrl = 'https://ko-fi.com/phyluke'
 const year = new Date().getFullYear()
 
 const productLinks = [
@@ -77,7 +77,7 @@ const projectLinks = [
         <span>{{ t('footer.copyright', { year }) }}</span>
         <div class="flex items-center gap-4">
           <LanguageSwitcher />
-          <span class="font-mono">conduit.gwitko.dev</span>
+          <span class="font-mono">conduit.phyluke.dev</span>
         </div>
       </div>
     </div>
